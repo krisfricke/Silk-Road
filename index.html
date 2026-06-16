@@ -115,6 +115,8 @@
 </div>
 
 <script>
+const SUPA_URL = "https://pryjfosvewnlencqbfxl.supabase.co";
+const SUPA_KEY = "sb_publishable_26F-RM1IB-YzZsW3iPnygA_5DF-u7en";
 "use strict";
 /* ============ DATA ============ */
 const VERSION='0.9.29';
@@ -631,6 +633,7 @@ function setOut(dir){
   S.screen='travel'; S.legKm=0;
   const t=nextCity();
   log("You set out from "+c.name+(d<0?" back toward ":" toward ")+t.name+" — "+fmtDist(legDist())+" of "+TERR_DESC[t.terr]+".");
+  const _gl=c.name+"->"+(t?t.name:"end"); S.legGraves=[]; S.legGraveShown=false; fetchLegGraves(_gl);
   startJourney(); // animate immediately — no separate staging step
 }
 function chooseRoute(r){
@@ -689,6 +692,7 @@ function buildEvent(terr){
   if(terr==='settled'){add(3,evInspect); add(3,evSogdian); add(2,evRebellion); add(2+(tollActive()?1:0),evCaravanserai); add(2,evCamel); add(2,evCholera);}
   if(terr==='settled' && S.goods){ const _t=S.goods.tea||0; if(_t>=10)add(2,evInspect); else if(_t>=1)add(1,evInspect); }
   add(3,evSick); add(2,evRoadDeal); add(2,evMonk);
+  if(S.legGraves&&S.legGraves.length&&!S.legGraveShown)add(3,evGraveMarker);
   // bandits: base presence by terrain, scaled by your reputation (pay them and word spreads; beat them and they avoid you)
   const banditBase={desert:2,harsh:2,steppe:3}[terr]||0;
   if(banditBase){ let bw=banditBase*(S.banditFreq||1); if(inContestedZone())bw*=1.6; add(Math.max(0,Math.round(bw)), evBandits); }
@@ -1178,12 +1182,23 @@ function deathFlavor(){
   return pick(far?home:out);
 }
 function rank(v){
-  if(v<900)return ['Footsore Peddler','You arrived. Historians will not mention it, but you arrived.'];
-  if(v<2500)return ['Respectable Merchant','A solid venture. The ledger closes with quiet satisfaction.'];
-  if(v<6000)return ['Caravan Master','Sogdians nod when you pass. There is no higher review.'];
-  if(v<12000)return ['Magnate of the Two Empires','Songs will be sung — mostly by people hoping you will buy them a drink. You will. You can afford it.'];
-  if(v<40000)return ['Khan of the Caravans','They will name a stretch of road after you, and overcharge travellers to walk it.'];
-  return ['Legend of the Silk Road','Your name outlives the route itself. Children three empires apart are told you were probably exaggerated.'];
+  if(v<800)  return ["Footsore Peddler","You arrived. Historians will not mention it, but you arrived."];
+  if(v<900)  return ["Prince of Donkeys","A bold venture. The donkeys have opinions about the outcome."];
+  if(v<1001) return ["King of the Donkeys","Crowned by your beasts, who are also your creditors."];
+  if(v<2501) return ["Bazaar Enthusiast","You browsed well. A few more runs and you may graduate to actual commerce."];
+  if(v<5001) return ["One of the Three Muleteers","All for one, and all for slightly better prices at the next oasis."];
+  if(v<10001)return ["Respectable Merchant","A solid venture. The ledger closes with quiet satisfaction."];
+  if(v<15001)return ["Caravan Master","Sogdians nod when you pass. There is no higher review."];
+  if(v<20001)return ["Daimon of the Caravan","Your companions say you have a gift. Your accountant says you have leverage. Both are correct."];
+  if(v<25000)return ["Guildmaster of the Flowing Spice","You set the price. Others accept it, or they walk."];
+  if(v<30000)return ["Regional Vice President of the Ancient World","The title is self-appointed but no one disputes it, not to your face."];
+  if(v<35000)return ["Mercantile Magnate","Your name precedes you. So does your credit rating."];
+  if(v<40000)return ["Caravan Tycoon","You have not merely traded the road — you have cornered significant portions of it."];
+  if(v<45000)return ["Prince of Profit","The numbers you deal in have ceased to feel real, which is fine, because they are very real."];
+  if(v<50000)return ["King of the Trade Routes","Rulers consult you. You consult your ledger. The ledger wins."];
+  if(v<55000)return ["Merchant Emperor","Dynasties have less liquid capital than you are carrying. Dynasties are aware of this."];
+  if(v<60000)return ["Legend of the Silk Road","Your name outlives the route itself. Children three empires apart are told you were probably exaggerated."];
+  return ["Grand Negus","You have the lobes for it, and apparently the camels. The Rules of Acquisition are yours to write."];
 }
 function pickRumor(){
   if(rnd()<.45 && nextCity()){
@@ -1195,45 +1210,94 @@ function pickRumor(){
     if(cheap) return c.name+" is the place to buy "+cheap.n.toLowerCase()+" cheap, if you've the camels for it.";
   }
   const here=city()?city().frac:0;
+  const cn=city()?city().name:'';
+  if((cn==='Khotan'||cn==='Miran'||cn==='Yarkand')&&rnd()<.25)
+    return "A fragrant man in the corner is muttering about cornering the musk market. Says his name is Elon. Says he will be the richest man in the world. The other merchants seem unconvinced.";
+  if(cn==='Osh'&&rnd()<.3)
+    return "An old herbalist holds court near the fire, rhapsodising about the medicinal properties of the local poppies. \"But the Silk Road,\" he adds firmly, \"would never traffic in drugs.\" A long pause. Nobody laughs.";
+  if(cn==='Iconium'&&rnd()<.3)
+    return "They say there is a woman in the west who wants to build a trade network connecting every market in the known world. An amazon, they call her. The merchants here think it will never work. The merchants here are often wrong.";
   const pool=RUMORS.filter(r=> !(here>.6 && /rebellion|silk grows scarce|Yangzhou|Talas|Onion/i.test(r)) );
   return pick(pool.length?pool:RUMORS);
 }
-// ---- persistent leaderboard ----
+// ---- Supabase leaderboard & grave markers ----
+// SUPA_URL and SUPA_KEY must be defined at the top of this script.
 let LEADERBOARD=null;
-const STORE = (typeof window!=='undefined' && window.storage && window.storage.get)
-  ? window.storage
-  : { get:(k)=>{ try{ const v=localStorage.getItem(k); return Promise.resolve(v!=null?{value:v}:null); }catch(e){ return Promise.resolve(null);} },
-      set:(k,v)=>{ try{ localStorage.setItem(k,v); return Promise.resolve(true);}catch(e){ return Promise.reject(e);} } };
+async function supaFetch(path,opts={}){
+  if(typeof SUPA_URL==="undefined"||!SUPA_URL||SUPA_URL.startsWith("YOUR"))return null;
+  try{
+    const headers={"apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY,"Content-Type":"application/json",...(opts.headers||{})};
+    const r=await fetch(SUPA_URL+path,{...opts,headers});
+    if(!r.ok)return null;
+    const txt=await r.text();return txt?JSON.parse(txt):null;
+  }catch(e){return null;}
+}
 async function loadBoard(){
   if(LEADERBOARD)return LEADERBOARD;
-  try{ const r=await STORE.get('silkroad_scores'); LEADERBOARD=r&&r.value?JSON.parse(r.value):[]; }
-  catch(e){ LEADERBOARD=[]; }
+  const rows=await supaFetch("/rest/v1/Leaderboard?select=*&order=score.desc&limit=20");
+  LEADERBOARD=rows||[];
   return LEADERBOARD;
 }
 async function saveScore(entry){
-  try{
-    const board=await loadBoard();
-    const i=board.findIndex(e=>e.runId && e.runId===entry.runId);
-    if(i>=0) board[i]=entry; else board.push(entry); // a finished round trip updates that run's line
-    board.sort((a,b)=>b.score-a.score);
-    LEADERBOARD=board.slice(0,12);
-    await STORE.set('silkroad_scores', JSON.stringify(LEADERBOARD));
-  }catch(e){ if(LEADERBOARD){const i=LEADERBOARD.findIndex(e=>e.runId&&e.runId===entry.runId); if(i>=0)LEADERBOARD[i]=entry; else LEADERBOARD.push(entry); LEADERBOARD.sort((a,b)=>b.score-a.score);LEADERBOARD=LEADERBOARD.slice(0,12);} }
-  if($('board')) renderBoardInto($('board'));
+  const {runId,...row}=entry;
+  await supaFetch("/rest/v1/Leaderboard",{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify(row)});
+  LEADERBOARD=null;
+  if($("board"))loadBoard().then(()=>renderBoardInto($("board")));
+}
+async function saveGrave(grave){
+  const leg=grave.leg;
+  const existing=await supaFetch("/rest/v1/graves?select=id,score&leg=eq."+encodeURIComponent(leg)+"&order=score.asc&limit=3")||[];
+  if(existing.length<3){
+    await supaFetch("/rest/v1/graves",{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify(grave)});
+  } else if(grave.score>existing[0].score){
+    await supaFetch("/rest/v1/graves?id=eq."+existing[0].id,{method:"DELETE"});
+    await supaFetch("/rest/v1/graves",{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify(grave)});
+  }
+}
+async function fetchLegGraves(leg){
+  const rows=await supaFetch("/rest/v1/graves?select=*&leg=eq."+encodeURIComponent(leg)+"&order=score.desc")||[];
+  S.legGraves=rows; S.legGraveShown=false;
+}
+function evGraveMarker(){
+  if(!S.legGraves||!S.legGraves.length||S.legGraveShown)return null;
+  S.legGraveShown=true;
+  const g=pick(S.legGraves);
+  const nc=nextCity(); const terr=nc?nc.terr:"settled";
+  const isSea=(S.screen==="sailing");
+  const isDesert=(terr==="desert"||terr==="harsh");
+  const homeward=g.returning?" — homeward bound":"";
+  let h,t;
+  if(isSea){
+    h="THE EPHESUS MEMORIAL";
+    t="Carved into stone at the harbour chapel in Ephesus: \""+g.name+", lost to the waves on day "+g.day+homeward+". "+g.cause+".\"";
+  } else if(isDesert){
+    h="BLEACHED BONES IN THE SAND";
+    t="Beside the track: camel bones scoured white by wind and years, and a small cairn of stones. Scratched on a pot-shard: \""+g.name+", "+g.cause+", day "+g.day+homeward+". \"";
+  } else {
+    h="A GRAVE MARKER";
+    t="A stone marker by the road, worn but legible: \"Here lies "+g.name+", "+g.cause+", day "+g.day+homeward+".\"";
+  }
+  return {h,t,ch:[{l:"Lay a stone on the cairn and press on",f(){log("You add a stone and move on. The road does not pause for the dead, but you do, briefly.");}}]};
 }
 function recordRun(outcome){
-  if(!S.runId) S.runId = 'r'+Date.now()+Math.floor(rnd()*1000);
+  if(!S.runId)S.runId="r"+Date.now()+Math.floor(rnd()*1000);
   const c=S.itin[S.idx]||S.itin[S.itin.length-1];
-  const worth=Math.round(S.silver + GOODS.reduce((a,g)=>a+S.goods[g.id]*price(g,c),0));
-  saveScore({runId:S.runId, name:S.name, score:worth, days:S.day-1, outcome, route:S.route?(S.route==='n'?'N':'S'):'-', when:Date.now()});
+  const hv=(typeof herdValue==="function"?herdValue(c):0);
+  const worth=Math.round(S.silver+GOODS.reduce((a,g)=>a+S.goods[g.id]*price(g,c),0)+hv);
+  saveScore({name:S.name,score:worth,days:S.day-1,outcome,route:S.route?(S.route==="n"?"N":"S"):"-"});
+  if(S.dead){
+    const ci=city(),nc=nextCity();
+    const leg=ci&&nc?ci.name+"->"+nc.name:ci?ci.name+"->[end]":"unknown";
+    const terr=nc?nc.terr:(S.screen==="sailing"?"sea":"settled");
+    saveGrave({name:S.name,cause:S.cause||"exhaustion",day:S.day-1,leg,score:worth,returning:!!S.returning,terrain:terr});
+  }
 }
 function renderBoardInto(el){
   const b=LEADERBOARD||[];
-  if(!b.length){ el.innerHTML='<p class="sub">No ventures recorded yet. Be the first name in the ledger.</p>'; return; }
-  el.innerHTML='<table><tr><th>#</th><th>Merchant</th><th style="text-align:right">Estate</th><th style="text-align:right">Days</th><th>Fate</th></tr>'+
-    b.map((e,i)=>'<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td class="num gold">'+e.score+'</td><td class="num">'+(e.days||'—')+'</td><td class="sub">'+e.outcome+'</td></tr>').join('')+'</table>';
+  if(!b.length){el.innerHTML="<p class=\"sub\">No ventures recorded yet. Be the first name in the ledger.</p>";return;}
+  el.innerHTML="<table><tr><th>#</th><th>Merchant</th><th style=\"text-align:right\">Estate</th><th style=\"text-align:right\">Days</th><th>Fate</th></tr>"+
+    b.map((e,i)=>"<tr><td>"+(i+1)+"</td><td>"+e.name+"</td><td class=\"num gold\">"+e.score+"</td><td class=\"num\">"+(e.days||"—")+"</td><td class=\"sub\">"+e.outcome+"</td></tr>").join("")+"</table>";
 }
-
 /* ============ v0.8.0 ADDITIONS ============ */
 function cityLabel(c){ return c?c.name:''; }
 function zhSpan(c){ return (c && c.zh && (!isWest() || S.inChina)) ? '<span class="zh">'+c.zh+'</span>' : ''; }
@@ -2204,7 +2268,7 @@ function renderTitle(m){
    '<h2>THE SILK ROAD <span class="zh">絲綢之路</span></h2>'+
    '<p class="sub">'+(west?'Constantinople to Chang’an and home again':'Chang’an to Constantinople and home again')+', in 762 CE <span style="opacity:.6">· v'+VERSION+'</span></p>'+
    '<div id="resumeslot"></div>'+
-   '<p>Buy low at one end of the world, sell high at the other, and bring your skin home if you can. The road kills the careless; many do not.</p>'+
+   '<p>Set out with whatever you can afford, come back rich or not at all. The road between is long and fraught with scouring dust storms, freezing mountain passes, swollen rivers, and of course, dysentery.</p>'+
    '<div class="panel"><p style="margin-bottom:6px">Your name, for the ledger <span class="red">*</span></p>'+
    '<input type="text" id="pname" value="'+escAttr(SETUP.name)+'" maxlength="24" placeholder="enter your name" oninput="setupNameInput()"> '+
    '<span id="nameWarn" class="sub">A name is required.</span></div>'+
@@ -2429,7 +2493,7 @@ function renderTitle_unused(m){
   '<h2>THE SILK ROAD <span class="zh">絲綢之路</span></h2>'+
   '<p class="sub">Chang\'an to Constantinople and home again, in the second year of Baoying — 762 CE <span style="opacity:.6">· v'+VERSION+'</span></p>'+
   '<div id="resumeslot"></div>'+
-  '<p>Buy low in the east, sell high in the west — then load up on western glass, coral, and wine and run it back. The rebellion smoulders behind you, the Caliph is raising a round city on the Tigris, and the whole world is in front. The road kills the careless; many do not come home.</p>'+
+  '<p>Set out with whatever you can afford, come back rich or not at all. Load up cheap in the east, sell dear in the west, then fill your packs with western glass, coral, and wine for the return. The road between is long and fraught with scouring dust storms, freezing mountain passes, swollen rivers — and of course, dysentery.</p>'+
   '<div class="panel"><p style="margin-bottom:6px">Your name, for the ledger <span class="red">*</span></p>'+
   '<input type="text" id="pname" value="" maxlength="24" placeholder="enter your name" oninput="nameGate()"> '+
   '<span id="nameWarn" class="sub">A name is required before you set out.</span></div>'+
