@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Silk Road, 762 CE</title>
+<title>Silk Road 762 AD</title>
 <style>
   :root{
     --ink:#171210;        /* night-desert ink */
@@ -111,15 +111,13 @@
   <div id="ribbon"></div>
   <div id="main"></div>
   <div id="log"></div>
-  <div style="text-align:center;color:#5d5141;font-size:.62rem;letter-spacing:.06em;padding:12px 2px 6px">lovingly vibe-coded by Kris Fricke · 2026 · in fond memory of <i>The Oregon Trail</i> (1971) by Don Rawitsch, Bill Heinemann &amp; Paul Dillenberger</div>
+  <div style="text-align:center;color:#5d5141;font-size:.62rem;letter-spacing:.06em;padding:12px 2px 6px">lovingly vibe-coded by Kris Fricke · 2026 · in fond memory of <i>The Oregon Trail</i> (1971) by Don Rawitsch, Bill Heinemann &amp; Paul Dillenberger<br><a href="https://emo-snal.livejournal.com/453533.html" target="_blank" style="color:#7a6a4a">Feedback appreciated</a></div>
 </div>
 
 <script>
-const SUPA_URL = "https://pryjfosvewnlencqbfxl.supabase.co";
-const SUPA_KEY = "sb_publishable_26F-RM1IB-YzZsW3iPnygA_5DF-u7en";
 "use strict";
 /* ============ DATA ============ */
-const VERSION='0.9.29';
+const VERSION='1.3.3';
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
  {id:'tea',   n:'Tea',       u:'brick', wt:4, e:4,  w:26},
@@ -147,7 +145,7 @@ const OVR={
  'Baghdad':{paper:10,glass:12,silk:60,musk:128,lapis:62,amber:52,coral:28,wine:18}, /* Gulf coral entrepôt; musk worth a fortune here */
  'Aleppo':{glass:14,silk:66,musk:138,jade:62,lapis:66,pepper:74,coral:34,amber:46,wine:16},
  'Iconium':{glass:20,silk:70,musk:144,coral:44,wine:18},
- 'Constantinople':{glass:48,lapis:80,silk:74,jade:80,musk:150,pepper:84,coral:36,amber:42,wine:14}
+ 'Constantinople':{glass:24,lapis:80,silk:74,jade:80,musk:150,pepper:84,coral:36,amber:42,wine:14}
 };
 /* terr: settled | steppe | desert | harsh | mountain */
 const MAIN1=[
@@ -195,7 +193,7 @@ const MAIN2=[
   desc:"The great oasis of the Karakum, ringed by walls and melon fields. Everything passes through Merv eventually, including, regrettably, you."},
  {name:'Nishapur',dist:1100,terr:'mountain',frac:.65,zh:'你沙不兒',
   desc:"Turquoise mines in the hills and poets in the taverns. Both produce material of variable quality."},
- {name:'Rey',dist:1400,terr:'steppe',frac:.72,zh:'剌夷',
+ {name:'Rey',dist:1400,terr:'settled',frac:.72,zh:'剌夷',
   desc:"An ancient city below the Alborz. The bazaar haggles in four languages, all of them at once."},
  {name:'Baghdad',dist:1500,terr:'settled',frac:.80,zh:'縛達',
   desc:"The Caliph al-Mansur's new Round City — founded months ago, still half scaffolding. Locals insist it will be the centre of the world. Locals everywhere say that, but here you almost believe it.",
@@ -212,8 +210,8 @@ const MAIN2=[
 const TERR_DESC={settled:'cultivated country',steppe:'open steppe',desert:'desert tracks',
  harsh:'deep desert — the worst of it',mountain:'high passes'};
 const SPEED_MOD={settled:1,steppe:1,desert:.85,harsh:.75,mountain:.6};
-const WATER_USE={settled:0,steppe:1,desert:1.8,harsh:2.2,mountain:1};
-const PACES={c:{n:'Leisurely',sp:.8,hp:+.4},s:{n:'Normal',sp:1,hp:-.2},g:{n:'Grueling',sp:1.3,hp:-1.1}};
+const WATER_USE={settled:0,steppe:0,desert:1.8,harsh:2.2,mountain:0}; // people & thirsty beasts drink only in the deep desert
+const PACES={c:{n:'Leisurely',sp:.8,hp:+.4},s:{n:'Normal',sp:1,hp:-.2},g:{n:'Grueling',sp:1.3,hp:-1.6}};
 const MONTHS=['third','fourth','fifth','sixth','seventh','eighth','ninth','tenth','eleventh','twelfth','first','second'];
 const NEPHEW={id:'nephew',name:'Little Tang',role:'your nephew, more enthusiasm than sense',kind:'companion',nephew:true,skills:{trade:0,cook:0,handle:0,hunt:1,fight:1}};
 const ROSTER=[
@@ -237,6 +235,7 @@ const RUMORS=[
  "The Caliph is building a perfectly round city on the Tigris. Madness. It will never amount to anything.",
  "Fill every skin before the deep desert. They say Taklamakan means 'you go in and you don't come out.' They say a lot of things. Fill the skins.",
  "With the rebellion, silk grows scarce. Western buyers will pay dearly this year.",
+ "Silk has grown scarce and dear of late; no one west of the passes seems to know quite why, but the wise lay in a stock and ask no questions.",
  "Glassware is a westerner's good — buy it cheap in Baghdad or Aleppo, sell it to the Romans, who like their own things best.",
  "Old hands cross the worst desert at a grueling pace. Fewer days of thirst, they say. More days of complaining, says Old Gao.",
  "A guard or two pays for itself the first time the steppe produces gentlemen with opinions about your silver.",
@@ -290,9 +289,9 @@ function newGame(name, chosenIds, nephewName, start){
     let chosen;
     if(west){ chosen=(chosenIds&&chosenIds.length)?chosenIds.slice(0,3).map(x=>(typeof x==='object')?x:CPL_ROSTER.find(r=>r.id===x)).filter(Boolean):[]; if(!chosen.length){ const pool=CPL_ROSTER.slice(); for(let i=0;i<3&&pool.length;i++) chosen.push(pool.splice(ri(pool.length),1)[0]); } }
     else chosen=(chosenIds&&chosenIds.length?chosenIds:['liqing','gao','pugu']).slice(0,3).map(x=>(typeof x==='object')?x:ROSTER.find(r=>r.id===x)).filter(Boolean);
-    const neph={...NEPHEW,skills:{...NEPHEW.skills},alive:true,kind:'companion',
+    const neph={...NEPHEW,skills:{...NEPHEW.skills},alive:true,kind:'companion',hp:100,
       name:(nephewName&&nephewName.trim())?nephewName.trim().slice(0,18):(west?'Little Theo':'Little Tang')};
-    party=[neph, ...chosen.map(c=>({...c,skills:{...c.skills},alive:true,kind:'companion'}))];
+    party=[neph, ...chosen.map(c=>({...c,skills:{...c.skills},alive:true,kind:'companion',hp:100}))];
     startSilver=900; startFood=60; startHerd= west ? {donkey:0,mule:3,horse:0,bactrian:0,dromedary:0,hybrid:0} : {donkey:0,mule:0,horse:0,bactrian:3,dromedary:0,hybrid:0};
   }
   S={name:name||'Merchant Wang', day:1, silver:startSilver, startSilver:startSilver, food:startFood, herd:startHerd, startHerdSnap:{...startHerd}, origin:(west?'west':'east'),
@@ -303,7 +302,8 @@ function newGame(name, chosenIds, nephewName, start){
      dealDays:0, returning:false, reachedCpl:false,
      banditFreq:1, banditMod:0, laps:0, dir:1, merit:0, meritPct:0, cityDay:{}, huntLuck:0, huntRisk:0, camelScare:0, priceLock:{}, seen:{}, runId:null};
   for(const g of GOODS){ S.goods[g.id]=0; S.basis[g.id]=0; S.lastBasis[g.id]=0; }
-  S.selfTrade = humble ? 2 : 0;   // a lone humble trader haggles for themselves
+  S.selfTrade = 0;                 // no general trade bonus any more
+  S.spec = humble ? (west?'wine':'tea') : null;   // ...but a humble trader is canny in one good
   S.lucky = humble;               // ... and is a touch luckier with mishaps
   S.water=waterMax();
   log(west
@@ -343,6 +343,9 @@ function skillSum(s){return livingParty().reduce((m,p)=>m+(p.skills[s]||0),0)}
 function bestAt(s){const a=livingParty().filter(p=>(p.skills[s]||0)>0); if(!a.length)return null; return a.reduce((b,p)=>(p.skills[s]>b.skills[s])?p:b);}
 // ---- season / passes ----
 function monthNum(){return ((Math.floor((S.day-1)/30)+2)%12)+1;} // game opens in the 3rd month
+function gameDate(){ const t=Date.UTC(762,2,17)+((S&&S.day?S.day:1)-1)*86400000; const dt=new Date(t); return {y:dt.getUTCFullYear(), m:dt.getUTCMonth()+1, d:dt.getUTCDate(), t}; } // 17 Mar 762 = the spring equinox
+function onOrAfter(y,mo,d){ return gameDate().t >= Date.UTC(y,mo-1,d); }
+function dateBetween(y1,mo1,d1,y2,mo2,d2){ const t=gameDate().t; return t>=Date.UTC(y1,mo1-1,d1) && t<=Date.UTC(y2,mo2-1,d2); }
 function passDanger(){ // 0 clear .. 1 deadly, by month
   const m=monthNum();
   return ({11:1,12:1,1:1,2:.7,10:.55,3:.3,9:.2}[m])||0;
@@ -449,6 +452,9 @@ function consumeDay(travelling, terrOverride){
   if(S.water<0){S.water=0; applyDeprivation('thirst',9);}
   if(travelling)S.hp+=PACES[S.pace].hp; else S.hp+=.5;
   S.hp=clamp(S.hp,0,100);
+  { const rec = travelling ? (S.pace==='g'?0.4:S.pace==='c'?2.2:1.1) : 2.4; for(const p of livingParty()){ const h=(p.hp==null?100:p.hp); if(h<100) p.hp=Math.min(100, h+rec); } } // members mend toward full; effective health is still capped at the party's
+  if(travelling){ const g=guardCount(); if(g>0){ const owe=g*wageRate(); if(S.silver>=owe){S.silver-=owe;} else { S.wageDebt=(S.wageDebt||0)+(owe-S.silver); S.silver=0; } } }
+  if(S.day>1095 && rnd()<0.0009){ const a=pick([['a creeping fever',8],['a bad fall',11],['the bloody flux',9],['a failing heart',13]]); S.hp-=a[1]; log("Three years and more on the road have worn you thin; "+a[0]+" lays you low for a time."); if(S.hp<=0){ S.cause=a[0].replace(/^a |^the /,''); die(); return; } }
   if(S.hp<=0)die();
 }
 function passDays(n){for(let i=0;i<n&&!S.dead;i++)consumeDay(false);}
@@ -594,15 +600,16 @@ function arrive(){
   S.idx+=dir; S.legKm=0; S.dealDays=0; S.dir=1; S.priceLock={}; // arriving resets to 'forward' for the city menu; fresh prices for the new market
   S.water=waterMax();
   const c=city();
+  { const prev=S.itin[S.idx-dir]; if(prev){ const lk=legPairKey(prev.name,c.name); S.legTraffic=S.legTraffic||{}; S.legTraffic[lk]=(S.legTraffic[lk]||0)+1; } }
   if(c && c.frac!=null && c.frac<=0.41) S.inChina=true;
   if(!S.cityDay)S.cityDay={};
   restockToNow(c.name);
   callInOnSettlers(c.name);
   log("You arrive at "+c.name+". Skins refilled at the wells.");
+  checkHistory(c);
   if(c.name==='Kashgar' && S.onceFlags.lostBeforeKashgar){ S.onceFlags.lostBeforeKashgar=false; log("In the Kashgar caravanserai, Vandak is conspicuously vague about exactly which route you took to get here. Old Gao studies the ceiling."); }
   if(c.name==='Constantinople' && !S.onceFlags.ot_egg){ S.onceFlags.ot_egg=true; S.pendingEvent=otCrewEvent(); }
   if(dir>0 && !S.returning && c.name===goalName()){ S.reachedCpl=true; growNephew(); S.screen='end'; return; }
-  if(dir>0 && S.returning && c.name===fork2Name() && !S.returnRouteChosen){ S.screen='routeReturn'; return; }
   if(dir>0 && S.returning && c.name===homeName()){ S.screen='home'; return; }
   maybeFrontier(c.name);
   S.screen='city';
@@ -630,10 +637,12 @@ function setOut(dir){
   const d=S.dir||1, c=city();
   if(cargoW()>cargoCap()){ log("The animals cannot carry all this cargo. Sell some goods or buy another beast before you set out."); S.screen='city'; render(); return; }
   if(d>0 && !S.returning && c.name===fork1Name() && !S.routeChosen){S.screen='route';render();return;}
-  S.screen='travel'; S.legKm=0;
+  if(d>0 && S.returning && c.name===fork2Name() && !S.returnRouteChosen){S.screen='routeReturn';render();return;}
+  if((S.wageDebt||0)>0){ const pay=Math.min(S.silver,S.wageDebt); S.silver-=pay; S.wageDebt-=pay; if(S.wageDebt>0){ const guards=S.party.filter(p=>p.alive&&p.kind==='guard'); const quit=guards.length; if(quit>0){ S.stiffed=S.stiffed||{}; S.stiffed[c.name]=(S.stiffed[c.name]||[]).concat(guards.map(g=>g.name)); S.party=S.party.filter(p=>!(p.alive&&p.kind==='guard')); S.hirePenalty=(S.hirePenalty||1)*Math.pow(1.25,quit); log(quit+" guard"+(quit>1?'s':'')+" you could not pay down tools and walk off in disgust. Word spreads; hiring will cost you more hereafter, and they will not have forgotten."); } S.wageDebt=0; } }
+  if(isWest() && !S.returning && c.name==='Constantinople' && !S.onceFlags.stChris){ S.onceFlags.stChris=true; S.pendingEvent=stChristopher(); }
+  S.pace='s'; S.screen='travel'; S.legKm=0;
   const t=nextCity();
   log("You set out from "+c.name+(d<0?" back toward ":" toward ")+t.name+" — "+fmtDist(legDist())+" of "+TERR_DESC[t.terr]+".");
-  const _gl=c.name+"->"+(t?t.name:"end"); S.legGraves=[]; S.legGraveShown=false; fetchLegGraves(_gl);
   startJourney(); // animate immediately — no separate staging step
 }
 function chooseRoute(r){
@@ -670,10 +679,14 @@ function casualty(kill){ // wound (false) or kill (true) a random living party m
   const lp=livingParty(); if(!lp.length)return null;
   const v=pick(lp);
   if(kill){v.alive=false;return v.name+' ('+v.role+')';}
+  v.hp=(v.hp==null?100:v.hp)-(18+ri(22));          // a real injury, tracked on the individual
+  if(v.hp<=0){ v.alive=false; return v.name+' ('+v.role+')'; }  // already hurt: this one finishes them
   return v.name;
 }
 function partyFight(){ return skillSum('fight'); }
-function combatStrength(){ return 1 + livingComps() + skillSum('fight'); } // each able body counts 1 (you + companions), plus blade-training // each member's combat skill, summed — guards carry most of it
+function mountedGuards(){ if(!S||!S.herd)return 0; const horses=S.herd.horse||0; if(horses<=0||guardCount()<=0)return 0; const surplus=cargoCap()-cargoW(); const spare=Math.min(horses, Math.floor(Math.max(0,surplus)/((ANIMALS.horse&&ANIMALS.horse.carry)||9))); return Math.min(spare, guardCount()); } // spare horses mount your guards: +1 each
+function healMembers(amt){ if(!S)return; for(const p of livingParty()){ if(p.hp!=null && p.hp<100) p.hp=Math.min(100,p.hp+amt); } }
+function combatStrength(){ return 1 + livingComps() + skillSum('fight') + mountedGuards(); } // each able body counts 1 (you + companions), plus blade-training // each member's combat skill, summed — guards carry most of it
 function sickTarget(){
   const lp=livingParty();
   return lp.length?pick(lp):null;
@@ -692,10 +705,10 @@ function buildEvent(terr){
   if(terr==='settled'){add(3,evInspect); add(3,evSogdian); add(2,evRebellion); add(2+(tollActive()?1:0),evCaravanserai); add(2,evCamel); add(2,evCholera);}
   if(terr==='settled' && S.goods){ const _t=S.goods.tea||0; if(_t>=10)add(2,evInspect); else if(_t>=1)add(1,evInspect); }
   add(3,evSick); add(2,evRoadDeal); add(2,evMonk);
-  if(S.legGraves&&S.legGraves.length&&!S.legGraveShown)add(3,evGraveMarker);
   // bandits: base presence by terrain, scaled by your reputation (pay them and word spreads; beat them and they avoid you)
-  const banditBase={desert:2,harsh:2,steppe:3}[terr]||0;
-  if(banditBase){ let bw=banditBase*(S.banditFreq||1); if(inContestedZone())bw*=1.6; add(Math.max(0,Math.round(bw)), evBandits); }
+  let banditBase={desert:2,harsh:2,steppe:3}[terr]||0;
+  if(banditBase===0 && inContestedZone()) banditBase=2; // a tense frontier draws raiders even over the passes
+  if(banditBase){ let bw=banditBase*(S.banditFreq||1); if(inContestedZone())bw*=1.6; if(S.banditVengeance && S.day<=S.banditVengeance)bw*=1.2; if(convoyValue()>10000)bw*=2; { const _lk=legPairKey(city().name,(nextCity()||{}).name||''); const _tf=(S.legTraffic&&S.legTraffic[_lk])||0; bw*=(1+0.05*_tf); } add(Math.max(0,Math.round(bw)), evBandits); }
   for(let i=0;i<8;i++){
     const fn=pick(pool);
     if(seraiActive()){ // recently rested & gathered road-news: more cautious, better informed
@@ -722,7 +735,7 @@ function evCaravanserai(){
   return {h:'CARAVANSERAI',t:"A mudbrick caravanserai, its courtyard loud with a dozen tongues and the smell of someone else's dinner. A bed, for once, that does not move."+warn,
   ch:[
    {l:'Pay for a night (6 s)',f(){ if(S.silver>=6){S.silver-=6;S.hp=clamp(S.hp+9,0,100);S.water=waterMax();S.serai=S.day+7;log('You sleep behind walls, refill the skins at the well, and trade road-news over tea: "'+pickRumor()+'" You leave the next morning rested and well-advised.');} else log("You can't spare the coin and bed down in the courtyard with the camels.");}},
-   {l:'Rest a few days for the road ahead to settle',f(){ const nightly=6; let d=3+ri(3); const afford=Math.floor(S.silver/nightly); if(afford<d)d=afford; if(d<=0){S.hp=clamp(S.hp+3,0,100);log("You cannot spare the coin for even one night under a roof; you bed down in the courtyard with the camels and move on at dawn.");return;} S.silver-=nightly*d; passDays(d); if(!S.dead){S.hp=clamp(S.hp+4*d,0,100);S.water=waterMax();S.serai=S.day+7;log("You wait out "+d+" days here at "+nightly+" s a night ("+(nightly*d)+" s in all), swapping road-news with every caravan that comes through and letting the worst of the way clear. You leave rested, the skins full, and as well-advised as anyone can be.");} }},
+   {l:'Rest a few days for the road ahead to settle',f(){ const nightly=6; let d=3+ri(3); const afford=Math.floor(S.silver/nightly); if(afford<d)d=afford; if(d<=0){S.hp=clamp(S.hp+3,0,100);log("You cannot spare the coin for even one night under a roof; you bed down in the courtyard with the camels and move on at dawn.");return;} S.silver-=nightly*d; passDays(d); if(!S.dead){S.hp=clamp(S.hp+4*d,0,100);S.water=waterMax();healMembers(7*d);S.serai=S.day+7;log("You wait out "+d+" days here at "+nightly+" s a night ("+(nightly*d)+" s in all), swapping road-news with every caravan that comes through and letting the worst of the way clear. You leave rested, the skins full, and as well-advised as anyone can be."); if(rnd()<Math.min(.85,.4*d)){ const e=evRoadDeal()||evSogdian(); if(e)S.pendingEvent=e; }} }},
    {l:'Camp outside, save the coin',f(){S.hp=clamp(S.hp+3,0,100);log("You camp by the gate. Cheaper, colder, and the gossip drifts out for free.");}},
   ]};
 }
@@ -762,7 +775,7 @@ function evBandits(){
   let bandits=3+ri(5)+(S.banditMod||0); if(seraiActive())bandits-=1; bandits=Math.max(1,bandits); // base roll 3..7, then ±1 per reputation / a recent rest; floor of 1, no ceiling
   const str=combatStrength();
   const odds = str>=bandits*2 ? 'You could scatter them' : str>=bandits ? 'It would be a near thing' : str>0 ? 'You are badly outmatched' : 'You have no one who can fight \u2014 this would be suicide';
-  return {h:'RIDERS',t:(bandits===1?"A lone horseman appears":"About "+bandits+" horsemen appear")+" on the ridgeline with the unhurried confidence of men who have done this before. Their leader admires your caravan loudly and demands a toll of "+demand+" silver. (Your fighting strength: "+str+". "+odds+".)",
+  return {h:'RIDERS',t:(bandits===1?"A lone horseman appears":"About "+bandits+" horsemen appear")+" on the ridgeline with the unhurried confidence of men who have done this before. Their leader admires your caravan loudly and demands a toll of "+demand+" silver. "+odds+".",
   ch:[
    {l:'Pay the "toll" ('+demand+' s)',f(){
      if(S.silver>=demand){ S.silver-=demand; banditRep(1.10,-1); log("You pay. The leader wishes you a safe journey with apparently genuine warmth."); }
@@ -773,7 +786,7 @@ function evBandits(){
        log(s); if(S.hp<=0){S.cause='a bandit\'s blade';die();}
      }
    }},
-   {l:'Stand and fight ('+str+' vs '+bandits+')',f(){
+   {l:'Stand and fight',f(){
      const margin=str-bandits;
      if(margin>=0){
        banditRep(0.90,1);
@@ -796,7 +809,7 @@ function evBandits(){
        log(s);
      }
    }},
-   {l:'Run for it',f(){ banditRep(1.0,0); const horsed=(S.herd&&S.herd.horse>0); const esc=horsed?.66:.42; const tossed=GOODS.some(g=>S.goods[g.id]>0)?loseRandomGoods(.12):null; if(rnd()<esc){log((horsed?"Your horses show their worth — you outrun the riders across the broken ground.":"You drive the caravan hard and lose them in the broken ground.")+(tossed?" You scatter "+tossed+" in your wake to slow them, and it serves.":""));S.hp-=5;} else {const lost1=(totalAnimals()>1)?loseAnimal():null;S.hp-=10; let s="They harry your flanks."+(tossed?" You throw down "+tossed+" to buy distance":"")+(lost1?(tossed?", and ":" ")+cap1(lost1)+" is cut loose in the scramble":""); if(rnd()<.2){const who=casualty(rnd()<.4);if(who)s+=((tossed||lost1)?" and ":" ")+who+(/\(/.test(who)?" is ridden down":" is hurt");} log(s+".");} }},
+   {l:'Run for it',f(){ banditRep(1.0,0); const horsed=(S.herd&&S.herd.horse>0); const esc=Math.min(.85, .42 + .055*((S.herd&&S.herd.horse)||0)); const tossed=GOODS.some(g=>S.goods[g.id]>0)?loseRandomGoods(.12):null; if(rnd()<esc){log((horsed?"Your horses show their worth — you outrun the riders across the broken ground.":"You drive the caravan hard and lose them in the broken ground.")+(tossed?" You scatter "+tossed+" in your wake to slow them, and it serves.":""));S.hp-=5;} else {const lost1=(totalAnimals()>1)?loseAnimal():null;S.hp-=10; let s="They harry your flanks."+(tossed?" You throw down "+tossed+" to buy distance":"")+(lost1?(tossed?", and ":" ")+cap1(lost1)+" is cut loose in the scramble":""); if(rnd()<.2){const who=casualty(rnd()<.4);if(who)s+=((tossed||lost1)?" and ":" ")+who+(/\(/.test(who)?" is ridden down":" is hurt");} log(s+".");} }},
   ]};
 }
 function evDryWell(){
@@ -835,7 +848,7 @@ function evLost(){
   if(kashAhead) S.onceFlags.lostBeforeKashgar=true;
   const line = kashAhead ? 'Say nothing of this in Kashgar' : 'Speak of this to no one, ever';
   return {h:'LOST',t:lostBlurb()+" Three days later you rejoin the true road from an unexpected direction.",
-  ch:[{l:line,f(){passDays(3);S.water=Math.max(0,S.water-8);log("Three days lost to navigation by committee.");}}]};
+  ch:[{l:line,f(){passDays(3);S.water=Math.max(0,S.water-8);log(livingComps()?"Three days lost to navigation by committee.":"Three days lost, and no one else to blame.");}}]};
 }
 function evSick(){
   if(!cooled('fever',30))return null; if(springActive()&&rnd()<0.5)return null; if(rnd()<0.4)return null; markEv('fever');
@@ -847,7 +860,7 @@ function evSick(){
   return {h:'SICKNESS',t:c.name+(pdesc(c)===c.name?"":", "+pdesc(c))+", has come down with "+(severe?'a raging fever':'dysentery')+". Some things, it turns out, are universal."+(cook?" Your physician sets to work.":""),
   ch:[
    {l:'Halt 3 days to nurse '+c.name,f(){passDays(3); const die=Math.max(.02,(severe?.20:.06)-.05*cook); if(rnd()<die){c.alive=false;log(c.name+" worsens despite everything, and dies on the third night. You bury them at dawn.");} else log(c.name+" recovers, weak but alive, and swears off the local water.");}},
-   {l:'Press on — no time',f(){ const risk=Math.max(.15,(severe?.6:.4)-.1*cook); if(rnd()<risk){c.alive=false;S.hp-=10;log(c.name+" has died — carried off by fever on the road. You divide "+pron(c).pp+" duties in silence.");if(S.hp<=0){S.cause='fever';die();}} else {log(c.name+" rides slumped over a camel for days, then rallies"+(cook?", helped by warm food and care":"")+". "+cap1(pron(c).s)+" "+(pron(c).s==='they'?'do':'does')+" not thank you.");} }},
+   {l:'Press on — no time',f(){ const risk=Math.max(.15,(severe?.6:.4)-.1*cook); if(rnd()<risk){c.alive=false;S.hp-=10;log(c.name+" has died — carried off by fever on the road. You divide "+pron(c).pp+" duties in silence.");if(S.hp<=0){S.cause='fever';die();}} else {c.hp=Math.max(1,(c.hp==null?100:c.hp)-25);log(c.name+" rides slumped over a camel for days, then rallies"+(cook?", helped by warm food and care":"")+". "+cap1(pron(c).s)+" "+(pron(c).s==='they'?'do':'does')+" not thank you.");} }},
   ]};
 }
 function evCamel(){
@@ -917,16 +930,16 @@ function evSnowedIn(){
   const d=passDanger();
   return {h:'SNOWBOUND', t:"The pass is worse than the season promised — drifts to the chest, the cairn-line gone, the wind a living thing. This is no afternoon squall.",
   ch:[
-   {l:'Dig in and wait it out',f(){ const days=4+ri(6); passDays(days); S.hp-=8; if(!S.dead){S.water=waterMax();log("You wait "+days+" frozen days for a break in the weather, melting snow for water as you go. Food runs low; tempers lower.");} }},
+   {l:'Dig in and wait it out',f(){ const days=4+ri(6); passDays(days); S.hp-=8; if(!S.dead){S.water=waterMax(); let m="You wait "+days+" frozen days for a break in the weather, melting snow for water and stamping the feeling back into your feet. Everyone is cold and short of temper."; if(S.food < foodNeed()*days){ m+=" Food runs low, and tempers lower with it."; } else if(livingComps()>0){ const who=someoneName(); m += (rnd()<.5)?(" "+who+" builds a frankly excellent snowman to pass the time."):(" A snowball fight breaks out and briefly thaws the mood; "+who+" wins, and is insufferable about it."); } log(m);} }},
    {l:'Force the pass now',f(){ S.hp-=22; let s=""; if(rnd()<d*.5){ const who=casualty(true); if(who){s=who+" is lost to the cold on the high traverse. ";} } if(rnd()<.4&&totalAnimals()>1){ s+=cap1(loseAnimal())+" and its load vanish into a drift. "; } if(S.hp<=0){S.cause='the cold';die();s+="And then the cold takes you, too.";} else { s+="You come down the far side fewer than you went up, and changed."; } if(!S.dead)S.water=waterMax(); log(s); }},
   ].concat((S.dir||1)>0?[{l:'Turn back, and wait out the season below',f(){ const dd=S.dir||1, x=S.legKm; S.idx+=dd; S.dir=-dd; S.legKm=Math.max(0,legDist()-x); const back=nextCity(); log("You will not die in this drift. You turn the caravan and retrace your steps toward "+(back?back.name:'the last town')+", to wait out the worst of the winter under a roof."); }}]:[])};
 }
 function evInspect(){
   const fee=Math.max(5,Math.round(S.silver*.05));
-  return {h:'OFFICIALS',t:"A checkpoint. Officials examine your guosuo travel pass with the slow relish of men paid by the hour, and suggest a 'documentation gift' of "+fee+" silver.",
+  return {h:'OFFICIALS',t:"A checkpoint. Officials examine your "+((nextCity()||city()).frac<0.45?"guosuo travel pass":"travel papers")+" with the slow relish of men paid by the hour, and suggest a 'documentation gift' of "+fee+" silver.",
   ch:[
    {l:'Offer the gift ('+fee+' s)',f(){ if(S.silver>=fee){ S.silver-=fee; log("Stamps are applied with sudden enthusiasm. You are waved through."); } else { S.silver=0; passDays(1+ri(2)); log("You haven't the silver they can smell on you. Affronted, they turn out every pack, pocket what little you have, and hold you a day or two out of spite before waving you on."); } }},
-   {l:'Stand on the letter of the law',f(){ if((S.goods.tea||0)>0){ S.goods.tea--; if(S.goods.tea<=0)S.basis.tea=0; passDays(2); log("They take a sudden, intense interest in your tea — 'confiscate' a brick of it as evidence of nothing in particular, and hold you two days while the paperwork is invented."); } else if(rnd()<.5){passDays(2);log("Two days of magnificent bureaucratic theatre. Your papers were in order the entire time.");} else log("The senior official, impressed or bored, waves you through unbribed. A story no one will believe.");}},
+   {l:'Stand on the letter of the law',f(){ S.banditVengeance=S.day+30; if((S.goods.tea||0)>0){ S.goods.tea--; if(S.goods.tea<=0)S.basis.tea=0; passDays(2); log("They take a sudden, intense interest in your tea — 'confiscate' a brick of it as evidence of nothing in particular, and hold you two days while the paperwork is invented."); } else if(rnd()<.5){passDays(2);log("Two days of magnificent bureaucratic theatre. Your papers were in order the entire time.");} else log("The senior official, impressed or bored, waves you through unbribed. A story no one will believe.");}},
   ]};
 }
 function evRebellion(){
@@ -967,7 +980,7 @@ function evAltitude(){
 function evHotspring(){
   return {h:'HOT SPRINGS',t:"Steam rising from rocks beside the trail: a hot spring, mineral-green and perfect.",
   ch:[
-   {l:'Soak the day away (1 day)',f(){passDays(1); if(!S.dead){S.hp=clamp(S.hp+12,0,100);S.springBuff=S.day+14;const who=livingComps()?someoneName()+" refuses to get out and has to be negotiated with":"you all but have to be dragged out at dusk";log("An afternoon and an evening in the hot water; aches dissolve, the day slips away, and "+who+".");}}},
+   {l:'Soak the day away (1 day)',f(){passDays(1); if(!S.dead){S.hp=clamp(S.hp+12,0,100);S.water=waterMax();healMembers(16);S.springBuff=S.day+14;const who=livingComps()?someoneName()+" refuses to get out and has to be negotiated with":"you all but have to be dragged out at dusk";log("An afternoon and an evening in the hot water; aches dissolve, the day slips away, and "+who+".");}}},
    {l:'Press on — no time to bathe',f(){log("You eye the steam with longing and keep walking. The road does not wait; today, neither do you.");}},
   ]};
 }
@@ -993,7 +1006,7 @@ function evFord(){
   return {h:'SWOLLEN RIVER',t:"The ford is running fast and brown"+(melt?" with snowmelt off the mountains":"")+". The far bank looks exactly as far away as it is.",
   ch:[
    {l:'Ford it now',f(){ S.water=waterMax(); const horsed=(S.herd&&S.herd.horse>0); const boat=livingParty().some(p=>p.riverwise); const ff=fordFail*(horsed?.7:1)*(boat?.55:1); if(rnd()>ff){log("Wet to the waist, swearing in three languages, but across."+(boat?" Your old boatman reads the current like a familiar face and picks the line.":(horsed?" The horses swim it strongly.":"")));} else { S.hp-=8; let s="A pack-rope snaps midstream. The river takes "+loseRandomGoods(.15)+"."; if(rnd()<(melt?.18:.08)){ const who=casualty(rnd()<.4); if(who) s+=" "+who+(/\(/.test(who)?" is swept away and drowned.":" is dragged under but hauled out, half-drowned."); } if(rnd()<.15&&totalAnimals()>1){ s+=" "+cap1(loseAnimal())+" is lost to the current.";} log(s); if(S.hp<=0){S.cause='drowning';die();} } }},
-   {l:'Wait for it to drop',f(){ const days=melt? 2+ri(5) : 1+ri(3); passDays(days); if(!S.dead){ S.water=waterMax(); const terr=(nextCity()?nextCity().terr:'steppe'); const hmsg=doHunt(terr,false); log("You wait it out — "+days+" day"+(days>1?'s':'')+" — and cross when the water falls. The high water draws game to drink, so the party hunts the bank while you wait: "+hmsg); } }},
+   {l:'Wait for it to drop',f(){ const days=melt? 2+ri(5) : 1+ri(3); passDays(days); if(!S.dead){ S.water=waterMax(); const terr=(nextCity()?nextCity().terr:'steppe'); const hmsg=doHunt(terr,false); log("You wait it out — "+days+" day"+(days>1?'s':'')+" — and cross when the water falls. You pass the time by hunting: "+hmsg); } }},
   ]};
 }
 
@@ -1006,7 +1019,7 @@ function addGoods(gid,qty,unitCost){
 }
 function buy(gid,n){
   const g=GOODS.find(x=>x.id===gid), c=city(), mp=price(g,c);
-  const hg=haggler(gid), hb=hg?hg.b:0;
+  const hg=haggler(gid); let hb=hg?hg.b:0; if(S.spec===gid)hb=Math.max(hb,0.12);
   if(!S.priceLock)S.priceLock={};
   const p = (S.priceLock[gid]!=null) ? Math.max(1,Math.round(S.priceLock[gid])) : Math.max(1,Math.round(mp*(1-tradeFactor()-hb)));
   const avail=S.stock[c.name][gid];
@@ -1026,7 +1039,7 @@ function sell(gid,n){
   if(q<=0){render();return;}
   // market saturation: normal lots sell fine; only a flood past local appetite is discounted
   const sat=Math.min(.5, Math.max(0, (q - STOCKBASE[gid]) / (STOCKBASE[gid]*6)));
-  const hg=haggler(gid), hb=hg?hg.b:0;
+  const hg=haggler(gid); let hb=hg?hg.b:0; if(S.spec===gid)hb=Math.max(hb,0.12);
   if(!S.priceLock)S.priceLock={};
   let base;
   if(S.priceLock[gid]!=null){ base=S.priceLock[gid]; }
@@ -1042,7 +1055,24 @@ function buyCamel(){ const p=camelPrice(); if(S.silver>=p){S.silver-=p;S.camels+
 function sellCamel(){ if(S.camels<=1){log("Your last camel is not for sale, unless you intend to carry the silk yourself.");render();return;}
   const p=Math.round(camelPrice()*.85); S.camels--; S.silver+=p; S.water=Math.min(S.water,waterMax());
   log("You sell a camel for "+p+" silver. It leaves without looking back, which is more than you'd do."); render(); }
-function hireGuard(){ if(S.silver>=40){S.silver-=40; const used=S.party.filter(p=>p.kind==='guard').length; S.party.push({name:GUARD_NAMES[used%GUARD_NAMES.length],role:'a hired guard',kind:'guard',alive:true,skills:{...pick(GUARD_SKILLS)}}); log("You hire "+S.party[S.party.length-1].name+", a guard with reassuring scars.");}else log("Guards cost 40 silver up front."); render(); }
+function wageRate(){ return 1 + Math.floor(convoyValue()/10000); } // 1 s/day, +1 per 10,000 s of convoy value
+function guardCost(){ return Math.round(40*Math.pow(1.1, guardCount())*(S.hirePenalty||1)); } // +10% per guard already kept; more if you've stiffed guards
+function guardName(){ const f=city()?city().frac:0.5; const bank = f<0.45?['Wei','Bao','Shan','Fei','Tieh','Jun'] : f<0.66?['Tarkan','Esen','Toghrul','Aybek','Qutuz','Bumin'] : f<0.85?['Roshan','Bahram','Sohrab','Dariush','Kaveh','Farrokh'] : ['Aspar','Tervas','Komes','Doukas','Bardanes','Petzeas']; const used=new Set(S.party.map(p=>p.name)); return bank.find(n=>!used.has(n)) || (pick(bank)+' the Younger'); }
+function hireGuard(){ const cn=city().name; S.released=S.released||{}; const pool=S.released[cn]||[]; const cost0=guardCost();
+  if(pool.length){ const r=pool[0]; const diff=Math.max(0, cost0-(r.deposit||0)); if(S.silver>=diff){ S.silver-=diff; pool.shift(); S.party.push({name:r.name,role:'a hired guard',kind:'guard',alive:true,hp:r.hp||100,deposit:cost0,skills:r.skills||{...pick(GUARD_SKILLS)}}); log("You take "+r.name+" back on — he has had your deposit already, so "+diff+" silver squares it."); } else log(r.name+" will sign on again for "+diff+" silver; you can't meet it just now."); render(); return; }
+  const cost=cost0; if(S.silver>=cost){ S.silver-=cost; S.party.push({name:guardName(),role:'a hired guard',kind:'guard',alive:true,hp:100,deposit:cost,skills:{...pick(GUARD_SKILLS)}}); log("You take on "+S.party[S.party.length-1].name+" for "+cost+" silver up front — a guard with reassuring scars."); } else log("That guard wants "+cost+" silver up front; you can't meet it."); render(); }
+function releaseGuard(idx){ const guards=S.party.filter(p=>p.alive&&p.kind==='guard'); const g=guards[idx]; if(!g)return; S.party=S.party.filter(p=>p!==g); const cn=city().name; S.released=S.released||{}; (S.released[cn]=S.released[cn]||[]).push({name:g.name,deposit:g.deposit||0,hp:g.hp||100,skills:g.skills}); log("You pay off "+g.name+" and release him in "+cn+"; he'd sign on again cheaply if you pass back through."); render(); }
+function openHire(){ if(!S||S.screen!=='city')return; S.screen='hire'; render(); }
+function renderHire(m){
+  const c=city(); const guards=S.party.filter(p=>p.alive&&p.kind==='guard'); const wr=wageRate();
+  const rows = guards.length ? guards.map((g,i)=>'<p style="margin:5px 0"><b>'+g.name+'</b> <span class="sub">— hired guard · '+wageRate()+' s/day</span> <button class="tiny" onclick="releaseGuard('+i+')">Release</button></p>').join('') : '<p class="sub">You keep no hired guards.</p>';
+  m.innerHTML='<h2>Guards <span class="sub">· '+cityLabel(c)+'</span></h2>'+
+   '<p class="sub">Hired guards take a deposit up front and <b>'+wr+' s each per day</b> on the road — the deposit is what it would cost to send them home from the far end. The richer your convoy, the more they charge (a fat caravan is a tempting one to rob, or to abandon). Companions who joined for love of the road draw no wage. You can only take on or release guards in a town.</p>'+
+   '<div class="panel">'+rows+'</div>'+
+   '<div style="margin-top:8px"><button class="seal" '+(S.silver<guardCost()?'disabled':'')+' onclick="hireGuard()">Hire a guard ('+guardCost()+' s)</button> <button onclick="S.screen=\'city\';render()">Back to the bazaar</button></div>'+
+   (((S.hirePenalty||1)>1)?'<p class="red sub" style="margin-top:6px">Your name is poor among fighting men — you have stiffed guards before — and hiring now costs '+Math.round(((S.hirePenalty||1)-1)*100)+'% more.</p>':'')+
+   ((S.wageDebt||0)>0?'<p class="red sub">You owe '+Math.round(S.wageDebt)+' s in back-pay; settle it before you leave town, or your guards will walk.</p>':'');
+}
 function buyFood(){
   if(S.silver<10){log("Not enough silver for provisions.");render();return;}
   if(cargoW()+Math.round(30*FOOD_WT)>cargoCap()){log("No room left on the animals for provisions — buy a beast or sell goods first.");render();return;}
@@ -1058,13 +1088,13 @@ function waitDays(n){ // pass days in a city; stop early if provisions run out s
 }
 function restCity(){
   const d=waitDays(3);
-  if(!S.dead && d>0){S.hp=clamp(S.hp+6*d,0,100);S.water=waterMax();S.dealDays+=d;restock(city().name,d);S.cityDay[city().name]=S.day;log("Rest, repairs, and proper cooking."+(skillMax('trade')>0?" Your trader works the bazaar for better prices.":""));}
+  if(!S.dead && d>0){S.hp=clamp(S.hp+6*d,0,100);S.water=waterMax();healMembers(9*d);S.dealDays+=d;restock(city().name,d);S.cityDay[city().name]=S.day;log("Rest, repairs, and proper cooking."+(skillMax('trade')>0?" Your trader works the bazaar for better prices.":""));}
   if(!S.dead && d>=3 && rnd()<.5) maybeCityEvent();
   render();
 }
 function waitMonth(){
   const d=waitDays(30);
-  if(!S.dead && d>0){S.hp=clamp(S.hp+Math.min(22,d),0,100);S.water=waterMax();S.dealDays+=d;restock(city().name,d);S.cityDay[city().name]=S.day; if(d>=30)S.priceLock={};
+  if(!S.dead && d>0){S.hp=clamp(S.hp+Math.min(22,d),0,100);S.water=waterMax();healMembers(Math.min(45,2*d));S.dealDays+=d;restock(city().name,d);S.cityDay[city().name]=S.day; if(d>=30)S.priceLock={};
     log(monthPassLog(d));}
   if(!S.dead && d>=6 && rnd()<.55) maybeCityEvent();
   render();
@@ -1078,7 +1108,7 @@ function cityEvent(){
   const pool=[];
   const add=(w,f)=>{for(let i=0;i<w;i++)pool.push(f)};
   const nephew=livingParty().find(p=>p.nephew);
-  if(nephew && cooled('neph',40)) add(3,()=>evNephew(nephew));
+  if(nephew && cooled('neph',60)) add(2,()=>evNephew(nephew));
   if(guardCount()>0 && cooled('brawl',35)) add(2,evBrawl);
   if(cooled('cutpurse',45)) add(2,evCutpurse);
   if(cooled('feastcity',30)) add(2,evCityFeast);
@@ -1182,23 +1212,37 @@ function deathFlavor(){
   return pick(far?home:out);
 }
 function rank(v){
-  if(v<800)  return ["Footsore Peddler","You arrived. Historians will not mention it, but you arrived."];
-  if(v<900)  return ["Prince of Donkeys","A bold venture. The donkeys have opinions about the outcome."];
-  if(v<1001) return ["King of the Donkeys","Crowned by your beasts, who are also your creditors."];
-  if(v<2501) return ["Bazaar Enthusiast","You browsed well. A few more runs and you may graduate to actual commerce."];
-  if(v<5001) return ["One of the Three Muleteers","All for one, and all for slightly better prices at the next oasis."];
-  if(v<10001)return ["Respectable Merchant","A solid venture. The ledger closes with quiet satisfaction."];
-  if(v<15001)return ["Caravan Master","Sogdians nod when you pass. There is no higher review."];
-  if(v<20001)return ["Daimon of the Caravan","Your companions say you have a gift. Your accountant says you have leverage. Both are correct."];
-  if(v<25000)return ["Guildmaster of the Flowing Spice","You set the price. Others accept it, or they walk."];
-  if(v<30000)return ["Regional Vice President of the Ancient World","The title is self-appointed but no one disputes it, not to your face."];
-  if(v<35000)return ["Mercantile Magnate","Your name precedes you. So does your credit rating."];
-  if(v<40000)return ["Caravan Tycoon","You have not merely traded the road — you have cornered significant portions of it."];
-  if(v<45000)return ["Prince of Profit","The numbers you deal in have ceased to feel real, which is fine, because they are very real."];
-  if(v<50000)return ["King of the Trade Routes","Rulers consult you. You consult your ledger. The ledger wins."];
-  if(v<55000)return ["Merchant Emperor","Dynasties have less liquid capital than you are carrying. Dynasties are aware of this."];
-  if(v<60000)return ["Legend of the Silk Road","Your name outlives the route itself. Children three empires apart are told you were probably exaggerated."];
-  return ["Grand Negus","You have the lobes for it, and apparently the camels. The Rules of Acquisition are yours to write."];
+  const T=[
+   [100,'Destitute Beggar',"Even the road's dust outranks your purse."],
+   [500,'Homeless Wanderer',"You've seen the world; it declined to pay."],
+   [1000,'Unintentional Non-Profit Director',"Every venture a charity, mostly to your creditors."],
+   [2000,'Footsore Peddler',"You arrived. The ledger, barely."],
+   [3000,'Expense Report Jockey',"Technically a profit, if you don't count the years."],
+   [4000,'Merchant of the Sorrowful Counting-house',"You tilt at prices as at windmills; the windmills usually win."],
+   [5000,'Musk Mule',"You smell of money. Faintly. Mostly of mule."],
+   [8000,'Prince of Donkeys',"A modest realm, loyal and loud."],
+   [12000,'King of the Donkeys',"Uneasy lies the head that brays the crown."],
+   [15000,'Bazaar Enthusiast',"Someone said you have bazaar hobbies. You'll take it… or did they mean bizarre?"],
+   [20000,'One of the “Three Muleteers”',"All for one pack-load, and one pack-load for all."],
+   [25000,'Ace Camel Pilot',"Tom Cruise will play you in the adaptation; the sunglasses are not period-appropriate."],
+   [30000,'Respectable Merchant',"Sogdians nod when you pass. There is no higher review."],
+   [35000,'Caravan Master',"The drovers stopped rolling their eyes where you can see."],
+   [40000,'Daimon of the Caravan',"They sneer ‘ferengi’ at you — but in half the tongues of the road that word just means ‘foreigner,’ and you have made it a rank."],
+   [45000,'Trader Baron',"‘Robber’ is such an ugly word; you prefer ‘aggressive logistics.’"],
+   [50000,'Caravan Tycoon',"You could buy a small oasis. You're thinking about it."],
+   [55000,'Caravan Grandmaster',"Every move three towns ahead, every price already yours."],
+   [60000,'Guildmaster of the Flowing Spice',"The spice must flow. It does — through you, at a markup."],
+   [65000,'Regional Vice President of the Ancient World',"Now overseeing synergies across the Tang–Abbasid corridor."],
+   [70000,'Senior Partner of the Firm Grip',"They shake your hand and count their fingers after."],
+   [75000,'Doge of Coins',"A certain musk of efficiency — just don't go mad and rename the Silk Road ‘Y.’"],
+   [80000,'Prince of Profit',"Born to margins, crowned in coin."],
+   [90000,'King of the Trade Routes',"Every road leads to you, and pays a toll on the way."],
+   [100000,'Great Khan of Commerce',"The steppe has khans; the ledger has you."],
+   [110000,'Merchant Emperor',"An empire with no army but the abacus, and it never loses."],
+   [120000,'Legend of the Silk Road',"Children three empires apart are told you were probably exaggerated."]
+  ];
+  for(const e of T){ if(v<e[0]) return [e[1],e[2]]; }
+  return ['Grand Negus',"The Rules of Acquisition are yours to write."];
 }
 function pickRumor(){
   if(rnd()<.45 && nextCity()){
@@ -1210,94 +1254,45 @@ function pickRumor(){
     if(cheap) return c.name+" is the place to buy "+cheap.n.toLowerCase()+" cheap, if you've the camels for it.";
   }
   const here=city()?city().frac:0;
-  const cn=city()?city().name:'';
-  if((cn==='Khotan'||cn==='Miran'||cn==='Yarkand')&&rnd()<.25)
-    return "A fragrant man in the corner is muttering about cornering the musk market. Says his name is Elon. Says he will be the richest man in the world. The other merchants seem unconvinced.";
-  if(cn==='Osh'&&rnd()<.3)
-    return "An old herbalist holds court near the fire, rhapsodising about the medicinal properties of the local poppies. \"But the Silk Road,\" he adds firmly, \"would never traffic in drugs.\" A long pause. Nobody laughs.";
-  if(cn==='Iconium'&&rnd()<.3)
-    return "They say there is a woman in the west who wants to build a trade network connecting every market in the known world. An amazon, they call her. The merchants here think it will never work. The merchants here are often wrong.";
-  const pool=RUMORS.filter(r=> !(here>.6 && /rebellion|silk grows scarce|Yangzhou|Talas|Onion/i.test(r)) );
+  const pool=RUMORS.filter(r=> !(here>=.55 && /rebellion|silk grows scarce|Yangzhou|Talas|Onion/i.test(r)) );
   return pick(pool.length?pool:RUMORS);
 }
-// ---- Supabase leaderboard & grave markers ----
-// SUPA_URL and SUPA_KEY must be defined at the top of this script.
+// ---- persistent leaderboard ----
 let LEADERBOARD=null;
-async function supaFetch(path,opts={}){
-  if(typeof SUPA_URL==="undefined"||!SUPA_URL||SUPA_URL.startsWith("YOUR"))return null;
-  try{
-    const headers={"apikey":SUPA_KEY,"Authorization":"Bearer "+SUPA_KEY,"Content-Type":"application/json",...(opts.headers||{})};
-    const r=await fetch(SUPA_URL+path,{...opts,headers});
-    if(!r.ok)return null;
-    const txt=await r.text();return txt?JSON.parse(txt):null;
-  }catch(e){return null;}
-}
+const STORE = (typeof window!=='undefined' && window.storage && window.storage.get)
+  ? window.storage
+  : { get:(k)=>{ try{ const v=localStorage.getItem(k); return Promise.resolve(v!=null?{value:v}:null); }catch(e){ return Promise.resolve(null);} },
+      set:(k,v)=>{ try{ localStorage.setItem(k,v); return Promise.resolve(true);}catch(e){ return Promise.reject(e);} } };
 async function loadBoard(){
   if(LEADERBOARD)return LEADERBOARD;
-  const rows=await supaFetch("/rest/v1/Leaderboard?select=*&order=score.desc&limit=20");
-  LEADERBOARD=rows||[];
+  try{ const r=await STORE.get('silkroad_scores'); LEADERBOARD=r&&r.value?JSON.parse(r.value):[]; }
+  catch(e){ LEADERBOARD=[]; }
   return LEADERBOARD;
 }
 async function saveScore(entry){
-  const {runId,...row}=entry;
-  await supaFetch("/rest/v1/Leaderboard",{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify(row)});
-  LEADERBOARD=null;
-  if($("board"))loadBoard().then(()=>renderBoardInto($("board")));
-}
-async function saveGrave(grave){
-  const leg=grave.leg;
-  const existing=await supaFetch("/rest/v1/graves?select=id,score&leg=eq."+encodeURIComponent(leg)+"&order=score.asc&limit=3")||[];
-  if(existing.length<3){
-    await supaFetch("/rest/v1/graves",{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify(grave)});
-  } else if(grave.score>existing[0].score){
-    await supaFetch("/rest/v1/graves?id=eq."+existing[0].id,{method:"DELETE"});
-    await supaFetch("/rest/v1/graves",{method:"POST",headers:{"Prefer":"return=minimal"},body:JSON.stringify(grave)});
-  }
-}
-async function fetchLegGraves(leg){
-  const rows=await supaFetch("/rest/v1/graves?select=*&leg=eq."+encodeURIComponent(leg)+"&order=score.desc")||[];
-  S.legGraves=rows; S.legGraveShown=false;
-}
-function evGraveMarker(){
-  if(!S.legGraves||!S.legGraves.length||S.legGraveShown)return null;
-  S.legGraveShown=true;
-  const g=pick(S.legGraves);
-  const nc=nextCity(); const terr=nc?nc.terr:"settled";
-  const isSea=(S.screen==="sailing");
-  const isDesert=(terr==="desert"||terr==="harsh");
-  const homeward=g.returning?" — homeward bound":"";
-  let h,t;
-  if(isSea){
-    h="THE EPHESUS MEMORIAL";
-    t="Carved into stone at the harbour chapel in Ephesus: \""+g.name+", lost to the waves on day "+g.day+homeward+". "+g.cause+".\"";
-  } else if(isDesert){
-    h="BLEACHED BONES IN THE SAND";
-    t="Beside the track: camel bones scoured white by wind and years, and a small cairn of stones. Scratched on a pot-shard: \""+g.name+", "+g.cause+", day "+g.day+homeward+". \"";
-  } else {
-    h="A GRAVE MARKER";
-    t="A stone marker by the road, worn but legible: \"Here lies "+g.name+", "+g.cause+", day "+g.day+homeward+".\"";
-  }
-  return {h,t,ch:[{l:"Lay a stone on the cairn and press on",f(){log("You add a stone and move on. The road does not pause for the dead, but you do, briefly.");}}]};
+  try{
+    const board=await loadBoard();
+    const i=board.findIndex(e=>e.runId && e.runId===entry.runId);
+    if(i>=0) board[i]=entry; else board.push(entry); // a finished round trip updates that run's line
+    board.sort((a,b)=>b.score-a.score);
+    LEADERBOARD=board.slice(0,12);
+    await STORE.set('silkroad_scores', JSON.stringify(LEADERBOARD));
+  }catch(e){ if(LEADERBOARD){const i=LEADERBOARD.findIndex(e=>e.runId&&e.runId===entry.runId); if(i>=0)LEADERBOARD[i]=entry; else LEADERBOARD.push(entry); LEADERBOARD.sort((a,b)=>b.score-a.score);LEADERBOARD=LEADERBOARD.slice(0,12);} }
+  if($('board')) renderBoardInto($('board'));
 }
 function recordRun(outcome){
-  if(!S.runId)S.runId="r"+Date.now()+Math.floor(rnd()*1000);
+  if(!S.runId) S.runId = 'r'+Date.now()+Math.floor(rnd()*1000);
   const c=S.itin[S.idx]||S.itin[S.itin.length-1];
-  const hv=(typeof herdValue==="function"?herdValue(c):0);
-  const worth=Math.round(S.silver+GOODS.reduce((a,g)=>a+S.goods[g.id]*price(g,c),0)+hv);
-  saveScore({name:S.name,score:worth,days:S.day-1,outcome,route:S.route?(S.route==="n"?"N":"S"):"-"});
-  if(S.dead){
-    const ci=city(),nc=nextCity();
-    const leg=ci&&nc?ci.name+"->"+nc.name:ci?ci.name+"->[end]":"unknown";
-    const terr=nc?nc.terr:(S.screen==="sailing"?"sea":"settled");
-    saveGrave({name:S.name,cause:S.cause||"exhaustion",day:S.day-1,leg,score:worth,returning:!!S.returning,terrain:terr});
-  }
+  const worth=Math.round(S.silver + GOODS.reduce((a,g)=>a+S.goods[g.id]*price(g,c),0) + (typeof herdValue==='function'?herdValue(c):0));
+  saveScore({runId:S.runId, name:S.name, score:worth, days:S.day-1, outcome, route:S.route?(S.route==='n'?'N':'S'):'-', mode:((S.startSilver||900)<200?'donkey':'caravan'), version:VERSION, when:Date.now()});
 }
 function renderBoardInto(el){
   const b=LEADERBOARD||[];
-  if(!b.length){el.innerHTML="<p class=\"sub\">No ventures recorded yet. Be the first name in the ledger.</p>";return;}
-  el.innerHTML="<table><tr><th>#</th><th>Merchant</th><th style=\"text-align:right\">Estate</th><th style=\"text-align:right\">Days</th><th>Fate</th></tr>"+
-    b.map((e,i)=>"<tr><td>"+(i+1)+"</td><td>"+e.name+"</td><td class=\"num gold\">"+e.score+"</td><td class=\"num\">"+(e.days||"—")+"</td><td class=\"sub\">"+e.outcome+"</td></tr>").join("")+"</table>";
+  if(!b.length){ el.innerHTML='<p class="sub">No ventures recorded yet. Be the first name in the ledger.</p>'; return; }
+  el.innerHTML='<table><tr><th>#</th><th>Merchant</th><th style="text-align:right">Estate</th><th style="text-align:right">Days</th><th>Fate</th></tr>'+
+    b.map((e,i)=>'<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td class="num gold">'+e.score+'</td><td class="num">'+(e.days||'—')+'</td><td class="sub">'+e.outcome+'</td></tr>').join('')+'</table>';
 }
+
 /* ============ v0.8.0 ADDITIONS ============ */
 function cityLabel(c){ return c?c.name:''; }
 function zhSpan(c){ return (c && c.zh && (!isWest() || S.inChina)) ? '<span class="zh">'+c.zh+'</span>' : ''; }
@@ -1315,7 +1310,8 @@ function restockToNow(name){
 function callInOnSettlers(name){
   for(const p of S.party){
     if(p.married && p.marriedAt===name){
-      log("Passing back through "+name+", you call in on "+p.name+" — stouter now, settled, and the very picture of married respectability, with a share in his father-in-law's trade. He sends his aunt his love and a bolt of good silk, and you are quietly relieved you never had to bury him.");
+      if(p.nephew){ log("Passing back through "+name+", you call in on your nephew "+p.name+" — and find him, astonishingly, respectable: a wife, a paunch, a share in the father-in-law's trade, and a small "+p.name+" the Younger already underfoot. He greets you the way one greets a fondly-remembered storm, presses good silk on you, and asks after his mother. You leave faintly stunned that the boy turned out at all."); }
+      else log("Passing back through "+name+", you call in on "+p.name+" — stouter now, settled, and the very picture of married respectability, with a share in his father-in-law's trade. He sends his aunt his love and a bolt of good silk, and you are quietly relieved you never had to bury him.");
     }
   }
 }
@@ -1327,7 +1323,7 @@ const TIBET_FR={
      paid:"They take their toll and wave you on into the contested oases, where the banners change with the season.",
      papers:"Your Tang pass earns a long, cold look but no chains; they let you on into the debated land."},
   e:{h:'OUT OF THE CONTESTED OASES',
-     t:"Heading east you clear the last Tibetan checkpoint of the contested oases, and a few li on a thin Tang patrol stops you — the border between the two empires runs somewhere in the dust between them, and shifts every year. The Tang men, out of the shrinking Hexi corridor, are starved for news from the west and suspicious of all of it.",
+     t:"Heading east you clear the last Tibetan checkpoint of the contested oases, and a short way on, a thin Tang patrol stops you — the border between the two empires runs somewhere in the dust between them, and shifts every year. The Tang men, out of the shrinking Hexi corridor, are starved for news from the west and suspicious of all of it.",
      paid:"Tolls paid twice over, you go on toward what is, for now, still Tang country.",
      papers:"Both sides squint at your papers; neither quite trusts them; both, in the end, wave you through."}
 };
@@ -1428,9 +1424,9 @@ const CITYFOLK={
 };
 const CPL_ROSTER=[
  {id:'niketas',name:'Niketas',role:'a Byzantine customs-clerk turned freelance',skills:{trade:3}},
- {id:'bardas',name:'Bardas',role:'a northern axeman seeking the Emperor’s guard',skills:{fight:3}},
+ {id:'bardas',name:'Halfdan',role:'a red-bearded axeman who has already crossed half the world from the cold North',skills:{fight:3}},
  {id:'eudokia',name:'Eudokia',role:'a physician of the city hospitals',skills:{cook:3}},
- {id:'leo',name:'Leo the Pilot',role:'a Bosphorus boatman and ship-handler',skills:{handle:2,hunt:1},riverwise:true},
+ {id:'leo',name:'Leo the Pilot',role:'a Bosphorus boatman and ship-handler',skills:{fight:2,hunt:1},riverwise:true},
  {id:'hasan',name:'Hasan',role:'an Arab merchant long settled in the City',skills:{trade:2,handle:1}},
  {id:'irene',name:'Irene',role:'a silk-factor’s clever widow',skills:{trade:2,cook:1}},
  {id:'tervel',name:'Tervel',role:'a Bulgar horseman from beyond the walls',skills:{fight:2,handle:1}},
@@ -1447,19 +1443,32 @@ function rollRecruit(name){
   const odds = comps>=4?0.10:comps===3?0.33:comps===2?0.50:comps===1?0.65:0.90;
   return rnd()<odds ? cand : null;
 }
+function halfdanTavern(scene){
+  const east=!isWest();
+  const t = scene + " By the fire sits a giant of a man, red-bearded and weather-cracked, an axe across his knees and a way of watching the whole room at once. He is further from home than anyone here: a Northman off a cold land he calls Sví\u00fej\u00f3\u00f0, who came south down a long chain of great rivers and across the Euxine sea — months of rowing and portage and worse — for no better reason than that he heard the Emperor of the Romans pays well for big men with axes. " + (east
+    ? "You, who have crossed the whole width of Asia, find you have met your match in restlessness; you trade road-tales late into the night, mostly by gesture and grin, and when he learns the road runs east as far again as he has already come, he is delighted. 'Then I am only half done,' he says."
+    : "Even to you, a Roman, he is a marvel — they say his people row out of the northern mists to raid the monasteries at the edge of the world. He has little love for the drill-yard of the Emperor's guard, and when he hears you mean to cross to far Cathay his eyes light like a boy's. 'That,' he says, 'I will see.'");
+  return {h:'A FAR-TRAVELLED STRANGER', t:t, ch:[
+    {l:'Take Halfdan on for the road east',f(){ S.party.push({name:'Halfdan',role:'a red-bearded axeman from the cold edge of the world',skills:{fight:3},alive:true,kind:'companion',recruited:true,hp:100,fromCity:'Constantinople'}); log("Halfdan shoulders his axe and his sea-chest and joins the caravan. He will, he says, follow this road to wherever it finally ends."); }},
+    {l:'Wish him well, and the guard joy of him',f(){ log("You leave the Northman to his cup and his axe. He raises the one to you and does not set down the other."); }},
+  ]};
+}
+function stChristopher(){ return {h:'THE MARTYRIUM AT CHALCEDON', t:"Before the road swallows you, you cross to the Asian shore at Chalcedon and pause at the little martyrium of Saint Christopher — patron of travellers, and you mean to travel further than most. But the shrine is troubled: where painted images of the saint once hung there are only pale rectangles on the soot and fresh chisel-marks. The Emperor and his bishops have lately declared the holy images idols, and zealous hands have been at work. An old caretaker watches you, unsure whether you have come to pray or to scrape. You leave a coin and ask the saint's blessing on the road — from whatever power is still permitted to grant it.", ch:[{l:"Take the saint's blessing and go",f(){ log("You set out under what protection Saint Christopher can still offer, in an age that has begun to doubt him."); }}]}; }
 function tavernEvent(){
   const c=city();
   let cup="";
   if(S.silver>=3){ S.silver-=3; cup="You buy a round and settle in by the fire. "; }
   else { cup="You cannot afford even a cup, so you nurse the tavern-keeper's pity and listen. "; }
   const tav=(CITYFOLK[c.name]&&CITYFOLK[c.name].tav)?CITYFOLK[c.name].tav:'low-roofed and smoky, full of caravan-men and their lies';
-  const flavour=pick(["Dice rattle in the corner.","Someone is singing, badly, in a language no one admits to knowing.","A communal pot of something goes round, and is not refused.","Two traders argue over a price that concerns neither of them."]);
+  const flavour=(c.name==='Osh')?"A communal cauldron of osh — rice, mutton, carrots, and onions — goes round, and is not refused.":(c.name==='Rey')?"A farmer in from the nearby village of Tehran nurses one cup all evening, grumbling that the city's prices are robbery and its people worse.":(c.name==='Constantinople'||c.name==='Iconium')?"In a corner two men argue in low voices over whether the holy images are idols to be smashed or windows onto heaven — the Emperor's quarrel, and not a safe one to be overheard taking a side in.":pick(["Dice rattle in the corner.","Someone is singing, badly, in a language no one admits to knowing.","A communal pot of something goes round, and is not refused.","Two traders argue over a price that concerns neither of them."]);
   const scene=cup+"The tavern in "+cityLabel(c)+" is "+tav+". "+flavour;
   const rumor=pickRumor();
   if(c.name==='Osh' && !S.onceFlags.osh_egg && rnd()<0.5){ S.onceFlags.osh_egg=true; return oshBeekeeperEvent(scene); }
   let recruit;
   if(S.lucky && c.name===homeName() && !S.onceFlags.nephewMet && !S.party.some(p=>p.nephew&&p.alive)){
     recruit=NEPHEW_RECRUIT; S.onceFlags.nephewMet=true;
+  } else if(c.name==='Constantinople' && !S.onceFlags.halfdanMet && !S.party.some(p=>p.name==='Halfdan'&&p.alive)){
+    S.onceFlags.halfdanMet=true; return halfdanTavern(scene);
   } else {
     recruit=rollRecruit(c.name);
   }
@@ -1471,6 +1480,10 @@ function tavernEvent(){
        {l:'Enjoy the night, but keep your company as it is',f(){ log('You drink with '+recruit.name+' and part as friends. Tavern talk: “'+rumor+'”'); }},
       ]};
   }
+  if(S.party.some(p=>p.name==='Halfdan'&&p.alive) && rnd()<0.5){
+    return {h:'THE TAVERN', t: scene+" When the talk lulls, Halfdan thumps the board and launches, unprompted, into a saga of his own cold country — a gold hall called Heorot, a fen-haunting horror named Grendel, and a hero who greets the thing bare-handed and keeps its arm for a trophy. The caravan-men are rapt; you follow perhaps a third of it, and that third is alarming.",
+      ch:[{l:'Hear it out (it is long)',f(){ log("Halfdan finishes somewhere past midnight, hoarse and pleased. There was a dragon too, he assures you, and it ended well for almost no one."); }}]};
+  }
   return {h:'THE TAVERN', t: scene+" Over the noise you catch the night's gossip: “"+rumor+"”",
     ch:[{l:'Drink, listen, and turn in',f(){ log('Tavern talk: “'+rumor+'”'); }}]};
 }
@@ -1479,7 +1492,9 @@ function tavernEvent(){
 function admireCity(){
   const c=city();
   const txt=CITY_ADMIRE[c.name]||"You walk the walls and the bazaars a while. The town is much like its neighbours, and keeps its history to itself.";
-  S.pendingEvent={h:'— '+cityLabel(c).toUpperCase()+' —', t:txt, ch:[{l:'Return to the bazaar',f(){}}]};
+  let extra='';
+  if(S.party.some(p=>p.name==='Halfdan'&&p.alive)){ S.halfdanCarved=S.halfdanCarved||{}; if(!S.halfdanCarved[c.name]){ S.halfdanCarved[c.name]=true; extra="</p><p>As you turn to go you catch Halfdan crouched at a quiet stretch of wall, scratching angular marks into the stone with his knife-point. 'Halfdan was here,' he says, satisfied, when he notices you watching — or so you assume; you cannot read a rune of it."; } }
+  S.pendingEvent={h:'— '+cityLabel(c).toUpperCase()+' —', t:txt+extra, ch:[{l:'Return to the bazaar',f(){}}]};
   render();
 }
 const CITY_ADMIRE={
@@ -1509,7 +1524,50 @@ const CITY_ADMIRE={
 
 /* ---- sea passage Aleppo <-> Constantinople ---- */
 function seaOffer(){ S.pendingEvent=seaEvent(); render(); }
+function convoyValue(){ if(!S)return 0; let v=S.silver||0; for(const g of GOODS) v+=(S.goods[g.id]||0)*((g.e+g.w)/2); if(typeof herdValue==='function' && S.itin && S.itin[S.idx]) v+=herdValue(S.itin[S.idx]); return Math.round(v); }
+function piratesResolve(str,pirates){
+  const margin=str-pirates;
+  if(margin>=0){ banditRep(0.90,1); let s="Crossbows, boarding-pikes, and chaos on the wet decks. The pirates break off and pull for the shore."; if(rnd()<Math.max(.08,.40-.07*margin)){ const who=casualty(rnd()<.4); if(who) s+=" "+who+(/\(/.test(who)?" is killed in the boarding":" takes a wound but will mend"); } S.silver+=20+ri(40); s+=" You take what coin the dead were carrying."; log(s); if(S.hp<=0){S.cause='pirates';die();} }
+  else { S.cause='pirates'; for(const p of (S.party||[])) p.alive=false; S.hp=0; die(); log("They are too many. The fight is short and one-sided; the pirates take the ship, the cargo, and every soul aboard. Your venture ends on a red deck in a foreign sea."); }
+}
+function evPirates(){
+  const reg = S.sail ? seaLeg((S.sail.total-S.sail.daysLeft)/S.sail.total, S.sail.target) : 'the Eastern Mediterranean';
+  const marmara=/Marmara/.test(reg);
+  const demand=Math.max(20,Math.round(S.silver*.15));
+  let pirates=3+ri(5)+(S.banditMod||0)+5; pirates=Math.max(1,pirates); // a band, plus the menace of the open sea
+  const str=combatStrength()+5; // you, your people, and the ship's crew
+  const odds = str>=pirates*2 ? 'You could scatter them' : str>=pirates ? 'It would be a near thing' : 'You are badly outmatched';
+  const desc = pirates<=2
+    ? ("An oared rowboat darts out from a cove, "+(pirates===1?"a lone sea-robber":"a pair of sea-robbers")+" in it with more confidence than sense")
+    : ("A lean pirate galley runs out from a headland, perhaps "+pirates+" armed men crowding her rail");
+  return {h:'PIRATES', t:desc+". They lay alongside, and their captain names his price: "+demand+" silver to pass unmolested. "+odds+".",
+   ch:[
+    {l:'Pay them off ('+demand+' s)',f(){ if(S.silver>=demand){ S.silver-=demand; banditRep(1.10,-1); log("You hand over the silver. The pirate captain salutes you with mock courtesy and sheers off to look for easier prey."); } else { S.silver=0; banditRep(1.10,-1); const lost=loseRandomGoods(.4); S.hp=clamp(S.hp-10,0,100); log("You haven't the coin. They take "+lost+" instead, and leave you bruised but breathing."); if(S.hp<=0){S.cause='pirates';die();} } }},
+    {l:'Surrender the cargo',f(){ for(const g of GOODS){ S.goods[g.id]=Math.round((S.goods[g.id]||0)*0.10); if(S.goods[g.id]<=0)S.basis[g.id]=0; } S.silver=Math.round(S.silver*0.10); banditRep(1.05,-1); log("You give up the hold without a fight. The pirates strip the ship, leaving only the tenth you managed to conceal in the bilges. Poorer, and alive."); }},
+    {l:'Fight them off',f(){ piratesResolve(str,pirates); }},
+    {l:'Try to run',f(){ if(marmara && rnd()<0.25){ banditRep(1.0,0); log("You crowd on sail — and out of the haze comes a Roman dromon, oars beating like a heart, bearing down on the pirates, who scatter for the shore. The Empire's navy has its uses."); return; } if(rnd()<0.50){ const tossed=GOODS.some(g=>S.goods[g.id]>0)?loseRandomGoods(.5):null; banditRep(1.0,0); log("You run before the wind and lose them among the islands"+(tossed?", though you cut "+tossed+" over the side to lighten the ship":"")+"."); } else { log("They are faster than they looked; grapnels bite, and there is no running now."); piratesResolve(str,pirates); } }},
+   ]};
+}
+function evChanganPanic(){ return {h:"PANIC IN CHANG'AN", t:"You arrive to a city holding its breath. A Tibetan army has come down the Wei valley; couriers gallop, the court is said to be packing, and every rumour is worse than the last. Wise merchants are turning goods into anything portable — or simply fleeing.", ch:[{l:'Note it, and keep the beasts close',f(){ log("You take the warning to heart, keep your packs loaded and your animals saddled, and watch the gates."); }}]}; }
+function evChanganSack(){ return {h:"THE SACK OF CHANG'AN", t:"You have walked into catastrophe. The Tibetans take the capital, and for a fortnight the greatest city on earth is given over to fire and plunder. Soldiers strip the markets to the boards; nothing portable is safe, least of all a foreign merchant's hoard.", ch:[{l:'Endure it, and survive',f(){ clearHerd(); for(const g of GOODS){ S.goods[g.id]=0; S.basis[g.id]=0; } S.silver=Math.round(S.silver*0.2); log("When the smoke clears you have your life, your people, and a fifth of your silver. The animals, the cargo — all of it gone into the sack. You begin again, in the ashes."); }}]}; }
+function checkHistory(c){
+  if(!c||!S) return;
+  const tang=c.frac<0.45;
+  if(tang && onOrAfter(763,2,17) && !S.onceFlags.anEnd){ S.onceFlags.anEnd=true; log("Word runs through the market that the great rebellion is over at last — the An Lushan war, eight years of it, finally guttering out. The Tang breathe again, warily, amid the ruin."); }
+  if(c.name==="Chang'an"){
+    if(dateBetween(763,11,12,763,11,16) && !S.onceFlags.cap_warn){ S.onceFlags.cap_warn=true; S.pendingEvent=evChanganPanic(); return; }
+    if(dateBetween(763,11,17,763,11,29) && !S.onceFlags.cap_sack){ S.onceFlags.cap_sack=true; S.pendingEvent=evChanganSack(); return; }
+    if(onOrAfter(763,11,30) && !S.onceFlags.cap_after){ S.onceFlags.cap_after=true; log("Chang'an is shaken and looted but standing — the Tibetans held it barely a fortnight before withdrawing with their plunder. The markets reopen among the ash, defiant."); }
+  }
+  if(c.name==='Wuwei' && onOrAfter(764,5,1) && !S.onceFlags.wuweiTib){ S.onceFlags.wuweiTib=true; banditRep(1.3,0); log("Wuwei answers to Lhasa now — the Tibetans took the Liangzhou corridor this spring. The Tang banners are gone from the walls, and the roads about are thick with opportunists."); }
+  if(c.name==='Dunhuang' && onOrAfter(781,1,1) && !S.onceFlags.dunTib){ S.onceFlags.dunTib=true; log("Even Dunhuang has fallen to the Tibetan Empire at last; the painted caves have new masters, though the monks paint on regardless."); }
+  if(c.name==='Constantinople' && dateBetween(763,6,30,763,9,28) && !S.onceFlags.bulgarWin){ S.onceFlags.bulgarWin=true; log("The City is delirious: the Emperor Constantine has broken the Bulgars at Anchialus, and the streets run with triumphal processions, chained captives, and very free wine. Good days to sell, if you can be heard over the cheering."); }
+  if(c.name==='Baghdad' && dateBetween(762,9,1,763,3,1) && !S.onceFlags.alid){ S.onceFlags.alid=true; log("Baghdad hums with dangerous news: the Alids have risen against the Caliph — Muhammad in Medina, his brother Ibrahim in Basra. The soldiers are jumpy and the bazaar full of sudden silences. Best keep your opinions in your purse."); }
+  if(c.name==="Chang'an" && S.party.some(p=>p.name==='Halfdan'&&p.alive) && !S.onceFlags.halfChangan){ S.onceFlags.halfChangan=true; log("Halfdan stands in the gate of Chang'an a long while, saying nothing. From the cold edge of the world to the heart of Cathay — the whole length of the earth, as anyone reckons it — and there may be no other man alive who has walked both ends. 'Worth it,' he says at last, and spits, contentedly, in the dust of the Tang."); }
+  if(c.name==='Iconium'){ S.iconiumVisits=(S.iconiumVisits||0)+1; if(S.iconiumVisits>=2 && !S.onceFlags.iconoPun && livingParty().some(p=>p.fromCity==='Constantinople'||p.fromCity==='Iconium'||CPL_ROSTER.some(r=>r.name===p.name))){ S.onceFlags.iconoPun=true; const who=livingParty().find(p=>p.fromCity==='Constantinople'||p.fromCity==='Iconium'||CPL_ROSTER.some(r=>r.name===p.name)); log("As the gates of Iconium rise again, "+(who?who.name:'one of your Romans')+" grins sidelong at you: 'Iconium — again? You must be a true iconophile.' Half the company groans; the pun, like the icons themselves, refuses to stay down."); } }
+}
 function seaTerms(){ const m=monthNum(); const stormy=(m>=11||m<=2); return {stormy, wreck: stormy?0.30:0.08}; }
+function hasPilot(){ return !!(S && livingParty().some(p=>p.riverwise)); } // Leo the Pilot etc. — steadier at sea
 function seaEvent(){
   const c=city();
   const target = c.name==='Aleppo' ? 'Constantinople' : 'Aleppo';
@@ -1534,14 +1592,25 @@ function seaEvent(){
 }
 
 /* ============ v0.8.1 ADDITIONS ============ */
+function showCargo(){
+  if(!S || S.pendingEvent) return;
+  const held=GOODS.filter(g=>S.goods[g.id]>0);
+  let rows = held.length
+    ? held.map(g=>'<p style="margin:4px 0"><b>'+S.goods[g.id]+'</b> '+g.n+' <span class="sub">('+g.u+(S.goods[g.id]>1?'s':'')+') — wt '+(S.goods[g.id]*g.wt)+(S.basis[g.id]>0?', avg paid '+Math.round(S.basis[g.id])+' s':'')+'</span></p>').join('')
+    : '<p class="sub">Your packs hold no trade-goods just now.</p>';
+  rows += '<p class="sub" style="margin-top:10px">Cargo weight <b>'+cargoW()+'</b> / capacity <b>'+cargoCap()+'</b> · provisions: <b>'+Math.round(S.food)+'</b> days.</p>';
+  S.pendingEvent={h:'THE PACKS', t:rows, ch:[{l:'Close',f(){}}]};
+  render();
+}
 function showParty(){
   if(!S || S.pendingEvent) return;
-  let rows='<p style="margin:2px 0"><b>'+S.name+'</b> <span class="sub">— the merchant (you)'+((S.selfTrade||0)>0?', a self-taught trader (trade '+S.selfTrade+')':'')+'</span></p>';
+  let rows='<p style="margin:2px 0"><b>'+S.name+'</b> <span class="sub">— the merchant (you)'+((S.selfTrade||0)>0?', a self-taught trader (trade '+S.selfTrade+')':'')+(S.spec?', with a canny eye for '+S.spec:'')+'</span></p>';
   rows+=S.party.map(p=>{
     const names={trade:'trade',cook:'cook/heal',handle:'animals',hunt:'hunt',fight:'fight'};
     const sk=Object.keys(p.skills).filter(k=>p.skills[k]>0).map(k=>names[k]+' '+p.skills[k]).join(', ')||'no special skills';
     const tag=p.kind==='guard'?' <span class="sub">(hired guard)</span>':(p.nephew?' <span class="sub">(your nephew)</span>':(p.recruited?' <span class="sub">(joined on the road)</span>':''));
-    const status=p.married?' <span class="gold">— settled &amp; married in '+(p.marriedAt||'a town')+'</span>':(p.alive?'':' <span class="red">— dead</span>');
+    const hurt = p.alive && p.hp!=null && p.hp < (S?S.hp:100);
+    const status=p.married?' <span class="gold">— settled &amp; married in '+(p.marriedAt||'a town')+'</span>':(p.alive?(hurt?' <span class="bad">— hurt</span>':''):' <span class="red">— dead</span>');
     return '<p style="margin:5px 0"><b>'+p.name+'</b>'+tag+status+'<br><span class="sub">'+p.role+' · '+sk+'</span></p>';
   }).join('');
   rows+='<p class="sub" style="margin-top:10px">Your <b>fighting strength</b> counts every able body — yourself and each living companion as one apiece — plus their training with a blade (a hired guard with fight&nbsp;3 adds three more). Right now that total is <b class="gold">'+combatStrength()+'</b>. When bandits appear they weigh their numbers against that figure.</p>';
@@ -1617,8 +1686,21 @@ async function saveAndQuit(){
   recordRun('staying a while at '+(city()?city().name:'the road')+', day '+(S.day-1));
   let ok=false;
   try{ await STORE.set('silkroad_save', JSON.stringify({v:VERSION, when:Date.now(), S})); ok=true; }catch(e){ ok=false; }
-  if(!ok){ log('The journey could not be set aside here — this device will not hold a saved game.'); render(); return; }
+  if(!ok){ S.pendingEvent={h:'NO SAVE HERE', t:"This device will not hold a saved game — the journey cannot be set aside to take up later. But you have come far, and "+(city()?city().name:'this place')+" is as good a place as any to stop for good. You could retire here: sell up, open a shop, and let the road go on without you.", ch:[{l:'Retire for good in '+(city()?city().name:'this town'),f(){ S.retired=true; S.silver+=finalGoodsValue(); for(const g of GOODS){S.goods[g.id]=0;} S.screen='retired'; }},{l:'Press on — the road still calls',f(){}}]}; render(); return; }
   S=null; render();
+}
+function renderRetire(m){
+  const score=Math.round(S.silver + (typeof herdValue==='function'?herdValue(city()):0));
+  const rr=rank(score);
+  recordRun('settled to open a shop in '+(city()?city().name:'a far town'));
+  m.innerHTML='<h2>A shop in '+(city()?city().name:'a far town')+'</h2>'+
+  '<p class="sub">'+S.name+' · retired from the road · '+(S.day-1)+' days travelled</p>'+
+  '<div class="panel"><p>You sell up, take a lease on a corner of the bazaar, and hang out a sign. The caravans go on without you, and you find you do not mind. There will be a spouse, in time, and a cat, and a dog, and two-point-three children; and on quiet evenings the smell of dust on the wind will still turn your head — east, or west.</p>'+
+  '<p>Final worth: <span class="gold" style="font-size:1.25rem">'+score+' silver</span> <span class="sub">(set out with '+(S.startSilver||900)+')</span></p>'+
+  '<p>Rank at retirement: <span class="gold">'+rr[0]+'</span></p><p class="sub">'+rr[1]+'</p></div>'+
+  '<div class="panel"><h3 class="gold" style="margin-bottom:6px">The Ledger of Ventures</h3><div id="board"></div></div>'+
+  '<div style="text-align:center"><button onclick="backToTitle()">Begin a new venture</button></div>';
+  loadBoard().then(()=>{if($('board'))renderBoardInto($('board'));});
 }
 async function loadSave(){
   try{ const r=await STORE.get('silkroad_save'); if(r && r.value){ return JSON.parse(r.value); } }catch(e){}
@@ -1655,11 +1737,11 @@ const ANIMALS={
             spd:{settled:1.05,steppe:1.0, desert:.8,  harsh:.7,  mountain:1.1}, nf:.9,  spread:.5},
  horse:    {n:'horse',          pl:'horses',          base:110,cap:45, carry:9,  thirst:1.5, note:'fast on grass and road; thirsty in the sands',
             spd:{settled:1.15,steppe:1.2, desert:.65, harsh:.55, mountain:.85}, nf:.42, spread:.7},
- bactrian: {n:'Bactrian camel', pl:'Bactrian camels', base:68, cap:80, carry:16, thirst:.8,  note:'the eastern all-rounder; cold desert and high pass alike',
+ bactrian: {n:'Bactrian camel', pl:'Bactrian camels', base:68, cap:80, carry:16, thirst:.4,  note:'the eastern all-rounder; cold desert and high pass alike',
             spd:{settled:.9,  steppe:1.0, desert:1.05,harsh:1.05,mountain:1.0}, nf:.22, spread:1.25, gate:[0,.66]},
- dromedary:{n:'dromedary',      pl:'dromedaries',     base:78, cap:80, carry:16, thirst:.8,  note:'master of the hot western desert; suffers in cold mountains',
+ dromedary:{n:'dromedary',      pl:'dromedaries',     base:78, cap:80, carry:16, thirst:.4,  note:'master of the hot western desert; suffers in cold mountains',
             spd:{settled:.9,  steppe:1.0, desert:1.15,harsh:1.15,mountain:.6},  nf:.9,  spread:1.45, gate:[.41,1]},
- hybrid:   {n:'hybrid bukht',   pl:'hybrid bukht',    base:150,cap:100,carry:18, thirst:.8,  note:'the prized crossbreed; strong on desert and mountain both',
+ hybrid:   {n:'hybrid bukht',   pl:'hybrid bukht',    base:150,cap:100,carry:18, thirst:.45, note:'the prized crossbreed; strong on desert and mountain both',
             spd:{settled:.95,steppe:1.05,desert:1.1, harsh:1.1, mountain:1.0}, nf:.66, spread:.6, gate:[.46,.82]},
 };
 const ANIMAL_ORDER=['donkey','mule','horse','bactrian','dromedary','hybrid'];
@@ -1670,7 +1752,7 @@ function animalSell(id,c){ return Math.round(animalPrice(id,c)*.85); }
 function totalAnimals(){ if(!S||!S.herd)return 0; let n=0; for(const k in S.herd)n+=S.herd[k]; return n; }
 function herdCap(){ if(!S||!S.herd)return 0; let c=0; for(const k in S.herd) if(ANIMALS[k]) c+=S.herd[k]*ANIMALS[k].cap; return c; }
 function herdCarry(){ if(!S||!S.herd)return 0; let w=0; for(const k in S.herd) if(ANIMALS[k]) w+=S.herd[k]*ANIMALS[k].carry; return w; }
-function thirstFactor(){ if(!S||!S.herd)return 1; let tot=0,acc=0; for(const k in S.herd){ if(S.herd[k]>0&&ANIMALS[k]){ const w=S.herd[k]*ANIMALS[k].cap; acc+=w*ANIMALS[k].thirst; tot+=w; } } return tot>0?acc/tot:1; }
+function thirstFactor(){ if(!S||!S.herd)return 1; let tot=0,acc=0; for(const k in S.herd){ if(S.herd[k]>0&&ANIMALS[k]){ const w=S.herd[k]*ANIMALS[k].cap; acc+=w*ANIMALS[k].thirst; tot+=w; } } return Math.max(0.6, tot>0?acc/tot:1); } // floor = the people, who always drink in the desert
 function speedMult(terr){ if(!S||!S.herd)return 1; let m=null; for(const k in S.herd){ if(S.herd[k]>0&&ANIMALS[k]){ const v=(ANIMALS[k].spd[terr]!=null)?ANIMALS[k].spd[terr]:1; m=(m===null)?v:Math.min(m,v); } } return m===null?1:m; }
 function gainAnimal(id){ if(!S.herd)S.herd={}; S.herd[id]=(S.herd[id]||0)+1; }
 function clearHerd(){ if(S.herd) for(const k in S.herd) S.herd[k]=0; }
@@ -1769,25 +1851,27 @@ function applyAnimalPeril(terr){
   for(const id of ANIMAL_ORDER){
     if(!S.herd[id]) continue;
     let p=0;
-    if(id==='dromedary' && terr==='mountain')                         p=.035 + .08*passDanger();   // cold kills the desert camel
+    if(id==='dromedary' && terr==='mountain')                         p=.04 + .07*passDanger();    // cold kills the desert camel
     else if(id==='bactrian' && (terr==='desert'||terr==='harsh') && f>=.74) p=.025 + ((m>=5&&m<=7)?.04:0); // heat kills the woolly camel in the Levant
     else if(id==='horse' && terr==='harsh')                            p=.06;                       // the deep desert is no place for a horse
-    else if(id==='horse' && terr==='desert')                          p=.03;                       // any desert, not just the west
-    else if(id==='horse' && terr==='mountain')                        p=.035 + .05*passDanger();   // high cold passes are no place for a horse either
-    else if(id==='donkey' && terr==='harsh')                          p=.018;
+    else if(id==='horse' && terr==='desert')                          p=.035;                      // thirsty horses die in the sands
+    else if(id==='horse' && terr==='mountain')                        p=.04 + .05*passDanger();    // high cold passes are no place for a horse either
+    else if(id==='donkey' && terr==='harsh')                          p=.02;
     if(p<=0) continue;
-    if(rnd() < p*care){ S.herd[id]--; perilLog(id, terr); }
+    if(rnd() < p*care){ const toll=Math.max(1, Math.round(S.herd[id]*0.08)); S.herd[id]=Math.max(0,S.herd[id]-toll); perilLog(id, terr, toll); }
   }
   const over=herdOverload();
   const strayP = over>1 ? Math.min(.30,(over-1)*0.5) : (over>0.85 ? (over-0.85)*0.2 : 0);
   if(strayP>0 && totalAnimals()>1 && rnd()<strayP){ const a=loseAnimal(); log("With too few hands to mind so many beasts, "+a+" strays from the line in the night and is gone by morning."); }
 }
-function perilLog(id, terr){
+function perilLog(id, terr, n){
+  n=n||1;
   const why = id==='dromedary' ? "the cold of the high passes"
             : id==='bactrian'  ? "the furnace heat of the western desert"
             : terr==='mountain'? "the cold"
             : "the killing waste";
-  log("One of your "+ANIMALS[id].pl+" falters and dies on the road — "+ANIMALS[id].pl+" were never bred for "+why+". You divide its load among the rest, who are not consulted.");
+  const subj = n>1 ? (n+" of your "+ANIMALS[id].pl+" falter and die") : ("One of your "+ANIMALS[id].pl+" falters and dies");
+  log(subj+" on the road — "+ANIMALS[id].pl+" were never bred for "+why+". You divide the loads among the rest, who are not consulted.");
 }
 
 function startHumble(){
@@ -1825,12 +1909,12 @@ function turnBack(){
 }
 
 /* ---- regional pilgrims ---- */
-function _alms(before, line){ S.silver-=10; S.merit=S.day+30; S.meritPct = before>100?0.10:(before>10?0.20:0.50); S.hp=clamp(S.hp+8,0,100); log(line); }
+function _alms(before, line){ S.silver=Math.max(0,S.silver-10); S.merit=S.day+30; S.meritPct = before>100?0.10:(before>10?0.20:0.50); S.hp=clamp(S.hp+8,0,100); log(line); }
 
 function pilgrimChan(){
   return {h:'A CHAN MONK',t:"A monk of the Chan school shares the road a while — robe patched, head shaven, a wooden alms-bowl at his belt. He speaks little and smiles often. 'The Pure Land is not truly west of here,' he says, 'but as you are going west regardless, a gift to a poor monk plants a seed all the same.'",
   ch:[
-   {l:'Give alms (10 s)',f(){ if(S.silver>=10){ const before=S.silver; _alms(before,"You set ten pieces of silver in the bowl. He bows, murmurs the name of Amitabha, and for a while the road feels less heavy."); } else log("You have nothing to give. He bows regardless: 'The intention is itself the merit.'"); }},
+   {l:'Give alms (10 s)',f(){ if(S.silver>0){ const before=S.silver; _alms(before,"You set ten pieces of silver in the bowl. He bows, murmurs the name of Amitabha, and for a while the road feels less heavy."); } else log("You have nothing to give. He bows regardless: 'The intention is itself the merit.'"); }},
    {l:'Walk on together a while',f(){log("You share the road an hour without words, which suits you both, and part with a nod.");}},
   ]};
 }
@@ -1840,21 +1924,21 @@ function pilgrimLama(overlap){
     : "A Buddhist monk walks the high road toward India, alone, one robe and a begging-bowl and the serenity of a man who long ago gave everything away. 'It is permitted,' he says mildly, raising the bowl, 'to allow the charitable to acquire merit. The Wheel turns for the giver as for the gift, and merit, upon the Road, has been known to turn aside the storm.'";
   return {h:'A TRAVELLING LAMA',t:t,
   ch:[
-   {l:'Donate 10 s for the acquiring of merit',f(){ if(S.silver>=10){ const before=S.silver; _alms(before,"You drop ten pieces of silver into the bowl. 'You acquire merit,' the lama says, well pleased, 'and the poorer the giver, the heavier it weighs.' For a month the caravan rides under a quieter sky."); } else log("You have nothing to give. 'The wish to give is itself a kind of giving,' he says, and blesses you regardless."); }},
+   {l:'Donate 10 s for the acquiring of merit',f(){ if(S.silver>0){ const before=S.silver; _alms(before,"You drop ten pieces of silver into the bowl. 'You acquire merit,' the lama says, well pleased, 'and the poorer the giver, the heavier it weighs.'"); } else log("You have nothing to give. 'The wish to give is itself a kind of giving,' he says, and blesses you regardless."); }},
    {l:'Wish him well and walk on',f(){log("You share the road an hour; he speaks of the Wheel and the Middle Way, and his feet are in worse shape than your whole caravan — yet he has not once complained.");}},
   ]};
 }
 function pilgrimDervish(){
   return {h:'A WANDERING DERVISH',t:"A Muslim ascetic in a patched woollen cloak rests by the road — one of the wandering holy poor, who owns a bowl, a staff, and nothing else, and seems the richer for it. 'Give for the sake of God,' he says, 'and God is generous to the generous. Alms, the wise men say, turn aside seventy kinds of calamity.'",
   ch:[
-   {l:'Give alms (10 s)',f(){ if(S.silver>=10){ const before=S.silver; _alms(before,"You press ten pieces of silver on him. He lifts his hands and prays for your road — 'God keep you from the storm and the bandit alike.' For a month the way seems to lie gentler before you."); } else log("You have nothing to give. 'Then give a kind word,' he says, 'that too is charity,' and blesses you regardless."); }},
+   {l:'Give alms (10 s)',f(){ if(S.silver>0){ const before=S.silver; _alms(before,"You press ten pieces of silver on him. He lifts his hands and prays for your road — 'God keep you from the storm and the bandit alike.' For a month the way seems to lie gentler before you."); } else log("You have nothing to give. 'Then give a kind word,' he says, 'that too is charity,' and blesses you regardless."); }},
    {l:'Wish him peace and walk on',f(){log("You give him salaam and share the road an hour. He speaks of poverty as a kind of wealth and appears, infuriatingly, to mean it.");}},
   ]};
 }
 function pilgrimChristian(){
   return {h:'A PILGRIM',t:"A Christian pilgrim on the old road, staff in hand, bound for the rock-churches of Cappadocia and, God willing, Jerusalem beyond. He blesses you in Greek and asks nothing.",
   ch:[
-   {l:'Give alms (10 s)',f(){ if(S.silver>=10){ const before=S.silver; _alms(before,"He makes the sign of the cross over the caravan. 'The Lord keeps the charitable from harm,' he says. The camels are unmoved; everyone else feels better, and the road ahead seems kinder."); } else log("You have nothing to spare. He blesses you anyway, gratis."); }},
+   {l:'Give alms (10 s)',f(){ if(S.silver>0){ const before=S.silver; _alms(before,"He makes the sign of the cross over the caravan. 'The Lord keeps the charitable from harm,' he says. The camels are unmoved; everyone else feels better, and the road ahead seems kinder."); } else log("You have nothing to spare. He blesses you anyway, gratis."); }},
    {l:'Wish him well',f(){log("You share the road an hour. His sandals are in worse shape than your whole caravan.");}},
   ]};
 }
@@ -1958,7 +2042,7 @@ const SHORT={
  'Khalil':'the caravan-guard',
  'Theodoros':'the Greek muleteer',
  'Niketas':'the customs-clerk',
- 'Bardas':'the northern axeman',
+ 'Halfdan':'the red-bearded axeman',
  'Eudokia':'the city physician',
  'Leo the Pilot':'the boatman',
  'Hasan':'the settled merchant',
@@ -2109,7 +2193,7 @@ function playerDodge(){ return !!(S && S.lucky && livingParty().length===0 && rn
 // per-city horse prices: cheap in horse-breeding country, dear at the capital and in the west
 const ANIMAL_OVR={ horse:{
  "Chang'an":145,"Lanzhou":82,"Wuwei":72,"Dunhuang":95,"Hami":98,"Turfan":100,"Kucha":102,"Aksu":96,
- "Kashgar":92,"Miran":104,"Khotan":108,"Yarkand":100,"Osh":80,"Samarkand":100,"Bukhara":106,"Merv":116,
+ "Kashgar":92,"Miran":104,"Khotan":108,"Yarkand":100,"Osh":58,"Samarkand":100,"Bukhara":106,"Merv":116,
  "Nishapur":130,"Rey":142,"Baghdad":150,"Aleppo":148,"Iconium":138,"Constantinople":150 } };
 
 // handling capacity vs. herd demand — real caravans run ~3-6 animals per drover
@@ -2142,7 +2226,7 @@ function maybeHuntress(terr){
 
 // --- easter eggs ---
 function oshBeekeeperEvent(scene){
-  return {h:'THE TAVERN', t: scene+" At the next bench a wiry beekeeper — one Khurshid Farrokh — is holding forth, convinced the fat marmots of these hills carry a plague in their fleas, and bitter that no one will heed him. He is trying to talk a bemused foreign friend, a fellow named Qlod Mardumī, into building a game together: a long journey of trade and hardship across half the world, all caravans and camels and cruel luck. The friend keeps insisting it would never amount to anything. You shake your head at the follies of idle men, drain your cup, and leave them to it.",
+  return {h:'THE TAVERN', t: scene+" At the next bench a wiry beekeeper — one Khurshid Farrokh — is holding forth, convinced the fat marmots of these hills carry a plague in their fleas, and bitter that no one will heed him. He is trying to talk a bemused foreign friend, a fellow named Qlod, into building a game together: a long journey of trade and hardship across half the world, all caravans and camels and cruel luck. The friend keeps insisting it would never amount to anything. You shake your head at the follies of idle men, drain your cup, and leave them to it.",
    ch:[{l:'Leave the dreamers to their scheme',f(){ log("You leave the beekeeper and his foreign friend arguing over their imaginary game. Madness. It will never amount to anything."); }}]};
 }
 function otCrewEvent(){
@@ -2162,21 +2246,21 @@ function inContestedZone(){
 function pilgrimManichaean(){
   return {h:'A MANICHAEAN ELECT',t:"A pilgrim in white robes, one of the Manichaean Elect — they neither farm, nor kill, nor wed, lest they imprison the Light yet deeper in the world. He eats only what is freely given, and teaches that every soul is a spark of the Light striving home through the long war of the Two Principles. To feed and clothe the Elect, he says gently, is itself a freeing of the Light.",
   ch:[
-   {l:'Give alms to free the Light (10 s)',f(){ if(S.silver>=10){ const before=S.silver; _alms(before,"You give, and he blesses the Light within you, speaking of the Two Principles and the Three Times until your head swims. The road, for a while, feels luminous."); } else log("You have nothing to give. 'The wish to give is a small light too,' he says, and walks on."); }},
+   {l:'Give alms to free the Light (10 s)',f(){ if(S.silver>0){ const before=S.silver; _alms(before,"You give, and he blesses the Light within you, speaking of the Two Principles and the Three Times until your head swims. The road, for a while, feels luminous."); } else log("You have nothing to give. 'The wish to give is a small light too,' he says, and walks on."); }},
    {l:'Wish him well and walk on',f(){log("You share the road an hour. He will not pull so much as a turnip from the earth, lest he wound the Light in it — and yet he is the best-fed beggar you have met.");}},
   ]};
 }
 function pilgrimNestorian(){
   return {h:'A NESTORIAN MONK',t:"A monk of the Church of the East — the 'luminous religion,' as it is known from Antioch to the Tang court — staff in hand and a small bronze cross at his breast, travelling between the scattered congregations of the Road. His people hold that Christ bore two natures, the human and the divine, kept distinct and unmingled in the one person; it strikes you as faintly heretical, but you are a merchant and not a theologian, so you let it pass. He blesses you in Syriac, in a faith that has walked these tracks longer than any living man recalls.",
   ch:[
-   {l:'Give alms (10 s)',f(){ if(S.silver>=10){ const before=S.silver; _alms(before,"He signs the cross over the caravan and prays for your road in a tongue you do not know but somehow trust. The way ahead seems a shade kinder."); } else log("You have nothing to spare. He blesses you regardless, and shares a little of his own bread."); }},
+   {l:'Give alms (10 s)',f(){ if(S.silver>0){ const before=S.silver; _alms(before,"He signs the cross over the caravan and prays for your road in a tongue you do not know but somehow trust. The way ahead seems a shade kinder."); } else log("You have nothing to spare. He blesses you regardless, and shares a little of his own bread."); }},
    {l:'Wish him well and walk on',f(){log("You share the road an hour. He has walked from Mesopotamia and means to walk to the eastern sea, and speaks of it as a man might speak of a stroll.");}},
   ]};
 }
 function pilgrimZoroastrian(){
   return {h:'A MAGUS OF THE FIRE',t:"A Zoroastrian magus tends a small portable fire at the roadside, his mouth veiled lest his breath defile the sacred flame. He keeps the old faith of Persia — Ahura Mazda against the Lie, the long war of light and dark — though the Caliph's tax and the Caliph's creed press harder on his kind each passing year. 'Good thoughts, good words, good deeds,' he offers, as another man might say good morning.",
   ch:[
-   {l:'Make an offering to the fire (10 s)',f(){ if(S.silver>=10){ const before=S.silver; _alms(before,"You feed the fire a few dry sticks and the magus your silver. He prays that Ahura Mazda keep the Lie, the bandit, and the storm from your road, and you feel, briefly, enlisted on the side of the light."); } else log("You have nothing to give. 'Then give a good thought,' he says. 'It is the beginning of the other two.'"); }},
+   {l:'Make an offering to the fire (10 s)',f(){ if(S.silver>0){ const before=S.silver; _alms(before,"You feed the fire a few dry sticks and the magus your silver. He prays that Ahura Mazda keep the Lie, the bandit, and the storm from your road, and you feel, briefly, enlisted on the side of the light."); } else log("You have nothing to give. 'Then give a good thought,' he says. 'It is the beginning of the other two.'"); }},
    {l:'Warm your hands and move on',f(){log("You share the fire an hour. He guards its purity like a child and will not let your shadow fall across it, yet he is warm company in a cold country.");}},
   ]};
 }
@@ -2266,7 +2350,7 @@ function renderTitle(m){
   const sBtn=(s,lbl)=>'<button class="'+(SETUP.style===s?'on':'')+'" onclick="setupStyle(\''+s+'\')">'+lbl+'</button>';
   m.innerHTML=
    '<h2>THE SILK ROAD <span class="zh">絲綢之路</span></h2>'+
-   '<p class="sub">'+(west?'Constantinople to Chang’an and home again':'Chang’an to Constantinople and home again')+', in 762 CE <span style="opacity:.6">· v'+VERSION+'</span></p>'+
+   '<p class="sub">'+(west?'Constantinople to Chang’an and home again':'Chang’an to Constantinople and home again')+', in 762 AD <span style="opacity:.6">· v'+VERSION+'</span></p>'+
    '<div id="resumeslot"></div>'+
    '<p>Set out with whatever you can afford, come back rich or not at all. The road between is long and fraught with scouring dust storms, freezing mountain passes, swollen rivers, and of course, dysentery.</p>'+
    '<div class="panel"><p style="margin-bottom:6px">Your name, for the ledger <span class="red">*</span></p>'+
@@ -2320,9 +2404,10 @@ function stepSail(){
   if(!S.sail.ephesusDone && _p>=0.5){ S.sail.ephesusDone=true; S.sailing=false; clearSail(); S.pendingEvent=evEphesus(); render(); return; }
   const _cp=(S.sail.target==='Aleppo')?0.75:0.25;
   if(!S.sail.chimeraDone && _p>=_cp){ S.sail.chimeraDone=true; log(CHIMERA_LINE); }
-  const wreckP=S.sail.winter?0.045:0.012;
+  const wreckP=(S.sail.winter?0.045:0.012)*(hasPilot()?0.9:1);
   if(rnd()<wreckP){ S.sailing=false; clearSail(); S.pendingEvent=evShipwreck(); render(); return; }
-  if(rnd()<0.06){ S.sailing=false; clearSail(); S.pendingEvent=evSeaWinds(); render(); return; }
+  if(rnd()<(hasPilot()?0.054:0.06)){ S.sailing=false; clearSail(); S.pendingEvent=evSeaWinds(); render(); return; }
+  { const _r=seaLeg(_p,S.sail.target); let _pp=(/Eastern Med/.test(_r)?0.045:/Aegean/.test(_r)?0.022:0.006)*(S.banditFreq||1); if(convoyValue()>10000)_pp*=2; if(rnd()<_pp){ S.sailing=false; clearSail(); S.pendingEvent=evPirates(); render(); return; } }
   updateSail();
 }
 function updateSail(){ if(!S||!S.sail)return; renderStats(); renderLog();
@@ -2341,6 +2426,7 @@ function sailArrive(){
   log("You raise "+target+" and put in — the passes never climbed, the beasts sold behind you. You will want fresh animals here.");
   if(!S.returning && target===goalName()){ S.reachedCpl=true; S.bySea=true; growNephew(); S.screen='end'; return; }
   if(S.returning && target===homeName()){ S.bySea=true; S.screen='home'; return; }
+  if(target==='Aleppo' && !S.onceFlags.leoMet && !S.party.some(p=>p.name==='Leo the Pilot'&&p.alive)){ S.onceFlags.leoMet=true; S.pendingEvent=leoOffer(); }
   S.screen='city';
 }
 function skipSail(){
@@ -2353,9 +2439,10 @@ function skipSail(){
     if(!S.sail.ephesusDone && _p>=0.5){ S.sail.ephesusDone=true; S.pendingEvent=evEphesus(); render(); return; }
     const _cp=(S.sail.target==='Aleppo')?0.75:0.25;
     if(!S.sail.chimeraDone && _p>=_cp){ S.sail.chimeraDone=true; log(CHIMERA_LINE); }
-    const wreckP=S.sail.winter?0.045:0.012;
+    const wreckP=(S.sail.winter?0.045:0.012)*(hasPilot()?0.9:1);
     if(rnd()<wreckP){ S.pendingEvent=evShipwreck(); render(); return; }
-    if(rnd()<0.06){ S.pendingEvent=evSeaWinds(); render(); return; }
+    if(rnd()<(hasPilot()?0.054:0.06)){ S.pendingEvent=evSeaWinds(); render(); return; }
+    { const _r=seaLeg(_p,S.sail.target); let _pp=(/Eastern Med/.test(_r)?0.045:/Aegean/.test(_r)?0.022:0.006)*(S.banditFreq||1); if(convoyValue()>10000)_pp*=2; if(rnd()<_pp){ S.pendingEvent=evPirates(); render(); return; } }
   }
   render();
 }
@@ -2407,9 +2494,13 @@ function seaLeg(p, target){
   if(f<0.50) return 'the Aegean';
   return 'the Eastern Mediterranean';
 }
+function leoOffer(){ return {h:'A FRIEND FROM THE CROSSING', t:"As the ship works into harbour, Leo — a Bosphorus boatman you fell in with over the long crossing, forever splicing rope and spinning tales of the Golden Horn — clears his throat. He has, he admits, no great wish to go home just yet. 'You're bound for the Orient, they say. I've been no further than the Dardanelles in my life. Take me with you?'", ch:[
+  {l:'Welcome Leo aboard the caravan',f(){ S.party.push({name:'Leo the Pilot',role:'a Bosphorus boatman and ship-handler',skills:{fight:2,hunt:1},riverwise:true,alive:true,kind:'companion',recruited:true,hp:100,fromCity:'Constantinople'}); log("Leo the Pilot joins the caravan — a sailor a thousand miles from any sea, and cheerful about it. He still knows a river when he sees one."); }},
+  {l:'Clasp his hand and part at the quay',f(){ log("You wish Leo fair winds on the wharf. He waves until the harbour crowd swallows him up."); }},
+]}; }
 function evEphesus(){
-  return {h:'LANDFALL AT EPHESUS', t:"The captain puts in for a night at Ephesus to water the ship and trade a little. Once the first city of Roman Asia, it is visibly sliding past its glory: the great harbour the emperors dredged for centuries is silting up, the sea drawing away year by year and leaving the marble wharves stranded among reeds. Yet the colonnaded street still runs white to the water, the huge basilica of Saint John crowns the hill above the broken columns of Artemis’ temple, and pilgrims throng the saint’s shrine while fishermen mend nets where senators once paraded. You buy bread and oranges, fill the casks, and are gone on the morning tide.",
-   ch:[{l:'Back to the ship',f(){}}]};
+  return {h:'LANDFALL AT EPHESUS', t:"The captain puts in for a night at Ephesus to water the ship and trade a little. Once the first city of Roman Asia, it is visibly sliding past its glory: the great harbour the emperors dredged for centuries is silting up, the sea drawing away year by year and leaving the marble wharves stranded among reeds. Yet the colonnaded street still runs white to the water, the huge basilica of Saint John crowns the hill above the broken columns of Artemis’ temple, and pilgrims throng the saint’s shrine while fishermen mend nets where senators once paraded. You can lay in provisions here before the ship sails.",
+   ch:[{l:'Buy 30 days of provisions (10 s)',f(){ if(S.silver>=10){ S.silver-=10; S.food+=30; log("Bread, salt fish, oranges, and oil come aboard at Ephesus — enough to see the galley through."); } else log("You count your coppers and decide the ship's biscuit will have to do."); }},{l:'Back to the ship',f(){}}]};
 }
 function renderSail(m){
   const s=S.sail; if(!s){ S.screen='city'; renderCity(m); return; }
@@ -2444,6 +2535,8 @@ function render(){
   else if(S.screen==='end')renderEnd(m);
   else if(S.screen==='conclude')renderFinal(m,'concluded at Constantinople');
   else if(S.screen==='home')renderHome(m);
+  else if(S.screen==='retired')renderRetire(m);
+  else if(S.screen==='hire')renderHire(m);
   else if(S.screen==='dead')renderDead(m);
   renderLog();
 }
@@ -2459,7 +2552,7 @@ function renderStats(){
    '<span>Guards <b>'+guardCount()+'</b></span>'+
    '<span style="cursor:pointer;text-decoration:underline dotted var(--dim)" title="View the company" onclick="showParty()">Party <b>'+(1+livingComps())+'</b></span>'+
    '<span>Health <b>'+hpWord()+'</b></span>'+
-   '<span'+w+'>Cargo <b'+w+'>'+cargoW()+'/'+cargoCap()+'</b></span>';
+   '<span'+w+' style="cursor:pointer;text-decoration:underline dotted var(--dim)" title="What you are carrying" onclick="showCargo()">Cargo <b'+w+'>'+cargoW()+'/'+cargoCap()+'</b></span>';
 }
 function renderRibbon(){
   const el=$('ribbon');
@@ -2468,7 +2561,7 @@ function renderRibbon(){
     let cls=i<S.idx?'done':i===S.idx?'here':'';
     return '<span class="city '+cls+'">'+c.name+'</span>';
   }).join('<span style="opacity:.4"> — </span>');
-  if(!S.routeChosen)h+='<span style="opacity:.4"> — </span><span class="city">… the West</span>';
+  if(!S.routeChosen)h+='<span style="opacity:.4"> — </span><span class="city">… the '+(isWest()?'Orient':'West')+'</span>';
   el.innerHTML=h;
 }
 function renderLog(){
@@ -2491,9 +2584,9 @@ function rosterTick(){
 function renderTitle_unused(m){
   m.innerHTML=
   '<h2>THE SILK ROAD <span class="zh">絲綢之路</span></h2>'+
-  '<p class="sub">Chang\'an to Constantinople and home again, in the second year of Baoying — 762 CE <span style="opacity:.6">· v'+VERSION+'</span></p>'+
+  '<p class="sub">Chang\'an to Constantinople and home again, in the second year of Baoying — 762 AD <span style="opacity:.6">· v'+VERSION+'</span></p>'+
   '<div id="resumeslot"></div>'+
-  '<p>Set out with whatever you can afford, come back rich or not at all. Load up cheap in the east, sell dear in the west, then fill your packs with western glass, coral, and wine for the return. The road between is long and fraught with scouring dust storms, freezing mountain passes, swollen rivers — and of course, dysentery.</p>'+
+  '<p>Buy low in the east, sell high in the west — then load up on western glass, coral, and wine and run it back. The rebellion smoulders behind you, the Caliph is raising a round city on the Tigris, and the whole world is in front. The road kills the careless; many do not come home.</p>'+
   '<div class="panel"><p style="margin-bottom:6px">Your name, for the ledger <span class="red">*</span></p>'+
   '<input type="text" id="pname" value="" maxlength="24" placeholder="enter your name" oninput="nameGate()"> '+
   '<span id="nameWarn" class="sub">A name is required before you set out.</span></div>'+
@@ -2549,7 +2642,7 @@ function renderCity(m){
   const backLeg = S.itin[S.idx] ? S.itin[S.idx].dist : 0;
   const cp=camelPrice();
   const mtn = upcomingMountain();
-  const passLine = mtn ? '<p class="sub">Ahead lies '+rangeName()+'. Travellers coming down say the passes are <b class="'+(passDanger()>=.5?'red':'gold')+'">'+passWord()+'</b>'+(passDanger()>=.5?' — wait for the season, or gamble with the snow.':'.')+'</p>' : '';
+  const passLine = mtn ? '<p class="sub">Ahead, on the road to '+(nextCity()?nextCity().name:'the next town')+', lies '+rangeName()+'. Travellers coming down say the passes are <b class="'+(passDanger()>=.5?'red':'gold')+'">'+passWord()+'</b>'+(passDanger()>=.5?' — wait for the season, or gamble with the snow.':'.')+'</p>' : '';
   m.innerHTML='<h2>'+cityLabel(c)+zhSpan(c)+(S.returning?' <span class="sub">· homeward</span>':'')+'</h2><p class="sub">'+cityDesc(c)+'</p>'+
   passLine+
   '<table><tr><th>Bazaar</th><th style="text-align:right">price</th><th style="text-align:right">avg&nbsp;paid</th><th style="text-align:right">held</th><th>buy / sell</th></tr>'+rows+'</table>'+
@@ -2558,7 +2651,7 @@ function renderCity(m){
   '<button onclick="buyFood()">Provisions +30 (10 s)</button>'+
   '<button onclick="S.screen=\'animals\';render()">Livestock market</button>'+
   '<button onclick="S.screen=\'notes\';render()">Prices &amp; notes</button>'+
-  '<button onclick="hireGuard()">Hire guard (40 s)</button>'+
+  '<button onclick="openHire()">Hire / release guards</button>'+
   '<button onclick="huntFood()">Hunt nearby (1 day)</button>'+
   '<button onclick="restCity()">Rest 3 days</button>'+
   '<button onclick="waitMonth()">Wait a month</button>'+
@@ -2569,7 +2662,7 @@ function renderCity(m){
   (canFwd?'<button class="seal" onclick="setOut(1)">Set out for '+fwdLabel+'</button> ':'')+
   (back?'<button onclick="setOut(-1)">Turn back toward '+back.name+' ('+fmtDist(backLeg)+')</button>':'')+
   (xfork?'<button onclick="setOutToOtherFork()">Detour to '+xfork.name+' (other Taklamakan road, '+fmtDist(xfork.dist)+')</button>':'')+
-  (function(){const sp=c.name==='Aleppo'?'Constantinople':(c.name==='Constantinople'?'Aleppo':null); if(!sp)return ''; const pi=S.itin.findIndex(x=>x.name===sp); return (pi>S.idx)?'<button class="seal" onclick="seaOffer()">Sell the herd & take ship for '+sp+'</button> ':'';})()+
+  (function(){const sp=c.name==='Aleppo'?'Constantinople':(c.name==='Constantinople'?'Aleppo':null); if(!sp)return ''; const pi=S.itin.findIndex(x=>x.name===sp); return (pi>=0 && pi!==S.idx)?'<button class="seal" onclick="seaOffer()">Sell the herd & take ship for '+sp+'</button> ':'';})()+
   '</div>';
 }
 const SKY=[
