@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.01.01';
+const VERSION='2.01.04';
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
  {id:'tea',   n:'Tea',       u:'brick', wt:4, e:4,  w:26},
@@ -3795,7 +3795,7 @@ function seaEntryButtons(c){
   return '';
 }
 /* ============ ANATOLIA REGION MAP (departure screen) ============ */
-const ANAT_IMG="Maps/anatolia762.png";
+const ANAT_IMG="Maps/anatolia_relief_setout.png";
 const CHARTS={
  kashgar:{img:"Maps/kashgar762.png",seasonal:true,vbw:1500,vbh:747,title:"Kashgar and the western Tarim",cities:{Kashgar:{x:665,y:420,ldx:-150,ldy:8},Akhsikath:{x:133,y:244,ldx:0,ldy:16},Yarkand:{x:873,y:596,ldx:0,ldy:18},Aksu:{x:1377,y:138,ldx:-95,ldy:-2}},open:["Kashgar"]},
  steppe:{img:"Maps/steppe762.png",seasonal:true,vbw:1980,vbh:1064,title:"Sogdiana and the steppe road",cities:{Bukhara:{x:62,y:729,ldx:14,ldy:6},Samarkand:{x:439,y:746,ldx:-10,ldy:20},Chach:{x:780,y:501,ldx:0,ldy:-18},Ispijab:{x:783,y:355,ldx:-118,ldy:-2},Talas:{x:1089,y:266,ldx:0,ldy:-16},Akhsikath:{x:1104,y:559,ldx:0,ldy:18},Kashgar:{x:1772,y:773,ldx:-150,ldy:8},Suyab:{x:1655,y:281,ldx:-118,ldy:-4}},open:["Samarkand","Chach","Ispijab","Talas","Akhsikath","Suyab"]},
@@ -3819,26 +3819,27 @@ const CHARTS={
 };
 const ANAT_NAME={constantinople:'Constantinople',iconium:'Iconium',ephesus:'Ephesus',gortyn:'Gortyn',aleppo:'Aleppo',trebizond:'Trebizond',antioch:'Antioch',nicaea:'Nicaea'};
 const ANAT_CITIES={
-  constantinople:{x:573,y:494,r:13,label:'Constantinople',big:true},
-  ephesus:{x:483,y:782,r:8,label:'Ephesus'},
-  iconium:{x:794,y:747,r:10,label:'Iconium'},
-  aleppo:{x:1140,y:870,r:10,label:'Aleppo'},
-  gortyn:{x:326,y:977,r:8,label:'Gortyn'},
-  antioch:{x:990,y:888,r:6,label:'Antioch',faint:true},
-  nicaea:{x:642,y:567,r:6,label:'Nicaea',faint:true},
-  trebizond:{x:1157,y:511,r:7,label:'Trebizond',faint:true}
+  constantinople:{x:434,y:108,r:13,label:'Constantinople',big:true},
+  ephesus:{x:297,y:366,r:8,label:'Ephesus'},
+  iconium:{x:730,y:372,r:10,label:'Iconium'},
+  aleppo:{x:1122,y:512,r:10,label:'Aleppo'},
+  gortyn:{x:92,y:613,r:8,label:'Gortyn'},
+  antioch:{x:1020,y:519,r:6,label:'Antioch',faint:true},
+  nicaea:{x:497,y:157,r:6,label:'Nicaea',faint:true},
+  trebizond:{x:1337,y:109,r:7,label:'Trebizond',faint:true},
+  alexandria:{x:512,y:932,r:8,label:'Alexandria',faint:true}
 };
 const ANAT_ROUTES=[
-  {type:'land',from:'constantinople',to:'iconium',wp:[[662,543],[636,570],[711,636],[786,687]]},
-  {type:'land',from:'iconium',to:'aleppo',wp:[[1000,759],[1066,819]]},
-  {type:'land',from:'antioch',to:'aleppo',wp:[[996,898]]},
-  {type:'land',from:'aleppo',end:[1385,1055],wp:[[1246,963]],dest:'east'},
-  {type:'land',from:'iconium',to:'trebizond',wp:[[1007,618],[1154,570]]},
-  {type:'land',from:'iconium',to:'ephesus',wp:[[680,766],[590,778]]},
-  {type:'sea',from:'constantinople',to:'ephesus',wp:[[380,581],[339,709]]},
-  {type:'sea',from:'constantinople',to:'gortyn',wp:[[351,606],[381,788],[408,978]],gortyn:true},
-  {type:'sea',from:'ephesus',to:'antioch',wp:[[472,927],[760,928],[891,886]]},
-  {type:'sea',from:'gortyn',end:[470,1116],wp:[[400,1050]],dest:'alexandria',gortyn:true}
+  {type:"land",from:"constantinople",to:"iconium",wp:[[437,107],[444,107],[454,108],[464,112],[475,116],[485,121],[496,124],[506,126],[515,131],[519,137],[517,144],[510,150],[505,155],[503,161],[504,168],[507,177],[511,186],[519,193],[529,198],[539,202],[550,206],[560,211],[570,218],[580,228],[590,238],[601,249],[611,259],[622,270],[632,279],[642,288],[652,296],[662,305],[672,315],[682,324],[692,334],[702,343],[712,352],[721,361]]},
+  {type:"land",from:"iconium",to:"aleppo",wp:[[735,373],[743,375],[756,377],[770,380],[784,384],[798,387],[812,388],[826,388],[839,389],[853,391],[867,392],[881,392],[895,394],[904,400],[911,409],[915,419],[917,428],[924,436],[933,444],[946,448],[959,449],[973,449],[987,449],[1000,449],[1014,449],[1027,451],[1038,454],[1044,460],[1046,469],[1043,479],[1040,490],[1039,499],[1043,506],[1053,508],[1066,508],[1080,508],[1094,509],[1106,510]]},
+  {type:"land",from:"antioch",to:"aleppo",wp:[]},
+  {type:"land",from:"aleppo",end:[1385, 579],wp:[[1259,546]],dest:"east"},
+  {type:"land",from:"iconium",to:"trebizond",wp:[[737,374],[748,375],[765,380],[784,383],[802,387],[821,388],[839,389],[858,391],[876,391],[892,386],[906,374],[918,358],[931,340],[945,323],[962,310],[979,297],[997,284],[1016,269],[1034,256],[1053,244],[1071,233],[1090,224],[1108,215],[1126,206],[1144,197],[1161,188],[1177,181],[1194,177],[1210,175],[1225,170],[1234,160],[1241,148],[1246,135],[1253,122],[1265,113],[1281,107],[1299,106],[1316,106]]},
+  {type:"land",from:"iconium",to:"ephesus",wp:[[726,367],[720,360],[710,351],[699,341],[687,335],[675,333],[664,335],[652,340],[641,344],[630,346],[618,344],[607,341],[595,340],[584,342],[572,346],[560,350],[549,351],[537,355],[526,360],[515,366],[503,370],[492,373],[480,375],[469,375],[457,375],[445,375],[434,373],[422,371],[410,369],[399,368],[387,367],[375,368],[364,369],[352,371],[340,371],[329,372],[317,371],[307,369]]},
+  {type:"sea",from:"constantinople",to:"ephesus",wp:[[434,112],[435,113],[434,113],[434,113],[433,113],[424,114],[402,118],[336,131],[309,140],[281,147],[263,154],[248,160],[231,171],[206,190],[189,199],[180,210],[176,224],[171,238],[164,267],[164,282],[164,296],[164,311],[173,341],[193,355],[235,377],[257,377],[277,375],[279,375],[282,374],[290,366]]},
+  {type:"sea",from:"constantinople",to:"gortyn",wp:[[269,193],[151,336],[101,495]],gortyn:true},
+  {type:"sea",from:"ephesus",to:"antioch",wp:[[297,366],[281,376],[274,386],[274,386],[256,398],[241,435],[244,457],[248,472],[250,480],[261,483],[359,487],[389,499],[415,511],[468,532],[530,565],[567,565],[599,560],[619,555],[654,544],[673,540],[697,536],[725,536],[771,536],[802,532],[833,528],[864,524],[910,522],[941,522],[971,521],[1001,520]]},
+  {type:"sea",from:"gortyn",end:[512, 932],wp:[[92,613],[92,620],[106,625],[118,628],[126,629],[149,630],[156,632],[167,636],[175,650],[192,689],[221,741],[233,757],[245,771],[257,783],[269,794],[292,818],[304,829],[316,841],[328,852],[340,863],[372,885],[397,896],[433,907],[482,919],[499,923],[506,923],[506,923],[507,923],[507,924],[508,926]],dest:"alexandria",gortyn:true}
 ];
 /* who can be reached from where, and how: itin = overland S.itin neighbour; land = caravan spur via the graph; sea = by ship */
 const ANAT_LINKS={
@@ -3859,6 +3860,18 @@ function anatRoutePts(r){ var a=[[ANAT_CITIES[r.from].x,ANAT_CITIES[r.from].y]];
 function openMap(){ if(!S)return; S.screen='map'; render(); }
 function renderMap(m){
   const here=mapHereId(); const links=anatLinksFor(here);
+  if(here==='constantinople'){ S.onceFlags=S.onceFlags||{}; if(!S.onceFlags.cnIntroW){ S.onceFlags.cnIntroW=true;
+    m.innerHTML='<h2>Leave Constantinople <span class="sub">\u00b7 the road east, toward Cathay</span></h2>'+
+    '<div class="cnEstab" id="cnbox" style="position:relative;max-width:880px;margin:6px auto;aspect-ratio:1980 / 1411;overflow:hidden;border:5px solid #6b4f2a;border-radius:3px;background:#0d0a06;cursor:pointer" onclick="if(window.cnSkip)cnSkip()">'+
+    '<svg id="cnsvg" viewBox="0 0 4500 1755" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:0;width:100%;height:100%">'+
+    '<g id="cnpan"><image href="Maps/silkroad_wide762.png" x="0" y="0" width="4500" height="1755"/>'+
+    '<g id="cnlbl" font-family="Georgia,serif" font-weight="bold">'+
+    '<circle cx="237" cy="551" r="13" fill="#c0241a" stroke="#fff" stroke-width="3"/><text x="262" y="544" font-size="42" fill="#7a1208" stroke="#f7e9c8" stroke-width="6" paint-order="stroke">Constantinople</text>'+
+    '<circle cx="4247" cy="889" r="13" fill="#c0241a" stroke="#fff" stroke-width="3"/><text x="4224" y="952" text-anchor="end" font-size="42" fill="#7a1208" stroke="#f7e9c8" stroke-width="6" paint-order="stroke">Chang\'an</text>'+
+    '</g></g></svg>'+
+    '<img id="cncorr" src="Maps/anatolia_relief_setout.png" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0">'+
+    '<div class="cnCap">Constantinople &mdash; the western end of the Silk Road. Your road runs east, across Anatolia and the deserts beyond, toward distant Cathay. <em>(tap to skip)</em></div></div>';
+    cnPlayIntro({x0:0,y0:486,x1:816,y1:1083},2.0); return; } }
   function avail(id){ if(!links[id])return false; if(links[id]==='sea')return voyAllowed(ANAT_NAME[here],ANAT_NAME[id]); return true; }
   var s='';
   ANAT_ROUTES.forEach(function(r){ if(r.gortyn && !gortynShown())return;
@@ -3875,7 +3888,7 @@ function renderMap(m){
     s+='<path d="'+anatSmooth(anatRoutePts(r))+'" fill="none" stroke="'+col+'" stroke-width="'+w+'" stroke-dasharray="10 9" stroke-linecap="round" opacity="'+op+'"/>';
     if(r.end){ var lab=r.dest==='alexandria'?'to Alexandria':'to the east'; s+='<text x="'+(r.end[0]-14)+'" y="'+(r.end[1]+4)+'" text-anchor="end" font-size="13" font-style="italic" fill="#3a2c17" font-family="Georgia,serif" style="paint-order:stroke;stroke:#efe2c2;stroke-width:4px">'+lab+'</text>'; }
   });
-  for(var id in ANAT_CITIES){ var c=ANAT_CITIES[id]; if(id==='gortyn'&&!gortynShown())continue;
+  for(var id in ANAT_CITIES){ var c=ANAT_CITIES[id]; if((id==='gortyn'||id==='alexandria')&&!gortynShown())continue;
     var hintCity=(id==='aleppo'||id==='antioch');
     var clickable=(id===here)||hintCity||(avail(id)&&!(id==='gortyn'&&!gortynShown()));
     var big=(id===here); var fill=c.faint?'#d8c7a0':'#c0392b'; var stroke=c.faint?'#7a6038':'#efe2c2';
@@ -3891,7 +3904,7 @@ function renderMap(m){
   m.innerHTML='<h2>Leave '+(city()?cityLabel(city()):'the city')+' <span class="sub">· choose your road</span></h2>'+
     '<div style="position:relative;max-width:800px;margin:6px auto;line-height:0">'+
     '<img src="'+ANAT_IMG+'" alt="map of Anatolia" style="width:100%;display:block;border:5px solid #6b4f2a;border-radius:3px" onerror="this.style.visibility=\'hidden\'">'+
-    '<svg viewBox="0 0 1402 1122" preserveAspectRatio="xMidYMid meet" style="position:absolute;left:5px;top:5px;width:calc(100% - 10px);height:calc(100% - 10px)">'+s+'</svg></div>'+
+    '<svg viewBox="0 0 1402 999" preserveAspectRatio="xMidYMid meet" style="position:absolute;left:5px;top:5px;width:calc(100% - 10px);height:calc(100% - 10px)">'+s+'</svg></div>'+
     '<p class="sub" style="text-align:center;max-width:780px;margin:6px auto">Click a destination. The bright lines are roads open to you now \u2014 <span style="color:#e23b25">red overland</span> (with the caravan) or <span style="color:#2f8fb0">blue by ship</span> (sell the beasts, pay a fare). Faint lines are the roads that carry on from there.</p>'+
     '<div style="text-align:center;margin-top:8px">'+_onward+'<button onclick="S.screen=\''+(S.seaMode?'port':'city')+'\';render()">Back to the bazaar</button></div>';
 }
@@ -3936,20 +3949,20 @@ function chartGo(name){ if(!S)return; var here=city()&&city().name;
   if(typeof mapSetOutTo==='function' && mapSetOutTo(name)) return;                       /* an adjacent overland stage */
   mapHint(name+" is no single stage from "+here+". Make for a nearer town on the road first.", name);
 }
-function cnPlayIntro(){
+function cnPlayIntro(win,holdT){
   var pan=document.getElementById('cnpan'), svg=document.getElementById('cnsvg'), corr=document.getElementById('cncorr'), lbl=document.getElementById('cnlbl');
   if(!pan) return;
   var VW=4500,VH=1755;
-  var win={x0:3221,y0:426,x1:4450,y1:978};                 // Hexi window in wide-map px (shares the same lon/lat system)
+  win=win||{x0:3221,y0:426,x1:4450,y1:978};                 // Hexi window in wide-map px (shares the same lon/lat system)
   var wcx=(win.x0+win.x1)/2, wcy=(win.y0+win.y1)/2;
   var s0=1.0, s1=VW/(win.x1-win.x0);                        // end: fill viewBox width with the Hexi window
-  var c0x=VW/2,c0y=VH/2, dur=4.6, hold=0.85;
+  var c0x=VW/2,c0y=VH/2, dur=4.6, hold=(holdT||0.85);
   var ease=function(t){ return t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2; };
   var t0=performance.now(), done=false;
   function snap(){ if(done)return; done=true;
     if(svg){svg.style.transition='filter .5s,opacity .5s'; svg.style.opacity='0'; svg.style.filter='blur(8px)';}
     if(corr){corr.style.transition='opacity .5s'; corr.style.opacity='1';}
-    setTimeout(function(){ if(S&&S.screen==='chart') render(); }, 560); }
+    setTimeout(function(){ if(S&&(S.screen==='chart'||S.screen==='map')) render(); }, 560); }
   window.cnSkip=snap;
   function frame(now){ if(!document.getElementById('cnpan'))return;
     var e=(now-t0)/1000, u=e<hold?0:Math.min(1,(e-hold)/dur), k=ease(u);
