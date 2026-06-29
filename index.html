@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.02.01';
+const VERSION='2.01.21';
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
  {id:'tea',   n:'Tea',       u:'brick', wt:4, e:4,  w:26},
@@ -498,200 +498,6 @@ function evTurfanFork(){ return {h:'The road splits', t:"The road splits where t
   {l:'Bear right — through the broad valley', f:function(){ turfanDivert(); }}
 ]}; }
 function turfanDivert(){ var HERE=[86.9,44.2], TURF=[89.18,42.93]; var miles=gcMiles(HERE,TURF); var D=Math.max(1,daySpeed()); var days=Math.max(3,Math.round(miles/15)); var fromObj=cityClone('the valley road','rugged',0,0.3); var toObj=cityClone('Turfan','desert',1,0.25); toObj.dist=Math.round(days*D); S.dash={kind:'turfan',to:'Turfan',terr:'rugged',lostChance:0,lostRolled:true,lostKm:0}; S.itin=[fromObj,toObj]; S.idx=0; S.dir=1; S.legKm=0; S.pace='s'; S.screen='travel'; log("You turn south off the steppe road, down into the broad valley that runs through the gap toward Turfan."); }
-
-/* ===================== HUNTING MINIGAME (ported from testbed) ===================== */
-var HM_CONF={ round_min:30, round_ms:1700, horse_walk:2.0, foot_walk:1.2, track_div:24, horse_fs:6,
-  game_enc:{steppe:0.09,settled:0.08,mountain:0.085,desert:0.032,harsh:0.03,marsh:0.10,jungle:0.11,forest:0.10,rugged:0.07},
-  pred_base:0.0013, pred_terr:{steppe:1.0,settled:0.8,mountain:1.6,desert:0.7,harsh:1.2,marsh:1.3,jungle:1.9,forest:1.4,rugged:1.1},
-  night_pred:0.065, tire_round:26, collapse_round:40, forage_div:38, herb_frac:0.12,
-  forage_terr:{steppe:1.0,settled:1.1,mountain:0.9,desert:0.4,harsh:0.4,marsh:1.1,jungle:1.3,forest:1.1,rugged:0.8} };
-var HM_DAYLIGHT={winter:9.5,spring:12,summer:14.5,autumn:12};
-var HM_SUBTERR={
- steppe:['open grassland','a reed-choked watercourse','a low rise','tussock and scrub','a dry wash','a salt-lick hollow'],
- settled:['stubble-fields','an orchard edge','a willow brake','a millpond margin','a thorn hedgerow'],
- mountain:['a ridgeline','a deep valley','a spruce forest','a scree slope','an alpine meadow','a boulder-field','a pine wood'],
- desert:['a gravel plain','a dune-field','a dry oued','a tamarisk thicket','a stony hammada'],
- harsh:['a stony barren','a frozen marsh','a wind-scoured flat','a thorn-brake','a gully'],
- marsh:['a reed-bed','a sedge fen','a willow carr','a tussock bog','open water','a muddy creek','an alder thicket'],
- forest:['a stand of birch','a walnut grove','a fern-choked hollow','a mossy deadfall','a sunlit glade'],
- rugged:['a broken hillside','a dry ravine','a juniper slope','a rockfall','a thorn-brake'],
- jungle:['dense rainforest','a riverbank','a bamboo brake','a leech-ridden swamp','a strangler-fig grove','a sunlit clearing','a mangrove edge'] };
-var HM_TRAV={
- steppe:['You cross a long swell of grassland.','You ford a shallow steppe stream.','A dust-devil walks across the plain ahead.','You skirt a marmot town, the sentinels whistling.'],
- settled:['You skirt a stubbled field, a farmer watching from his gate.','You follow a hedgerow between holdings.','You pass a mill, its wheel turning slow.'],
- mountain:['You labour up over a ridge, a valley opening below.','You pick down a scree slope, stones sliding underfoot.','You cross a stand of spruce, needles soft underfoot.','You work along a high traverse, the air thin and cold.'],
- desert:['You cross a shimmering gravel plain.','You climb a dune and slither down the far side.','You follow a dry oued, hoping for tracks in the sand.'],
- harsh:['You pick across a stony barren.','Wind scours the flat; you lean into it and go on.'],
- marsh:['You wade a reed-choked channel, mud sucking at the hooves.','You skirt open water loud with frogs.','You test each step across a quaking bog.'],
- forest:['You thread between close-grown trunks, leaf-mould underfoot.','You cross a glade where the light comes down in shafts.','You step over a mossy deadfall.'],
- rugged:['You scramble over a broken hillside.','You follow a dry ravine up into the hills.'],
- jungle:['You hack along a game-trail under a dripping canopy.','You ford a brown river, wary of what lies beneath.','You push through bamboo, leeches questing at your ankles.','Gibbons hoot somewhere overhead as you pass below.'] };
-var HM_PREY=[
- {id:'hare',  n:'a hare',          perc:5,  stealth:9,  kill:7,  meat:[6,8],   w:1.3, terr:['steppe','settled','desert','mountain','harsh','rugged','forest']},
- {id:'fowl',  n:'a covey of partridge', perc:7, stealth:11, kill:6, meat:[7,10], w:1.0, terr:['steppe','settled','mountain','forest','rugged']},
- {id:'gazelle',n:'a gazelle',      perc:10, stealth:15, kill:17, meat:[22,14], w:1.0, terr:['steppe','desert']},
- {id:'deer',  n:'a roe deer',      perc:12, stealth:6,  kill:18, meat:[26,16], w:1.0, terr:['steppe','settled','mountain','forest']},
- {id:'ibex',  n:'an ibex',         perc:16, stealth:12, kill:22, meat:[30,18], w:0.8, terr:['mountain','rugged']},
- {id:'onager',n:'a wild ass',      perc:11, stealth:13, kill:21, meat:[40,24], w:0.7, terr:['steppe','desert','harsh']},
- {id:'boar',  n:'a wild boar',     perc:9,  stealth:5,  kill:12, meat:[40,20], w:0.7, terr:['settled','mountain','steppe','marsh','jungle','forest'], boar:true},
- {id:'wolves',n:'a wolf-pack',     perc:6,  fs:20, hp:12, dmg:6, w:0.10, terr:['steppe','mountain','harsh','marsh','forest','rugged'], pred:true},
- {id:'lion',  n:'a lion',          perc:5,  fs:36, hp:12, dmg:6, w:0.07, terr:['steppe','settled'], pred:true},
- {id:'bear',  n:'a she-bear',      perc:5,  fs:30, hp:16, dmg:8, w:0.08, terr:['mountain','forest'], pred:true},
- {id:'leopard',n:'a leopard',      perc:11, fs:28, hp:10, dmg:6, w:0.06, terr:['mountain','settled','rugged'], pred:true},
- {id:'waterfowl',n:'a raft of ducks',  perc:6,  stealth:12, kill:7,  meat:[8,12],  w:1.4, terr:['marsh']},
- {id:'marshdeer',n:'a marsh deer',     perc:11, stealth:7,  kill:18, meat:[28,16], w:1.0, terr:['marsh']},
- {id:'jfowl',   n:'a jungle-fowl',     perc:7,  stealth:11, kill:6,  meat:[7,10],  w:1.3, terr:['jungle']},
- {id:'muntjac', n:'a muntjac deer',    perc:13, stealth:8,  kill:16, meat:[20,14], w:1.1, terr:['jungle']},
- {id:'sambar',  n:'a sambar stag',     perc:14, stealth:9,  kill:22, meat:[42,24], w:0.7, terr:['jungle']},
- {id:'tiger',   n:'a tiger',           perc:13, fs:42, hp:16, dmg:8, w:0.55, terr:['jungle'], pred:true},
- {id:'python',  n:'a python',          perc:15, fs:22, hp:10, dmg:6, w:0.30, terr:['jungle','marsh'], pred:true} ];
-var HM_SYM='<svg viewBox="0 0 120 120" width="54" height="54" xmlns="http://www.w3.org/2000/svg"><defs><g id="hmspear"><line x1="60" y1="16" x2="60" y2="104" stroke="#8a6a32" stroke-width="4" stroke-linecap="round"/><path d="M60,8 C56,16 56,22 60,30 C64,22 64,16 60,8 Z" fill="#d8c98a" stroke="#2a1f10" stroke-width="1.6"/></g></defs><use href="#hmspear" transform="rotate(42 60 60)"/><use href="#hmspear" transform="rotate(-32 60 60)"/></svg>';
-
-function hmCap(s){ return s?s.charAt(0).toUpperCase()+s.slice(1):s; }
-function hmD(n){ return 1+Math.floor(rnd()*n); }
-function hmSeason(){ var m=monthNum(); return (m<=2||m===12)?'winter':(m<=5)?'spring':(m<=8)?'summer':'autumn'; }
-function hmDayRounds(){ return Math.round((HM_DAYLIGHT[hmSeason()]||12)*60/HM_CONF.round_min); }
-function hmSub(terr){ var a=HM_SUBTERR[terr]||HM_SUBTERR.steppe; return pick(a); }
-function hmIsForest(sub){ return /forest|wood|brake|thicket|orchard|bamboo|fig|carr/.test(sub||''); }
-function hmPickFrom(pool){ if(!pool.length)return null; var tot=pool.reduce(function(s,a){return s+a.w;},0); var r=rnd()*tot; for(var i=0;i<pool.length;i++){ r-=pool[i].w; if(r<=0)return pool[i]; } return pool[pool.length-1]; }
-function hmPickGame(terr){ return hmPickFrom(HM_PREY.filter(function(a){return !a.pred && a.terr.indexOf(terr)>=0;})) || hmPickFrom(HM_PREY.filter(function(a){return !a.pred;})); }
-function hmPickPred(terr,night){ var pool=HM_PREY.filter(function(a){return a.pred && a.terr.indexOf(terr)>=0;}); if(!pool.length)pool=HM_PREY.filter(function(a){return a.pred;}); if(night)pool=pool.map(function(a){return Object.assign({},a,{w:(a.id==='wolves'?a.w*4:a.w)});}); return hmPickFrom(pool); }
-function hmHsBest(){ return Math.max.apply(null,S.hm.hunters.map(function(p){return p.hs;})); }
-function hmHsWorst(){ return Math.min.apply(null,S.hm.hunters.map(function(p){return p.hs;})); }
-function hmKill(){ var hs=S.hm.hunters.map(function(p){return p.hs;}).sort(function(a,b){return b-a;}); var st=hs[0]; for(var i=1;i<hs.length;i++)st+=hs[i]*0.2; if(!S.hm.bowed)st*=0.7; return st; }
-function hmFS(p){ return p.fs + ((S.hm&&S.hm.horsed)?HM_CONF.horse_fs:0); }
-function hmClock(round, tw){ var start=tw?18*60:6*60; var t=((start+round*HM_CONF.round_min)%1440+1440)%1440; var hh=Math.floor(t/60), mm=t%60; return (hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm; }
-function hmMove(){ return S.hm.horsed?HM_CONF.horse_walk:HM_CONF.foot_walk; }
-function hmSomeName(){ var a=S.hm.hunters.filter(function(p){return p.hp>0;}); return a.length?pick(a).name.split(',')[0]:'someone'; }
-function hmHit(p,dmg){ p.hp=Math.max(0,p.hp-dmg); if(p.hp>0 && dmg>0 && p.maxhp>0 && rnd()<dmg/p.maxhp){ p.maxhp++; if(p.you){ S.youHpBase=youCombHP()+1; } else if(p.ref){ p.ref.hpBase=combHP(p.ref)+1; } } }
-function hmHealer(){ var best=null; S.hm.hunters.forEach(function(p){ if(p.hp>0 && (p.heal||0)>0 && (!best||p.heal>best.heal)) best=p; }); return best; }
-
-function hmHazard(tired){ var H=S.hm; var up=H.hunters.filter(function(p){return p.hp>0;}); if(!up.length)return false; var m=tired?1.6:1;
- var fallP=((H.terr==='mountain')?0.012:(H.terr==='jungle'?0.006:0.002))*m; if(/scree|ridge|boulder|cliff|slope/.test(H.sub))fallP+=0.012*m;
- if(rnd()<fallP){ var w1=pick(up); var dm=hmD(6); hmHit(w1,dm); H.L.push('<span class="red">'+w1.name.split(',')[0]+' loses footing on '+H.sub+' — −'+dm+' HP'+(w1.hp<=0?', badly hurt':'')+'.</span>'); if(H.hunters.every(function(p){return p.hp<=0;}))return hmFinish('lost'),true; return true; }
- var snakeP=({steppe:0.004,settled:0.004,mountain:0.003,desert:0.006,harsh:0.003,marsh:0.009,jungle:0.011,forest:0.005,rugged:0.004}[H.terr]||0.004)*m;
- if(rnd()<snakeP){ var w2=pick(up); var dm2=hmD(6); hmHit(w2,dm2); H.L.push('<span class="red">'+w2.name.split(',')[0]+' is struck by a snake in '+H.sub+' — −'+dm2+' HP.</span>'); if(H.hunters.every(function(p){return p.hp<=0;}))return hmFinish('lost'),true; return true; }
- return false; }
-function hmForage(){ var H=S.hm; var fr=hmHealer(); if(!fr)return false; var hl=fr.heal; var tf=(HM_CONF.forage_terr[H.terr]!=null?HM_CONF.forage_terr[H.terr]:1);
- if(rnd() < tf*hl/(hl+HM_CONF.forage_div)){ var y=4+ri(7); H.meat+=y; S.food+=y; H.L.push('<span class="gold">'+fr.name.split(',')[0]+' gathers roots, greens and fruit along the way — +'+y+' food.</span>'); return true; } return false; }
-
-function hmShow(extra){ if(!S.hm)return; S.hm._extra=extra||null; S.screen='hunt'; render(); }
-function hmTimer(fn,ms){ var H=S.hm; if(!H)return; if(H.timer){clearTimeout(H.timer);H.timer=null;} H.timer=setTimeout(function(){ if(S.hm) fn(); }, ms); }
-
-function hmStart(terr,inTown){ if(!S||S.dead)return; S.pendingEvent=null; S.hm={phase:'setup', terr:terr, inTown:!!inTown}; S.screen='hunt'; render(); }
-function hmBegin(){ var H=S.hm; if(!H||H.phase!=='setup')return;
- var picks=[]; var youSel=document.getElementById('hmYou'); if(youSel&&youSel.checked)picks.push(hmYou());
- livingParty().forEach(function(p){ var c=document.getElementById('hmc'+S.party.indexOf(p)); if(c&&c.checked)picks.push(hmHunter(p)); });
- if(!picks.length){ alert('Pick at least one to send.'); return; }
- var nH=picks.length;
- var horses=(S.herd&&S.herd.horse)||0;
- var bows=(gHasBow(youGear())?1:0)+livingParty().filter(function(p){return gHasBow(p.gear);}).length;
- var twilight=(H.terr==='desert');
- S.hm={phase:'run', hunters:picks, n:nH, horsed:horses>=nH, bowed:bows>=nH, terr:H.terr, inTown:H.inTown, sub:hmSub(H.terr), round:0, dist:0, _maxdist:0, meat:0, kills:0, returning:false, track:null, dark:false, over:hmDayRounds(), L:[], timer:null, twilight:twilight };
- var R=S.hm;
- R.L.push('The party sets out into '+R.sub+' — '+nH+' hunter'+(nH>1?'s':'')+', '+(R.horsed?'all mounted':'some afoot')+', '+(R.bowed?'all with bows':'short of bows')+'.');
- passDays(1); if(S.dead){ S.hm=null; render(); return; }
- hmShow(); hmTimer(hmStep,900); }
-
-function hmStep(){ var H=S.hm; if(!H||H.phase!=='run')return; if(H.timer){clearTimeout(H.timer);H.timer=null;}
- H.round++;
- if(H.returning){ H.dist=Math.max(0,H.dist-hmMove()); } else { H.dist+=hmMove(); H._maxdist=Math.max(H._maxdist,H.dist); if(rnd()<0.34) H.sub=hmSub(H.terr); }
- if(H.returning && H.dist<=0.01){ return hmFinish('home'); }
- if(H.round>=HM_CONF.collapse_round && !H.returning){ H.hunters.forEach(function(p){ if(p.hp>0)p.hp=Math.max(1,p.hp-hmD(4)); }); H.L.push('<span class="red"><b>Spent past going on, the party can do no more — a cold camp, and home at first light.</b></span>'); return hmFinish('exhausted'); }
- if(H.round===HM_CONF.tire_round){ H.L.push('<span class="red">'+hmSomeName()+' is flagging — some '+Math.round(H.round*HM_CONF.round_min/60)+' hours afield.</span>'); }
- var tired=(H.round>HM_CONF.tire_round);
- if(!H.twilight && !H.returning && H.round>H.over && !H.dark){ H.dark=true; H.L.push('<span class="red">The light fails and the cold comes down — you are still afield, far from camp.</span>'); }
- if(H.dark && !H.returning){
-   if(rnd()<HM_CONF.night_pred*(HM_CONF.pred_terr[H.terr]||1)){ return hmPredator(hmPickPred(H.terr,true)); }
-   var risk=((H.terr==='jungle')?0.45:(H.terr==='mountain'||hmIsForest(H.sub))?0.26:0.15)*(1+0.12*(H.round-H.over))*(tired?1.6:1);
-   if(rnd()<risk){ return hmMishap(); }
-   H.L.push(pick(['The dark is full of small sounds; you press on by starlight.','Something coughs in the blackness, off to the side.','You stumble on, eyes straining, hands out before you.','An owl ghosts past, low and silent.']));
-   hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return;
- }
- if(!H.returning){
-   if(H.track){ var t=H.track; H.track=null; H.L.push('You steal up on the tracks you cut last round…'); return hmStalk(t); }
-   if(hmHazard(tired)){ if(S.hm&&S.hm.phase==='run'){ hmShow(); hmTimer(hmStep,HM_CONF.round_ms);} return; }
-   var b=hmHsBest();
-   if(rnd() < HM_CONF.pred_base*Math.min(6,12/Math.max(3,b))*(HM_CONF.pred_terr[H.terr]||1)){ return hmPredator(hmPickPred(H.terr)); }
-   if(rnd() < (HM_CONF.game_enc[H.terr]||0.10)){ return hmEncounter(hmPickGame(H.terr)); }
-   if(hmForage()){ hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
-   H.L.push(pick(HM_TRAV[H.terr]||HM_TRAV.steppe));
- } else { H.L.push('You make your way back toward camp — about '+H.dist.toFixed(1)+' mi to go.'); }
- hmShow(); hmTimer(hmStep,HM_CONF.round_ms); }
-
-function hmEncounter(a){ var H=S.hm; if(!a)return (hmShow(),hmTimer(hmStep,HM_CONF.round_ms)); if(a.pred) return hmPredator(a);
- var b=hmHsBest(); if(rnd()>=b/(b+a.perc)){ H.L.push('Something rustles in '+H.sub+' and is gone — you never get eyes on it.'); hmTrack(a); hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
- hmStalk(a); }
-function hmStalk(a){ var H=S.hm; var w=hmHsWorst();
- if(rnd()>=w/(w+a.stealth)){ H.L.push('You make out '+a.n+' in '+H.sub+' — but a careless step sends it bounding away.'); hmTrack(a); hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
- if(a.boar) return hmBoar(a);
- var str=hmKill(), p=Math.min(0.95,str/a.kill);
- if(rnd()<p){ var y=a.meat[0]+ri(a.meat[1]); H.meat+=y; H.kills++; S.food+=y; H.L.push('<span class="gold">A clean kill — '+a.n+' down. +'+y+' food.</span>'); }
- else { H.L.push('You loose at '+a.n+' and miss; it is away before you can nock another.'); hmTrack(a); }
- hmShow(); hmTimer(hmStep,HM_CONF.round_ms); }
-function hmTrack(a){ var H=S.hm; var b=hmHsBest(); if(!a.pred && b>=12 && rnd()<b/HM_CONF.track_div){ H.track=a; H.L.push('<span class="gold">— but you cut its trail, and set off after it.</span>'); } }
-function hmBoar(a){ var H=S.hm; if(H.timer){clearTimeout(H.timer);H.timer=null;} H._boar=a; H.L.push('<span class="gold">'+hmCap(a.n)+'! No arrow will stop it — it must be met on the spears, or left be.</span>'); hmShow('<button class="seal" onclick="hmBoarFight()">Take it on the spears</button> <button onclick="hmResume()">Let it go</button>'); }
-function hmBoarFight(){ var H=S.hm; var a=H._boar; var att=H.hunters.filter(function(p){return p.hp>0;}); var per=a.kill/att.length; var killed=false, rl=[];
- att.forEach(function(p){ if(rnd()<hmFS(p)/(hmFS(p)+per)){ killed=true; rl.push(p.name.split(',')[0]+' gets a spear well in'); } else { var dmg=hmD(6); hmHit(p,dmg); rl.push('<span class="red">'+p.name.split(',')[0]+' is gored −'+dmg+(p.hp<=0?', down!':'')+'</span>'); } });
- H.L.push('Boar, on the spears: '+rl.join('; ')+'.');
- if(killed){ var y=a.meat[0]+ri(a.meat[1]); H.meat+=y; H.kills++; S.food+=y; H.L.push('<span class="gold">The boar goes down — a heavy carcass. +'+y+' food.</span>'); H._boar=null; return hmResume(); }
- if(H.hunters.every(function(p){return p.hp<=0;})) return hmFinish('lost');
- H.L.push('<span class="red">The boar still stands, slashing.</span>'); hmShow('<button class="seal" onclick="hmBoarFight()">Spear it again</button> <button onclick="(S.hm._boar=null,hmResume())">Fall back, let it go</button>'); }
-function hmPredator(a){ var H=S.hm; if(!a)return (hmShow(),hmTimer(hmStep,HM_CONF.round_ms)); if(H.timer){clearTimeout(H.timer);H.timer=null;} H._pred={a:a,hp:a.hp}; var b=hmHsBest()*(H.dark?0.55:1);
- if(rnd()>=b/(b+a.perc)){ H.L.push('<span class="red">'+hmCap(a.n)+' breaks from cover before anyone marks it — you are set upon!</span>'); return hmPredRound(); }
- H.L.push('<span class="gold">You catch '+a.n+' watching you from '+H.sub+'. It has not charged — yet.</span>');
- hmShow('<button onclick="hmPredWithdraw()">Withdraw quietly</button> <button class="seal" onclick="hmPredRound()">Go after it</button>'); }
-function hmPredWithdraw(){ var H=S.hm; H.L.push('You back off slow, weapons up, and leave the beast its ground.'); H._pred=null; hmResume(); }
-function hmPredRound(){ var H=S.hm; var P=H._pred; var a=P.a; if(H.timer){clearTimeout(H.timer);H.timer=null;} var rl=[];
- H.hunters.forEach(function(p){ if(p.hp<=0)return; if(rnd()<a.fs/(a.fs+hmFS(p))){ var dmg=hmD(a.dmg); hmHit(p,dmg); rl.push('<span class="red">'+p.name.split(',')[0]+' is mauled −'+dmg+(p.hp<=0?', down!':'')+'</span>'); } else { var dd=hmD(p.die); P.hp-=dd; rl.push(p.name.split(',')[0]+' lands a blow −'+dd); } });
- H.L.push(hmCap(a.n)+' ('+Math.max(0,P.hp)+' HP left): '+rl.join('; ')+'.');
- if(P.hp<=0){ var y=18+ri(18); H.meat+=y; H.kills++; S.food+=y; H.L.push('<span class="gold">'+hmCap(a.n)+' is down — a hard, dangerous kill. +'+y+' food, and a hide to brag on.</span>'); H._pred=null; return hmResume(); }
- if(H.hunters.every(function(p){return p.hp<=0;})){ H.L.push('<span class="red"><b>The beast stands over the fallen. The hunt is a disaster.</b></span>'); return hmFinish('lost'); }
- hmShow('<button class="seal" onclick="hmPredRound()">Fight on</button> <button onclick="hmPredFlee()">Break off and run</button>'); }
-function hmPredFlee(){ var H=S.hm; var a=H._pred.a; var rl=[]; H.hunters.forEach(function(p){ if(p.hp<=0)return; if(rnd()<0.45){ var dmg=hmD(a.dmg); hmHit(p,dmg); rl.push('<span class="red">'+p.name.split(',')[0]+' is raked as they break −'+dmg+'</span>'); } }); H.L.push('You break off and run'+(rl.length?': '+rl.join('; '):' — clean away')+'.'); H._pred=null; hmResume(); }
-function hmMishap(){ var H=S.hm; var up=H.hunters.filter(function(p){return p.hp>0;}); var who=pick(up)||H.hunters[0]; var jung=(H.terr==='jungle');
- if(rnd()<(jung?0.4:0.5)){ var dmg=hmD(6); hmHit(who,dmg); H.L.push('<span class="red">In the '+(jung?'black tangle':'dark')+', '+who.name.split(',')[0]+' takes a bad fall — −'+dmg+' HP'+(who.hp<=0?', and does not rise':'')+'.</span>'); }
- else { H.dist+=hmMove()*(jung?3:2); H.L.push('<span class="red">'+(jung?'The canopy blots out the stars and every game-trail looks the same; you blunder in circles, only straying further from camp.':'You lose the way in the dark and stray further from camp before getting your bearings.')+'</span>'); }
- if(H.hunters.every(function(p){return p.hp<=0;})) return hmFinish('lost');
- hmShow(); hmTimer(hmStep,HM_CONF.round_ms); }
-function hmHeadBack(){ var H=S.hm; if(!H)return; if(H.timer){clearTimeout(H.timer);H.timer=null;} H.returning=true; H.L.push('<span class="sub">You turn for camp — about '+H.dist.toFixed(1)+' mi, ~'+Math.max(1,Math.ceil(H.dist/hmMove()))+' more rounds.</span>'); hmShow(); hmTimer(hmStep,700); }
-function hmResume(){ var H=S.hm; if(!H)return; hmShow(); hmTimer(hmStep,850); }
-function hmPress(){ var H=S.hm; if(!H)return; if(H.timer){clearTimeout(H.timer);H.timer=null;} hmStep(); }
-
-function hmFinish(how){ var H=S.hm; if(!H)return; if(H.timer){clearTimeout(H.timer);H.timer=null;}
- var hours=H.round*HM_CONF.round_min/60, L=H.L;
- H.hunters.forEach(function(p){ if(p.you){ S.hp=clamp(Math.round(100*p.hp/p.maxhp),0,100); } else if(p.ref){ p.ref.hp=Math.max(0,Math.round(100*p.hp/p.maxhp)); } });
- if(hours>=4){ var surv=H.hunters.filter(function(p){return p.hp>0;}); var N=surv.length; if(N>0){ var maxHS=Math.max.apply(null,surv.map(function(p){return p.hs;})); var uniq=surv.filter(function(p){return p.hs===maxHS;}).length===1;
-   surv.forEach(function(p){ if(N>1 && uniq && p.hs===maxHS){ return; } var ch=cbImprove(p.hs); if(N>1)ch*=(1/(N-1)); if(rnd()<ch){ if(p.you){S.youHs=p.hs+1;} else if(p.ref){p.ref.hs=p.hs+1;} L.push('<span class="gold">'+p.name.split(',')[0]+' is the wiser for the day’s hunting. [HS '+(p.hs+1)+']</span>'); } }); } }
- var pdead=false;
- H.hunters.forEach(function(p){ if(p.hp<=0){ if(p.you){ pdead=true; } else if(p.ref){ p.ref.alive=false; if(typeof noteDeath==='function')noteDeath(p.ref,'a hunting accident'); } } });
- S.party=S.party.filter(function(p){return p.alive;});
- var head=(how==='lost')?'<span class="red">The hunt ends badly</span>':(how==='exhausted')?'<span class="red">Staggered home, exhausted</span>':'Home from the hunt';
- H._summary='<h2>'+head+'</h2><p class="sub">'+H.round+' rounds · ~'+hours.toFixed(1)+'h afield · ranged ~'+H._maxdist.toFixed(1)+' mi · '+H.kills+' kill'+(H.kills===1?'':'s')+' · <span class="gold">+'+H.meat+' food</span></p>'+'<div class="log" style="max-height:320px;overflow:auto">'+L.slice().reverse().map(function(x){return '<div>'+x+'</div>';}).join('')+'</div>';
- if(typeof log==='function')log('Hunt: '+H.kills+' kill'+(H.kills===1?'':'s')+', +'+H.meat+' food, ~'+hours.toFixed(1)+'h.');
- S.hm.phase='done';
- if(pdead){ S.hp=0; S.cause='a hunting accident'; S.hm=null; if(typeof die==='function')die(); S.screen='dead'; render(); return; }
- render(); }
-
-function renderHunt(m){ var H=S.hm; if(!H){ S.screen=(S.seaMode?'port':'city'); render(); return; }
- if(H.phase==='setup'){ var rows=''; var g=youGear();
-   rows+='<tr><td style="text-align:center"><input type="checkbox" id="hmYou" checked></td><td><b>'+(S.name||'You')+'</b> <span class="sub">(you)</span></td><td class="sub">hunt '+youCombHS()+' · fight '+youCombFS()+(gHasBow(g)?' · 🏹':'')+'</td></tr>';
-   livingParty().forEach(function(p){ var idx=S.party.indexOf(p); rows+='<tr><td style="text-align:center"><input type="checkbox" id="hmc'+idx+'"></td><td><b>'+p.name.split(',')[0]+'</b> <span class="sub">'+(p.role||'')+'</span></td><td class="sub">hunt '+combHS(p)+' · fight '+combFS(p)+(gHasBow(p.gear)?' · 🏹':'')+'</td></tr>'; });
-   var horses=(S.herd&&S.herd.horse)||0;
-   m.innerHTML='<h2>Make a hunt of it</h2><p class="sub">Tick who goes out into '+(TERR_DESC[H.terr]||H.terr)+'. You play it out round by round — longer afield means more game, but exhaustion, the dark, and worse. Horses ('+horses+') and bows are shared across the party.</p>'+
-     '<table><tr><th>go</th><th>who</th><th>skill</th></tr>'+rows+'</table>'+
-     '<div style="margin-top:8px"><button class="seal" onclick="hmBegin()">Set out at '+(H.terr==='desert'?'dusk':'daybreak')+'</button> <button onclick="(S.hm=null,S.screen=\''+(S.seaMode?'port':'city')+'\',render())">Never mind</button></div>';
-   return; }
- if(H.phase==='done'){ m.innerHTML=H._summary+'<div style="margin-top:8px"><button class="seal" onclick="(S.hm=null,S.screen=\''+(S.seaMode?'port':'city')+'\',render())">Back to camp</button></div>'; return; }
- var alive=H.hunters.filter(function(p){return p.hp>0;});
- var s='<h2>The hunt'+(H.returning?' — homeward':'')+'</h2>'+
-  '<div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:8px 0">'+HM_SYM+
-   '<div class="sub" style="text-align:left">Round '+H.round+' · '+hmClock(H.round,H.twilight)+'<br><b style="color:#e3c878">'+hmCap(H.sub)+'</b><br>~'+H.dist.toFixed(1)+' mi from camp'+(H.dark?' · <span class="red">after dark</span>':'')+'</div></div>'+
-  '<p class="sub">'+(alive.length?alive.map(function(p){return p.name.split(',')[0]+' <span style="opacity:.7">[HP '+p.hp+'/'+p.maxhp+', HS '+p.hs+']</span>';}).join(', '):'—')+' · '+(H.bowed?'🏹 bows':'short of bows')+' · '+(H.horsed?'🐎 mounted':'afoot')+' · <span class="gold">'+H.meat+' food, '+H.kills+' kills</span></p>'+
-  '<div class="log" style="max-height:170px;overflow:auto;margin:6px 0">'+H.L.slice(-9).map(function(x){return '<div>'+x+'</div>';}).join('')+'</div>';
- s += H._extra ? H._extra : ('<button onclick="hmPress()">Press on →</button> '+(H.returning?'':'<button onclick="hmHeadBack()">Head back to camp</button>'));
- m.innerHTML=s; }
-
 
 let GMIN=null, GMAX=null;
 function goodMin(g){
@@ -1085,7 +891,6 @@ function huntFood(){ // button on the camp screen and in cities — choose who g
     const fit = r>0?', and at home in this country':(r<0?', though out of their element here':'');
     return {l:'Send '+(pp.you?'yourself':pp.name.split(',')[0])+' \u2014 '+word+fit, f:(function(h){return function(){ huntWith(h,terr,inTown); };})(pp)};
   });
-  ch.unshift({l:'Make a proper hunt of it \u2014 go out and play it through', f:function(){ hmStart(terr,inTown); }});
   ch.push({l:'Never mind',f:function(){}});
   S.pendingEvent={h:'WHO GOES OUT?', t:"Someone must go out after the game. An old hand rarely comes back empty; a green one often does \u2014 but a green one only learns the country by walking it. Who do you send?", ch:ch};
   render();
@@ -4367,7 +4172,6 @@ function render(){
   else if(S.screen==='hire')renderHire(m);
   else if(S.screen==='battle')renderBattle(m);
   else if(S.screen==='outfitter')renderOutfitter(m);
-  else if(S.screen==='hunt')renderHunt(m);
   else if(S.screen==='monuments')renderMonuments(m);
   else if(S.screen==='teleport')renderTeleport(m);
   else if(S.screen==='coffle')renderCoffle(m);
