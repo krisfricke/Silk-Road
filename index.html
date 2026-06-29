@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.01.16';
+const VERSION='2.01.20';
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
  {id:'tea',   n:'Tea',       u:'brick', wt:4, e:4,  w:26},
@@ -494,8 +494,8 @@ function evDzReveal(took){ var body = (took==='pass')
   return {h:'The country behind you', t:"<img src='Maps/dzungaria762.png' alt='the Dzungarian country' style='width:100%;display:block;border:4px solid #6b4f2a;border-radius:3px;margin-bottom:8px'>"+body+" This is the country you have just come through — and the road you did not take.", ch:[{l:'Press on',f:function(){}}]}; }
 
 function evTurfanFork(){ return {h:'The road splits', t:"The road splits where the ranges crowd in. The right-hand track pushes off through a broad valley between the mountains; the left holds on north of the range. You cannot see far enough to judge where either truly runs.", ch:[
-  {l:'Bear right — through the broad valley', f:function(){ turfanDivert(); }},
-  {l:'Bear left — north of the range', f:function(){ log("You keep to the steppe road, north of the mountains, and hold on toward Beshbalik."); }}
+  {l:'Bear left — north of the range', f:function(){ log("You keep to the steppe road, north of the mountains, and hold on toward Beshbalik."); }},
+  {l:'Bear right — through the broad valley', f:function(){ turfanDivert(); }}
 ]}; }
 function turfanDivert(){ var HERE=[86.9,44.2], TURF=[89.18,42.93]; var miles=gcMiles(HERE,TURF); var D=Math.max(1,daySpeed()); var days=Math.max(3,Math.round(miles/15)); var fromObj=cityClone('the valley road','rugged',0,0.3); var toObj=cityClone('Turfan','desert',1,0.25); toObj.dist=Math.round(days*D); S.dash={kind:'turfan',to:'Turfan',terr:'rugged',lostChance:0,lostRolled:true,lostKm:0}; S.itin=[fromObj,toObj]; S.idx=0; S.dir=1; S.legKm=0; S.pace='s'; S.screen='travel'; log("You turn south off the steppe road, down into the broad valley that runs through the gap toward Turfan."); }
 
@@ -1417,6 +1417,11 @@ function evWildCamels(){
    {l:'Leave them be',f(){log("You and the wild camels regard each other across the sand, two parties with no use for one another.");}},
   ]};
 }
+function turfanBesh(dest){ var origin=(dest==='Beshbalik')?'Turfan':'Beshbalik'; var via=(dest==='Beshbalik')?"north through the Dabancheng gap and up onto the Dzungarian grass":"south through the Dabancheng gap, down to the vine-country of Turfan"; return {h:'The gap road to '+dest, t:"From "+origin+" a road runs "+via+" to "+dest+" \u2014 a few days through the broad valley between the ranges, where the Urumchi river comes down.", ch:[
+   {l:'Take the gap road to '+dest, f:function(){ turfanBeshGo(dest); }},
+   {l:'Stay in '+origin, f:function(){}}
+ ]}; }
+function turfanBeshGo(dest){ var dd=4+ri(3); passDays(dd); if(S.dead)return; if(dest==='Beshbalik'){ var st=fullRoute('k', isWest()); var ni=st.findIndex(function(x){return x.name==='Beshbalik';}); if(ni>=0){ S.route='k'; S.routeChosen=true; S.steppeDecided=true; S.itin=st; S.idx=ni; S.dir=1; S.legKm=0; } } else { var st2=fullRoute('n', isWest()); var ni2=st2.findIndex(function(x){return x.name==='Turfan';}); if(ni2>=0){ S.route='n'; S.routeChosen=true; S.steppeDecided=true; S.itin=st2; S.idx=ni2; S.dir=1; S.legKm=0; } } S.water=waterMax(); if(typeof restockToNow==='function')restockToNow(dest); log("You take the gap road to "+dest+", "+dd+" days through the valley between the ranges."); S.screen='city'; }
 function akChach(dest){ var origin=(dest==='Chach')?'Akhsikath':'Chach'; var via=(dest==='Chach')?"north-west across the Hungry Steppe and over the Jaxartes":"south-east over the Jaxartes into the Ferghana valley"; return {h:'The road to '+dest, t:"From "+origin+" a good caravan road runs "+via+" to "+dest+" \u2014 a week or so of easy lowland going between the two great valleys, neither steppe nor mountain.", ch:[
    {l:'Take the road to '+dest, f:function(){ akChachGo(dest); }},
    {l:'Stay in '+origin, f:function(){}}
@@ -1489,7 +1494,7 @@ function crossingEvent(riv){
 }
 /* ===== reckless desert shortcuts + lost-in-the-sand (v1.16.54) ===== */
 const DESERT_LL={Dunhuang:[94.66,40.14],Hami:[93.51,42.83],Turfan:[89.18,42.93],Kucha:[82.96,41.72],Aksu:[80.26,41.17],Kashgar:[75.99,39.47],Yarkand:[77.24,38.41],Khotan:[79.92,37.11],Miran:[88.90,39.23],Beshbalik:[89.05,44.05]};
-const SHORTCUTS={Yarkand:['Aksu'],Khotan:['Aksu','Kucha'],Miran:['Kucha','Turfan','Hami'],Aksu:['Yarkand','Khotan','Miran'],Kucha:['Khotan','Miran'],Turfan:['Miran','Beshbalik','Dunhuang'],Hami:['Miran']};
+const SHORTCUTS={Yarkand:['Aksu'],Khotan:['Aksu','Kucha'],Miran:['Kucha','Turfan','Hami'],Aksu:['Yarkand','Khotan','Miran'],Kucha:['Khotan','Miran'],Turfan:['Miran','Dunhuang'],Hami:['Miran']};
 const DESERT_CITIES=['Dunhuang','Hami','Turfan','Kucha','Aksu','Kashgar','Yarkand','Khotan','Miran'];
 function gcMiles(a,b){ var toR=Math.PI/180,la1=a[1]*toR,la2=b[1]*toR,dla=(b[1]-a[1])*toR,dlo=(b[0]-a[0])*toR,s1=Math.sin(dla/2),s2=Math.sin(dlo/2),h=s1*s1+Math.cos(la1)*Math.cos(la2)*s2*s2; return 3959*2*Math.asin(Math.sqrt(h)); }
 function displacedPt(lon,lat,maxMi){ var ang=rnd()*2*Math.PI,r=maxMi*(0.45+0.55*rnd()),dlat=(r*Math.sin(ang))/69,dlon=(r*Math.cos(ang))/(69*Math.cos(lat*Math.PI/180)); return [lon+dlon,lat+dlat]; }
@@ -4032,13 +4037,13 @@ function chartGo(name){ if(!S)return; var here=city()&&city().name;
   if(!S.steppeDecided && !S.returning && !isWest() && here==='Hami' && S.route==='n'){ if(name==='Beshbalik'){ chooseSteppe(true); return; } if(name==='Turfan'){ chooseSteppe(false); return; } }
   if(here==='Dunhuang' && !S.routeChosen && !S.returning && !isWest()){ if(name==='Hami'){ chooseRoute('n'); return; } if(name==='Miran'){ chooseRoute('s'); return; } }
   if(here==='Kashgar' && !S.routeChosen && !S.returning && isWest()){ if(name==='Yarkand'){ chooseRoute('s'); return; } if(name==='Aksu'){ chooseRoute('n'); return; } }
-  if(here==='Samarkand' && name==='Chach' && !S.returning && !S.steppeDecided && isWest()){ S.screen='steppe'; render(); return; }
   if(here==='Samarkand' && name==='Akhsikath' && !S.returning && isWest()){ S.route='n'; S.routeChosen=false; S.steppeDecided=true; S.itin=fullRoute('n', isWest()); var _si=S.itin.findIndex(function(x){return x.name==='Samarkand';}); var _oi=S.itin.findIndex(function(x){return x.name==='Akhsikath';}); if(_si>=0){ S.idx=_si; S.dir=(_oi>_si)?1:-1; S.legKm=0; } log("You leave the steppe junction at Samarkand and turn onto the settled road, down toward Akhsikath and the Pamir passes."); setOut(S.dir||1); return; }
   if(here==='Akhsikath' && name==='Suyab' && !S.returning){ S.pendingEvent=oshSuyabShortcut('Suyab'); S.screen=(S.seaMode?'port':'city'); render(); return; }
   if(here==='Suyab' && name==='Akhsikath' && !S.returning){ S.pendingEvent=oshSuyabShortcut('Akhsikath'); S.screen=(S.seaMode?'port':'city'); render(); return; }
   if((here==='Samarkand'&&name==='Chach')||(here==='Chach'&&name==='Samarkand')){ if(S.route!=='k'){ S.route='k'; S.routeChosen=true; S.steppeDecided=true; S.itin=fullRoute('k', isWest()); var _hi=S.itin.findIndex(function(x){return x.name===here;}); if(_hi>=0){ S.idx=_hi; S.legKm=0; } } if(typeof mapSetOutTo==='function' && mapSetOutTo(name)) return; }
   if((here==='Akhsikath'&&name==='Chach')||(here==='Chach'&&name==='Akhsikath')){ S.pendingEvent=akChach(name); S.screen=(S.seaMode?'port':'city'); render(); return; }
 
+  if((here==='Turfan'&&name==='Beshbalik')||(here==='Beshbalik'&&name==='Turfan')){ S.pendingEvent=turfanBesh(name); S.screen=(S.seaMode?'port':'city'); render(); return; }
   if(SHORTCUTS[here] && SHORTCUTS[here].indexOf(name)>=0 && !S.returning){ S.pendingEvent=desertDashEvent(here,name); S.screen=(S.seaMode?'port':'city'); render(); return; }
   if(name===here){ S.screen=(S.seaMode?'port':'city'); render(); return; }
   var lk=(typeof findLink==='function')?findLink(here,name):null;
@@ -4096,7 +4101,7 @@ function renderChart(m){
     var lk=(typeof findLink==='function')?findLink(here,nm):null;
     var ok=isHere||(lk?voyAllowed(here,nm):(adj||reach))||dunFork||kashFork||(here==='Hami'&&nm==='Beshbalik'&&!S.returning&&!S.steppeDecided&&S.route==='n')||(here==='Samarkand'&&nm==='Chach'&&!S.returning&&!S.steppeDecided&&isWest())||(here==='Samarkand'&&nm==='Akhsikath'&&!S.returning&&isWest());
     if(ok&&!isHere)okSet[nm]=true;
-    var secret=((here==='Akhsikath'&&nm==='Suyab')||(here==='Suyab'&&nm==='Akhsikath')||(SHORTCUTS[here]&&SHORTCUTS[here].indexOf(nm)>=0))&&!S.returning;
+    var secret=((here==='Akhsikath'&&nm==='Suyab')||(here==='Suyab'&&nm==='Akhsikath')||(here==='Akhsikath'&&nm==='Chach')||(here==='Chach'&&nm==='Akhsikath')||(here==='Samarkand'&&nm==='Chach')||(here==='Chach'&&nm==='Samarkand')||(here==='Turfan'&&nm==='Beshbalik')||(here==='Beshbalik'&&nm==='Turfan')||(SHORTCUTS[here]&&SHORTCUTS[here].indexOf(nm)>=0))&&!S.returning;
     var fill=ok?'#c0392b':'#9aa6ac'; var r=c.r||11;
     s+='<g '+((ok||secret)?'style="cursor:pointer'+(ok?'':';opacity:.62')+'" onclick="chartGo(&quot;'+nm+'&quot;)"':'style="opacity:.55"')+'>';
     s+='<circle cx="'+c.x+'" cy="'+c.y+'" r="'+(isHere?r+4:r)+'" fill="'+fill+'" stroke="#efe2c2" stroke-width="'+(isHere?4:2.6)+'"/>';
@@ -4877,12 +4882,16 @@ function defaultSimpleWeapon(p){
 function kitTargetMember(){ return (S.kitTarget==='you')? null : (livingParty()[S.kitTarget]||null); }
 function cbRole(p){ if(!p) return 'you'; if(p.kind==='guard') return 'guard'; var h=memSkill(p,'hunt'); if(h>=2 && h>=memSkill(p,'fight')) return 'hunter'; return 'other'; }
 const CB_BASE={ you:{hp:10,fs:8,die:7}, guard:{hp:12,fs:10,die:8}, hunter:{hp:8,fs:6,die:6}, other:{hp:6,fs:3,die:6} };
+function combFS(p){ return (p&&p.fs!=null)?p.fs:(CB_BASE[cbRole(p)].fs+2*memSkill(p,'fight')); }
+function combHS(p){ return (p&&p.hs!=null)?p.hs:(6+2*memSkill(p,'hunt')); }
+function youCombFS(){ return (S.youFs!=null)?S.youFs:(CB_BASE.you.fs+2*youSkill('fight')); }
+function youCombHS(){ return (S.youHs!=null)?S.youHs:(6+2*youSkill('hunt')); }
 function cbImprove(skill){ return skill<=11 ? (12-skill)/16 : 1/(skill+5); }
 function buildYouFighter(){
   var g=youGear(), b=CB_BASE.you, cMax=b.hp+gArmorHP(g);
   return {ref:null,you:true,name:(S.name||'You'),role:'you',cMax:cMax,
     cHP:Math.max(1,Math.round(cMax*clamp(S.hp,0,100)/100)),
-    fs:b.fs+2*youSkill('fight')+gWeaponFS(g)+gArmorFS(g),
+    fs:youCombFS()+gWeaponFS(g)+gArmorFS(g),
     hs:youSkill('archery')+gBowHS(g), die:(gWeaponDie(g)||defaultSimpleWeapon(null).die),
     bow:gHasBow(g), mount:false, alive:true, _withdraw:false};
 }
@@ -4890,7 +4899,7 @@ function buildCompFighter(p){
   var g=p.gear, role=cbRole(p), b=p.cbStats||CB_BASE[role], cMax=b.hp+gArmorHP(g);
   return {ref:p,you:false,name:p.name,role:role,cMax:cMax,
     cHP:Math.max(1,Math.round(cMax*clamp(memHp(p),0,100)/100)),
-    fs:b.fs+2*memSkill(p,'fight')+gWeaponFS(g)+gArmorFS(g),
+    fs:combFS(p)+gWeaponFS(g)+gArmorFS(g),
     hs:(memSkill(p,'archery')||memSkill(p,'hunt'))+gBowHS(g),
     die:(gWeaponDie(g)||defaultSimpleWeapon(p).die), bow:gHasBow(g), mount:false, alive:true,
     _withdraw:false};
@@ -5047,8 +5056,8 @@ function battleFinish(outcome){
   });
   stayers.forEach(function(f){
     if(f.cHP>0 && f._fought){
-      if(f.you){ if(rnd()<cbImprove(youSkill('fight'))){ bumpYouSkill('fight'); L.push('<span class="gold">You grow steadier in the fight.</span>'); } }
-      else if(f.ref){ if(rnd()<cbImprove(memSkill(f.ref,'fight'))){ f.ref.skills.fight=(memSkill(f.ref,'fight'))+1; L.push('<span class="gold">'+cbName(f)+' grows steadier in the fight.</span>'); } }
+      if(f.you){ if(rnd()<cbImprove(youCombFS())){ S.youFs=youCombFS()+1; L.push('<span class="gold">You grow steadier in the fight.</span>'); } }
+      else if(f.ref){ if(rnd()<cbImprove(combFS(f.ref))){ f.ref.fs=combFS(f.ref)+1; L.push('<span class="gold">'+cbName(f)+' grows steadier in the fight.</span>'); } }
     }
   });
   if((outcome==='win'||outcome==='draw') && c.loot>0){ S.silver+=c.loot; L.push('<span class="gold">You strip about '+c.loot+'s in valuables from the slain.</span>'); }
