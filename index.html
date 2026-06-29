@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.01.04';
+const VERSION='2.01.16';
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
  {id:'tea',   n:'Tea',       u:'brick', wt:4, e:4,  w:26},
@@ -318,9 +318,9 @@ const ERA1271_WEST = {
   ]
 };
 const TERR_DESC={settled:'cultivated country',steppe:'open steppe',desert:'desert tracks',rugged:'rugged hill-country',
- harsh:'deep desert — the worst of it',mountain:'high passes',forest:'forested hill country'};
-const SPEED_MOD={settled:1,steppe:1,desert:.85,harsh:.75,mountain:.6,rugged:.7,forest:.82};
-const WATER_USE={settled:0,steppe:0,desert:1.8,harsh:2.2,mountain:0,forest:0,rugged:0.6}; // people & thirsty beasts drink only in the deep desert
+ harsh:'deep desert — the worst of it',mountain:'high passes',forest:'forested hill country',marsh:'reed-marsh and standing water'};
+const SPEED_MOD={settled:1,steppe:1,desert:.85,harsh:.75,mountain:.6,rugged:.7,forest:.82,marsh:.6};
+const WATER_USE={settled:0,steppe:0,desert:1.8,harsh:2.2,mountain:0,forest:0,rugged:0.6,marsh:0}; // people & thirsty beasts drink only in the deep desert
 const PACES={c:{n:'Leisurely',sp:.8,hp:+.4},s:{n:'Normal',sp:1,hp:-.2},g:{n:'Grueling',sp:1.3,hp:-1.6}};
 const MONTHS=['third','fourth','fifth','sixth','seventh','eighth','ninth','tenth','eleventh','twelfth','first','second'];
 const NEPHEW={id:'nephew',name:'Little Tang',role:'your nephew, more enthusiasm than sense',kind:'companion',nephew:true,skills:{trade:0,cook:0,handle:0,hunt:1,fight:1}};
@@ -459,6 +459,46 @@ function newGame(name, chosenIds, nephewName, start){
       : "You leave the western gate of Chang'an with "+S.silver+" silver, three camels, and a head full of prices. The rebellion smolders behind you; the whole world is in front."));
   render();
 }
+function devConan(){ newGame('Conan', null, null, 'cpl');
+  S.route='k'; S.routeChosen=true; S.steppeDecided=true; S.itin=fullRoute('k', isWest());
+  var si=S.itin.findIndex(function(x){return x.name==='Samarkand';}); if(si>=0){ S.idx=si; }
+  var ci=S.itin.findIndex(function(x){return x.name==='Chach';}); S.dir=(ci>si)?1:-1; S.legKm=0;
+  S.youSkills={fight:16,hunt:16,archery:10}; S.silver=2000;
+  if(typeof restockToNow==='function') restockToNow('Samarkand');
+  S.pendingEvent=null; S.screen='city'; S.log=[];
+  log("[dev] Conan the Barbarian sets out from Samarkand on the steppe road — FS/HS 16, 2000 s. East to Chach and the northern fork.");
+  render();
+}
+try{ window.devConan=devConan; }catch(e){}
+
+function campEnter(site,isFork,east){
+  S._campSave={itin:S.itin, idx:S.idx, dir:S.dir, legKm:S.legKm, route:S.route};
+  S._campFork=isFork?{east:east}:null;
+  var where=(site==='Almaliq')?'the Ili meadows near Almaliq':(site==='Bole')?'the grass by Bole':'the apple-country at Almaty';
+  var camp={name:'a Karluk camp', camp:true, hub:'minor', cash:120+ri(140), frac:0.18, terr:'steppe',
+    desc:"A Karluk camp in "+where+" \u2014 felt yurts, horse-lines, herds dark on the hills. These are herders, not merchants: they have felt and a few captives to sell, and little use for silver beyond what your foreign luxuries can tempt from a thin purse."};
+  S.stock=S.stock||{}; var st={}; for(var i=0;i<GOODS.length;i++)st[GOODS[i].id]=0; st.felt=30+ri(30); if(SLAVERY)st.slaves=2+ri(3); S.stock['a Karluk camp']=st;
+  S.townCash=S.townCash||{}; S.townCash['a Karluk camp']=camp.cash; S.townCashDay=S.townCashDay||{}; S.townCashDay['a Karluk camp']=S.day;
+  S.itin=[camp]; S.idx=0; S.dir=1; S.legKm=0; S.screen='city'; render();
+}
+function campLeave(){
+  var sv=S._campSave; S._campSave=null; var fk=S._campFork; S._campFork=null;
+  if(sv){ S.itin=sv.itin; S.idx=sv.idx; S.dir=sv.dir; S.legKm=sv.legKm; S.route=sv.route; }
+  if(fk){ S.screen='travel'; S.pendingEvent=evAlmatyFork(fk.east); render(); return; }
+  S.screen='travel'; startJourney();
+}
+
+function evDzReveal(took){ var body = (took==='pass')
+  ? "Behind you the Heavenly Mountains stand white against the sky. You crossed them by the high passes — the short, hard road the snow shuts in winter — and have come down at last onto the farther grass."
+  : "Behind you the ranges stand white and unbroken. You took the long way, swinging north around them through the wind-scoured Dzungarian Gate, where the snow never closes the road — slower, but sure.";
+  return {h:'The country behind you', t:"<img src='Maps/dzungaria762.png' alt='the Dzungarian country' style='width:100%;display:block;border:4px solid #6b4f2a;border-radius:3px;margin-bottom:8px'>"+body+" This is the country you have just come through — and the road you did not take.", ch:[{l:'Press on',f:function(){}}]}; }
+
+function evTurfanFork(){ return {h:'The road splits', t:"The road splits where the ranges crowd in. The right-hand track pushes off through a broad valley between the mountains; the left holds on north of the range. You cannot see far enough to judge where either truly runs.", ch:[
+  {l:'Bear right — through the broad valley', f:function(){ turfanDivert(); }},
+  {l:'Bear left — north of the range', f:function(){ log("You keep to the steppe road, north of the mountains, and hold on toward Beshbalik."); }}
+]}; }
+function turfanDivert(){ var HERE=[86.9,44.2], TURF=[89.18,42.93]; var miles=gcMiles(HERE,TURF); var D=Math.max(1,daySpeed()); var days=Math.max(3,Math.round(miles/15)); var fromObj=cityClone('the valley road','rugged',0,0.3); var toObj=cityClone('Turfan','desert',1,0.25); toObj.dist=Math.round(days*D); S.dash={kind:'turfan',to:'Turfan',terr:'rugged',lostChance:0,lostRolled:true,lostKm:0}; S.itin=[fromObj,toObj]; S.idx=0; S.dir=1; S.legKm=0; S.pace='s'; S.screen='travel'; log("You turn south off the steppe road, down into the broad valley that runs through the gap toward Turfan."); }
+
 let GMIN=null, GMAX=null;
 function goodMin(g){
   if(!GMIN){ GMIN={}; const cities=[...MAIN1,...NORTH,...SOUTH,...MAIN2,...STEPPE,...SEA];
@@ -487,6 +527,7 @@ function livingComps(){return livingParty().length}
 function someoneName(fb){ const lp=livingParty(); return lp.length?pick(lp).name:(fb||'someone'); }
 function desertBonus(){ return S ? Math.min(0.4, 0.20*livingParty().filter(p=>p.desertwise).length) : 0; } // oasis-bred companions: +20% each to finding water
 function guardCount(){return S.party.filter(p=>p.alive&&p.kind==='guard').length}
+function guardWageTotal(){ if(!S||!S.party)return 0; var t=0; S.party.forEach(function(p){ if(p.alive&&p.kind==='guard') t+=(p.wage||1); }); return t; }
 function skillMax(s){return livingParty().reduce((m,p)=>Math.max(m,p.skills[s]||0),0)}
 function skillSum(s){return livingParty().reduce((m,p)=>m+(p.skills[s]||0),0)}
 function bestAt(s){const a=livingParty().filter(p=>(p.skills[s]||0)>0); if(!a.length)return null; return a.reduce((b,p)=>(p.skills[s]>b.skills[s])?p:b);}
@@ -502,7 +543,7 @@ function passDanger(){ // 0 clear .. 1 deadly, by month (scaled by how high the 
 }
 function rangeName(){
   const n=nextCity(); if(!n) return 'the high passes';
-  const c=city(); if(c){ const k=legPairKey(c.name,n.name); if(k==='Aleppo|Iconium') return 'the rugged Taurus'; if(k==='Kashgar|Akhsikath') return 'the Tian Shan and the high Pamirs'; }
+  const c=city(); if(c){ const k=legPairKey(c.name,n.name); if(k==='Aleppo|Iconium') return 'the rugged Taurus'; if(k==='Akhsikath|Kashgar') return 'the Tian Shan and the high Pamirs'; }
   if((n.name==='Iconium'&&city().name==='Constantinople')||(n.name==='Constantinople'&&city().name==='Iconium')) return 'the Anatolian plateau';
   return {Akhsikath:'the Pamirs — the Onion Mountains', Nishapur:'the Kopet Dag', Iconium:'the Taurus'}[n.name] || 'the high passes';
 }
@@ -515,11 +556,13 @@ function passWord(){
   if(d>=.15) return improving?'opening soon':'closing soon';
   return 'open';
 }
-const PASS_LEGS={'Kashgar|Akhsikath':1,'Aleppo|Iconium':0.4}; // value = pass severity (1 = a deadly high pass; <0.6 = rugged but passable)
-const LEG_TERRAIN={"Suyab|Talas":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Beshbalik|Suyab":["steppe","steppe","steppe","steppe","mountain","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Beshbalik|Hami":["steppe","steppe","steppe","steppe","desert","steppe","steppe","forest","steppe","steppe","steppe","steppe"],"Ispijab|Talas":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Chach|Ispijab":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Chach|Samarkand":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Bukhara|Samarkand":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Akhsikath|Samarkand":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Kashgar|Akhsikath":["steppe","rugged","rugged","rugged","mountain","mountain","mountain","mountain","forest","forest","steppe","steppe"],"Aksu|Kashgar":["desert","desert","rugged","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Aksu|Kucha":["desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Kucha|Turfan":["desert","desert","desert","desert","desert","rugged","desert","desert","desert","desert","desert","desert"],"Hami|Turfan":["desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Dunhuang|Hami":["desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Kashgar|Yarkand":["desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Khotan|Yarkand":["desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Khotan|Miran":["desert","desert","desert","rugged","rugged","rugged","desert","desert","desert","desert","desert","desert"],"Dunhuang|Miran":["desert","desert","desert","harsh","harsh","harsh","harsh","harsh","harsh","harsh","harsh","desert"]};
+const PASS_LEGS={'Akhsikath|Kashgar':1,'Aleppo|Iconium':0.4}; // value = pass severity (1 = a deadly high pass; <0.6 = rugged but passable)
+const LEG_TERRAIN={"Suyab|Talas":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Beshbalik|Suyab":["steppe","steppe","steppe","steppe","mountain","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Beshbalik|Hami":["steppe","steppe","steppe","steppe","desert","steppe","steppe","forest","steppe","steppe","steppe","steppe"],"Ispijab|Talas":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Chach|Ispijab":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Chach|Samarkand":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Bukhara|Samarkand":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Akhsikath|Samarkand":["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe"],"Akhsikath|Kashgar":["steppe","rugged","rugged","rugged","mountain","mountain","mountain","mountain","forest","forest","steppe","steppe"],"Aksu|Kashgar":["desert","desert","rugged","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Aksu|Kucha":["desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Kucha|Turfan":["desert","desert","desert","desert","desert","rugged","desert","desert","desert","desert","desert","desert"],"Hami|Turfan":["desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Dunhuang|Hami":["desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Kashgar|Yarkand":["desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Khotan|Yarkand":["desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert","desert"],"Khotan|Miran":["desert","desert","desert","rugged","rugged","rugged","desert","desert","desert","desert","desert","desert"],"Dunhuang|Miran":["desert","desert","desert","harsh","harsh","harsh","harsh","harsh","harsh","harsh","harsh","desert"]};
 function legPairKey(a,b){ return [a,b].sort().join('|'); }
-function legTerr(){ if(S&&S.dash) return S.dash.terr||'desert'; const n=nextCity(); if(!n) return 'settled'; const c=city(); if(c){ const key=legPairKey(c.name,n.name); const prof=LEG_TERRAIN[key]; if(prof&&prof.length){ var ff=(S.legKm||0)/(legDist()||1); ff=ff<0?0:(ff>0.999?0.999:ff); var idx=(c.name<n.name)?ff:(1-ff); if(idx>0.999)idx=0.999; return prof[Math.floor(idx*prof.length)]; } const v=PASS_LEGS[key]; if(v!=null) return v<0.6?'rugged':'mountain'; } if(c && (n.terrE||n.terrW)){ return (n.frac>=c.frac)?(n.terrW||n.terr):(n.terrE||n.terr); } return n.terr; }
-function legHasMountain(){ const c=city(),n=nextCity(); if(!c||!n)return false; const p=LEG_TERRAIN[legPairKey(c.name,n.name)]; if(p) return p.indexOf('mountain')>=0; const v=PASS_LEGS[legPairKey(c.name,n.name)]; return v!=null&&v>=0.9; }
+const DZ_PROF={pass:["steppe","steppe","steppe","steppe","mountain","mountain","mountain","steppe","steppe","steppe","steppe","steppe"],north:["steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","steppe","marsh","steppe"]};
+
+function legTerr(){ if(S&&S.dash) return S.dash.terr||'desert'; const n=nextCity(); if(!n) return 'settled'; const c=city(); if(c){ const key=legPairKey(c.name,n.name); const prof=(key==='Beshbalik|Suyab')?DZ_PROF[S.dzungar||'pass']:LEG_TERRAIN[key]; if(prof&&prof.length){ var ff=(S.legKm||0)/(legDist()||1); ff=ff<0?0:(ff>0.999?0.999:ff); var idx=(c.name<n.name)?ff:(1-ff); if(idx>0.999)idx=0.999; return prof[Math.floor(idx*prof.length)]; } const v=PASS_LEGS[key]; if(v!=null) return v<0.6?'rugged':'mountain'; } if(c && (n.terrE||n.terrW)){ return (n.frac>=c.frac)?(n.terrW||n.terr):(n.terrE||n.terr); } return n.terr; }
+function legHasMountain(){ const c=city(),n=nextCity(); if(!c||!n)return false; if(legPairKey(c.name,n.name)==='Beshbalik|Suyab') return S.dzungar!=='north'; const p=LEG_TERRAIN[legPairKey(c.name,n.name)]; if(p) return p.indexOf('mountain')>=0; const v=PASS_LEGS[legPairKey(c.name,n.name)]; return v!=null&&v>=0.9; }
 function upcomingMountain(){ const t=legTerr(); return t==='mountain'||t==='rugged'; }
 function passSeverity(){ const n=nextCity(); if(!n)return 1; const c=city(); if(c){ const v=PASS_LEGS[legPairKey(c.name,n.name)]; if(v!=null)return v; } return 1; }
 // ---- trade skill ----
@@ -559,8 +602,9 @@ function slaveRevoltResolve(){ var n=slaveCount();
   var str=8 + ((typeof youGear==='function' && youGear().weapon)?4:0);
   (typeof livingParty==='function'?livingParty():[]).forEach(function(p){ str += (typeof effFS==='function'?effFS(p):(p.fs||3)) * (p.kind==='guard'?1.0:0.8); });
   var threat=n*4; var pSup=str/(str+threat);
-  if(rnd()<pSup){ var killed=Math.min(n, Math.max(1, Math.round(n*0.4))); S.goods.slaves=Math.max(0,n-killed); if((S.goods.slaves||0)<=0)S.basis.slaves=0; var hurt=(typeof casualty==='function')?casualty(false):null; log("You and your men beat the rising down, bloodily \u2014 "+killed+" of the coffle are killed or break away; the rest are cowed."+(hurt?" "+hurt+" is hurt in the doing.":"")); }
-  else { var freed=n; S.goods.slaves=0; S.basis.slaves=0; S.hp=clamp(S.hp-(10+ri(14)),0,100); if(S.hp<=0){ S.cause='a slave rising'; die(); return; } if(typeof casualty==='function')casualty(true); log("The coffle overpowers you \u2014 "+freed+" slaves scatter to the four winds, a man or two of yours left bleeding in the dust, and you are lucky to crawl away alive."); }
+  function _coffleOutcome(h,t){ log(t); S.pendingEvent={h:h,t:t,ch:[{l:'Continue',f:function(){ if(S.deathQueue&&S.deathQueue.length){ S.pendingEvent=deathDialog(); } }}]}; }
+  if(rnd()<pSup){ var killed=Math.min(n, Math.max(1, Math.round(n*0.4))); S.goods.slaves=Math.max(0,n-killed); if((S.goods.slaves||0)<=0)S.basis.slaves=0; var hurt=(typeof casualty==='function')?casualty(false):null; _coffleOutcome('THE RISING PUT DOWN', "You and your men beat the rising down, bloodily \u2014 "+killed+" of the coffle are killed or break away; the rest are cowed."+(hurt?" "+hurt+" is hurt in the doing.":"")); }
+  else { var freed=n; S.goods.slaves=0; S.basis.slaves=0; S.hp=clamp(S.hp-(10+ri(14)),0,100); if(S.hp<=0){ S.cause='a slave rising'; die(); return; } if(typeof casualty==='function')casualty(true); _coffleOutcome('<span class="red">THE COFFLE BREAKS FREE</span>', "The coffle overpowers you \u2014 "+freed+" slaves scatter to the four winds, a man or two of yours left bleeding in the dust, and you are lucky to crawl away alive."); }
 }
 function waterMax(){return 25+herdCarry()+5*slaveCount()}
 const FOOD_WT=0.25; // each day of provisions weighs on the camels too
@@ -571,6 +615,8 @@ function city(){ if(S&&S.seaMode){ return SEA_BYNAME[S.portName] || cityByName(S
 function nextCity(){return S.itin[S.idx+(S.dir||1)]} // the city we're heading toward (dir +1 onward, -1 back)
 function fwdCity(){return S.itin[S.idx+1]}
 function backCity(){return S.itin[S.idx-1]}
+function fwdHub(){var i=(S.idx||0)+1;while(S.itin&&S.itin[i]&&S.itin[i].silent)i++;return S.itin&&S.itin[i];}
+function backHub(){var i=(S.idx||0)-1;while(S.itin&&S.itin[i]&&S.itin[i].silent)i--;return S.itin&&S.itin[i];}
 function otherForkCity(){
   // At Kashgar (confluence) offer the nearest city of the OTHER Taklamakan branch
   if(!S.routeChosen || city().name!=='Kashgar') return null;
@@ -588,12 +634,13 @@ function setOutToOtherFork(){
   S.itin.splice(ki+1, 0, {...other}); // Kashgar at ki; other at ki+1; old ki+1 (Akhsikath) shifts to ki+2
   setOut(1); // travel forward from Kashgar into the detour city
 }
-function legDist(){ return (S.dir||1)>0 ? (S.itin[S.idx+1]?S.itin[S.idx+1].dist:0) : (S.itin[S.idx]?S.itin[S.idx].dist:0); } // length of the current leg, whichever way you walk it
+function legDist(){ var base=(S.dir||1)>0 ? (S.itin[S.idx+1]?S.itin[S.idx+1].dist:0) : (S.itin[S.idx]?S.itin[S.idx].dist:0); if(S.dzungar==='north'){ var c=city(),n=nextCity(); if(c&&n&&legPairKey(c.name,n.name)==='Beshbalik|Suyab') base=Math.round(base*1.25); } return base; } // length of the current leg, whichever way you walk it
 function ovrBase(g,c){ return (OVR[c.name]&&OVR[c.name][g.id]!=null)?OVR[c.name][g.id]:g.e+(g.w-g.e)*c.frac; }
 function goodMax(g){ if(!GMAX){ GMAX={}; const cities=[...MAIN1,...NORTH,...SOUTH,...MAIN2,...STEPPE,...SEA]; for(const gg of GOODS){ let m=-Infinity; for(const c of cities){ const b=ovrBase(gg,c); if(b>m)m=b; } GMAX[gg.id]=m; } } return GMAX[g.id]; }
 function cityGoodRel(g,c){ const lo=goodMin(g), hi=goodMax(g), b=ovrBase(g,c); return hi>lo ? (b-lo)/(hi-lo) : 0; } // 0 = this city is the cheapest place for g; 1 = the dearest
 const BAZAAR_N=9; // how many comparative-advantage goods a bazaar always lists (plus anything carried)
 function cityShownGoods(c){
+  if(c&&c.camp){ var cs={felt:1}; if(SLAVERY)cs.slaves=1; if(S)for(var _i=0;_i<GOODS.length;_i++){var _g=GOODS[_i]; if((S.goods[_g.id]||0)>0)cs[_g.id]=1;} return GOODS.filter(function(g){return cs[g.id]&&!(g.id==='slaves'&&!SLAVERY);}); }
   const N=(c&&c.hub==='minor')?4:BAZAAR_N;
   const ranked=GOODS.filter(g=>(g.id!=='conut'||conutHere(c.name)) && (g.id!=='aloe'||aloeHere(c.name)) && !(g.id==='slaves'&&!SLAVERY)).sort((a,b)=>cityGoodRel(a,c)-cityGoodRel(b,c)).slice(0,N); // the goods this city is the best place to BUY
   const set={}; for(const g of ranked) set[g.id]=1;
@@ -657,7 +704,7 @@ function consumeDay(travelling, terrOverride){
   S.hp=clamp(S.hp,0,100);
   { const rec = travelling ? (S.pace==='g'?-1.2:S.pace==='c'?2.2:1.1) : 2.4; for(const p of livingParty()){ const h=(p.hp==null?100:p.hp); if(h<100||rec<0) p.hp=Math.max(0,Math.min(100, h+rec)); } } // members mend toward full; effective health is still capped at the party's
   if(typeof souls==='function'){ var _SL=souls(); if(_SL.length){ if(travelling){ var _dd=(S.pace==='g'?4.0:S.pace==='c'?-0.6:1.6); for(var _i=_SL.length-1;_i>=0;_i--){ var _s=_SL[_i]; soulHp(_s); _s.hp=Math.min(100,_s.hp-_dd*(0.75+rnd()*0.5)); if(_s.hp<55&&_s.cond==='hale')_s.cond='sick'; if(_s.hp>=80&&_s.cond==='sick')_s.cond='hale'; if(_s.hp<=0){ var _g=soulRemoveOne(_i); if(_g) log("<b>"+_g.name+"</b>, "+_g.origin+", does not last the grind of the road \u2014 you bury "+(_g.g==='f'?'her':'him')+" at the verge and the coffle trudges on, one lighter."); } } } else { for(var _j=0;_j<_SL.length;_j++){ var _s2=_SL[_j]; soulHp(_s2); if(_s2.hp<100){ _s2.hp=Math.min(100,_s2.hp+2.5); if(_s2.hp>=80&&_s2.cond==='sick')_s2.cond='hale'; } } } } }
-  if(travelling){ const g=guardCount(); if(g>0){ const owe=g*wageRate(); if(S.silver>=owe){S.silver-=owe;} else { S.wageDebt=(S.wageDebt||0)+(owe-S.silver); S.silver=0; } } }
+  if(travelling){ const owe=guardWageTotal(); if(owe>0){ if(S.silver>=owe){S.silver-=owe;} else { S.wageDebt=(S.wageDebt||0)+(owe-S.silver); S.silver=0; } } }
   if(S.day>1095 && rnd()<0.0009){ const a=pick([['a creeping fever',8],['a bad fall',11],['the bloody flux',9],['a failing heart',13]]); S.hp-=a[1]; log("Three years and more on the road have worn you thin; "+a[0]+" lays you low for a time."); if(S.hp<=0){ S.cause=a[0].replace(/^a |^the /,''); die(); return; } }
   if(!travelling && typeof maybeBaghdadFounding==='function') maybeBaghdadFounding();
   if(S.hp<=0)die();
@@ -693,6 +740,44 @@ function evVarakhsha(){ return {h:'THE OLD ROAD TO VARAKHSHA', t:"Where the firs
  ]}; }
 function checkOxusLeg(){ if(!S||S.seaMode||S.pendingEvent||S._oxusCrossed)return false; var a=city()&&city().name,b=nextCity()&&nextCity().name; if(!((a==='Merv'&&b==='Bukhara')||(a==='Bukhara'&&b==='Merv')))return false; var p=S.legKm/(legDist()||1); var pf=(a==='Merv')?p:(1-p); if(pf<0.36||pf>0.46)return false; S._oxusCrossed=true; S.journeying=false; clearJourney(); S.pendingEvent=crossingEvent(RIVERS['Bukhara|Merv']); render(); return true; }
 function checkVarakhshaLeg(){ if(!S||S.seaMode||S.pendingEvent)return false; var a=city()&&city().name,b=nextCity()&&nextCity().name; if(b!=='Bukhara'||!(a==='Merv'||a==='Samarkand'))return false; if(S.onceFlags&&S.onceFlags['vara_'+a])return false; var p=S.legKm/(legDist()||1); var w=(a==='Merv')?(p>=0.5&&p<=0.58):(p>=0.6&&p<=0.72); if(!w)return false; S.onceFlags['vara_'+a]=true; S._varaFrom=a; S._varaDest='Bukhara'; S._varaWest=false; S.journeying=false; clearJourney(); S.pendingEvent=evVarakhshaFork(); render(); return true; }
+function checkSteppeStops(){ if(!S||S.seaMode||S.pendingEvent)return false;
+  var c=city(),n=nextCity(); if(!c||!n)return false;
+  var east=(c.name==='Suyab'&&n.name==='Beshbalik'), west=(c.name==='Beshbalik'&&n.name==='Suyab');
+  if(!east&&!west)return false;
+  var ff=S.legKm/(legDist()||1);
+  var STOPS=[{site:'Almaty',e:0.15,fork:'e'},{site:'Almaliq',e:0.35,passOnly:true},{site:'Bole',e:0.78,fork:'w'},{site:'TurfanFork',e:0.88,turfanFork:true}];
+  for(var i=0;i<STOPS.length;i++){ var st=STOPS[i]; var f=east?st.e:(1-st.e); var flag='_stop_'+st.site;
+    if(S[flag])continue;
+    if(Math.abs(ff-f)>0.045)continue;
+    if(st.passOnly && S.dzungar==='north')continue;
+    if(st.turfanFork && !east){ S[flag]=true; continue; }
+    S[flag]=true;
+    if(st.turfanFork){ S.journeying=false; clearJourney(); S.pendingEvent=evTurfanFork(); render(); return true; }
+    var isFork=(east&&st.fork==='e')||(west&&st.fork==='w');
+    var winter=(typeof passDanger==='function'?passDanger():0)>=0.5;
+    if(rnd()<0.34){ S.journeying=false; clearJourney(); campEnter(st.site,isFork,east); return true; }
+    if(isFork){ S.journeying=false; clearJourney(); S.pendingEvent=evAlmatyFork(east); render(); return true; }
+    if(winter && (st.site==='Almaliq'||st.site==='Bole')){ S.journeying=false; clearJourney(); S.pendingEvent=evWinterWait(st.site); render(); return true; }
+  }
+  return false;
+}
+function evCamp(site,isFork,east){
+  var winter=(typeof passDanger==='function'?passDanger():0)>=0.5;
+  var LUX=['silk','musk','jade','lapis','amber','coral','pearls','glass','frank','turq','cinn','nutmeg'];
+  var ch=[];
+  ch.push({l:'Buy felt — 8 s for 5 bolts', f:function(){ if(S.silver>=8){ S.silver-=8; S.goods.felt=(S.goods.felt||0)+5; if(!S.basis.felt)S.basis.felt=2; log("You take five bolts of felt off the herders for 8 silver."); } else log("You cannot meet even that."); S.pendingEvent=evCamp(site,isFork,east); }});
+  ch.push({l:'Buy food — 15 s for 30', f:function(){ if(S.silver>=15){ S.silver-=15; S.food+=30; log("The camp spares you 30 of food for 15 silver — dear, this far out on the grass."); } else log("You have not the 15 silver."); S.pendingEvent=evCamp(site,isFork,east); }});
+  ch.push({l:'Buy a slave — 14 s', f:function(){ if(S.silver>=14){ S.silver-=14; S.goods.slaves=(S.goods.slaves||0)+1; if(!S.basis.slaves)S.basis.slaves=14; if(typeof soulsBuy==='function')soulsBuy(1,'central'); log("A captive is roped into your coffle for 14 silver."); } else log("You have not the silver."); S.pendingEvent=evCamp(site,isFork,east); }});
+  if(LUX.some(function(id){return (S.goods[id]||0)>0;})){ ch.push({l:'Sell foreign luxuries to the headman', f:function(){ var purse=120+ri(140), got=0, sold=0; for(var k=0;k<LUX.length;k++){ var id=LUX[k], g=GOODS.find(function(x){return x.id===id;}); if(!g)continue; while((S.goods[id]||0)>0){ var pr=Math.max(2,Math.round((g.e+(g.w-g.e)*0.5)*0.6)); if(got+pr>purse)break; got+=pr; S.goods[id]--; if((S.goods[id]||0)<=0)S.basis[id]=0; sold++; } } if(sold){ S.silver+=got; log("The headman counts out "+got+" silver for "+sold+" of your luxuries, then turns his palms up — his purse is dry."); } else log("They finger your wares with longing, but have not the silver for them."); S.pendingEvent=evCamp(site,isFork,east); }}); }
+  ch.push({l:'Rest a few days', f:function(){ var d=2+ri(3); if(typeof passDays==='function')passDays(d); if(S.dead)return; if(typeof healMembers==='function')healMembers(14); if(typeof healSouls==='function')healSouls(10); S.hp=clamp(S.hp+10,0,100); log("You lie over "+d+" days in the camp's lee, and folk and beasts mend a little."); S.pendingEvent=evCamp(site,isFork,east); }});
+  if(winter && !isFork){ ch.push({l:'Winter here, and wait for the passes', f:function(){ var d=24+ri(16); if(typeof passDays==='function')passDays(d); if(S.dead)return; S.water=waterMax(); log("You winter among the Karluk — "+d+" days of smoke and mutton and long cold nights — and let the snows settle before going on."); }}); }
+  if(isFork){ ch.push({l:'Take to the road — choose your way on', f:function(){ S.pendingEvent=evAlmatyFork(east); }}); }
+  else { ch.push({l:'Strike camp and go on', f:function(){}}); }
+  var lead=(site==='Almaty')?"A Karluk encampment at Almaty — felt yurts, horse-lines, the smell of curds and dung-smoke.":(site==='Almaliq')?"A Karluk camp in the Ili meadows near Almaliq, fat with horses and felt.":"A Karluk camp on the grass by Bole, the herds dark on the hills above.";
+  return {h:'A nomad camp', t:lead+" These are herders, not merchants: they have felt and a few captives to sell and little use for silver, though the headman eyes your foreign luxuries with want — and a thin purse. Food is hard to come by this far out, and dear.", ch:ch};
+}
+function evWinterWait(site){ var where=(site==='Almaliq')?"the Ili meadows by Almaliq":"the grass by Bole"; return {h:'Winter at the threshold', t:"No camp stands here to take you in, but "+where+" offers grass, water and a little shelter — and ahead the passes are closing with snow. Hole up and wait out the worst, or press on and chance the white.", ch:[{l:'Winter here and wait for the thaw', f:function(){ var d=24+ri(16); if(typeof passDays==='function')passDays(d); if(S.dead)return; S.water=waterMax(); log("You winter at the foot of the mountains — "+d+" lean days — and let the snows settle before going on."); }},{l:'Press on into the cold', f:function(){ log("You press on into the teeth of the season, trusting your luck against the snow."); }}]}; }
+function evAlmatyFork(east){ return {h:'A fork in the grass', t:(east?"Karluk herdsmen in felt fall in beside the caravan near a scatter of yurts they call Almaty \u2014 the place of apples. Ahead the steppe buckles up into the white wall of the Heavenly Mountains.":"Beyond Beshbalik the grass road bends toward the white wall of the Heavenly Mountains, and Karluk herdsmen in felt fall in beside the caravan.")+" With a few words of trade-Sogdian and much pointing they give you to understand there are two roads on. One climbs straight over the passes ahead: shorter, but high, and shut fast by snow in the cold months. The other swings far to the north, the long way round the ranges, through a wind-scoured gate in the hills where the snow never closes the road. There is no map of this country; you must choose by their word alone.", ch:[{l:'Over the passes \u2014 shorter, but high and snow-prone', f:function(){ S.dzungar='pass'; S._dzTook='pass'; log("You set your face to the mountains and trust the short, hard road over the passes."); }},{l:'North around \u2014 longer, but low and always open', f:function(){ S.dzungar='north'; S._dzTook='north'; log("You take the long way, swinging north around the ranges by the wind-gate the herders spoke of."); }}]}; }
 function forkReader(){ var lp=(typeof livingParty==='function')?livingParty():[]; var g=lp.find(function(p){return /guard|drover|handler|caravan|camel|guide|scout/i.test(p.role||'');})||lp[0]; return g?(g.name.split(',')[0]+" studies the two and will not swear which is the true road"):"you must choose, and hope"; }
 function evVarakhshaFork(){ var sam=(S._varaFrom==='Samarkand'); var lead=sam?"Past the village of Karmana the Samarkand road forks.":"Beyond the Oxus ferry at Amul the track forks."; var t=lead+" Two ways run on across the green of the oasis and you cannot tell which you ought to take — one looks the newer, well-used road, the other older and drifted half over with sand. There is no signpost; "+forkReader()+"."; var older={l:'Bear '+(sam?'right':'left')+' — the older, sand-drifted road', f:function(){ varaForkLeft(); }}; var newer={l:'Bear '+(sam?'left':'right')+' — the newer, well-used road', f:function(){ log("You keep to the newer-looking road and hold on toward Bukhara."); }}; return {h:'A FORK IN THE ROAD', t:t, ch: sam?[newer,older]:[older,newer]}; }
 function varaForkLeft(){ var FORK=(S._varaFrom==='Samarkand')?[65.37,40.13]:[63.92,39.34], VARA=[63.70,39.92]; var miles=gcMiles(FORK,VARA); var fromObj=cityClone('the fork','steppe',0,0.3); var toObj=cityClone('Varakhsha','steppe',1,0.3); var D=Math.max(1,daySpeed()); var days=Math.max(2,Math.round(miles/14)); toObj.dist=Math.round(days*D); S.dash={kind:'vara',stage:1,to:'Varakhsha',terr:'steppe',lostChance:0,lostRolled:true,lostKm:0}; S.itin=[fromObj,toObj]; S.idx=0; S.dir=1; S.legKm=0; S.pace='s'; S.screen='travel'; log("You take the older, sand-drifted road to the northwest, certain it must be the way."); }
@@ -720,6 +805,7 @@ function stepDay(){
   if(checkHamadanLeg()) return;
   if(checkPaykandLeg()) return;
   if(checkVarakhshaLeg()) return;
+  if(checkSteppeStops()) return;
   const terr=legTerr();
   // winter passes: extra danger on mountain legs out of season
   if(terr==='mountain' && passDanger()>0 && rnd()<passDanger()*.09){
@@ -852,6 +938,7 @@ function pressOn(){ // synchronous fast-forward to next event / arrival (the "sk
   render();
 }
 function arrive(){
+  S._oweConfirmed=false; S.dzungar=null; S._stop_Almaty=false; S._stop_Almaliq=false; S._stop_Bole=false;
   if(S.dash){ dashArrive(); return; }
   const dir=S.dir||1;
   S.idx+=dir; S.legKm=0; S.dealDays=0; S.dir=1; S.priceLock={}; S.lostOk=null; // arriving resets to 'forward' for the city menu; fresh prices for the new market
@@ -876,6 +963,7 @@ function arrive(){
   if(c.hub==='minor' && (c.name==='Zhangye'||c.name==='Jiuquan'||c.name==='Ispijab') && !S.pendingEvent){ S.pendingEvent=oasisEvent(c); }
   if(!S.pendingEvent){ var _pv=S.itin[S.idx-dir]; if(_pv){ var _rv=RIVERS[legPairKey(_pv.name,c.name)]; if(_rv && (!_rv.at || _rv.at===c.name)) S.pendingEvent=crossingEvent(_rv); } }
   if(!S.pendingEvent && typeof maybeFoodShortage==='function') maybeFoodShortage(c);
+  if(!S.pendingEvent && S._dzTook && (c.name==='Beshbalik'||c.name==='Suyab')){ S.pendingEvent=evDzReveal(S._dzTook); S._dzTook=null; }
   if(!S.pendingEvent && typeof maybeSlaveTrouble==='function') maybeSlaveTrouble(c);
   maybeFrontier(c.name);
   S.screen='city';
@@ -918,6 +1006,8 @@ function setOut(dir){
   if(d>0 && !S.returning && c.name===fork1Name() && !S.routeChosen){S.screen='route';render();return;}
   if(d>0 && !S.returning && !S.steppeDecided && ((!isWest() && c.name==='Hami' && S.route==='n') || (isWest() && c.name==='Samarkand'))){ S.screen='steppe'; render(); return; }
   if(d>0 && S.returning && c.name===fork2Name() && !S.returnRouteChosen){S.screen='routeReturn';render();return;}
+  if(d>0 && (S.wageDebt||0)>0 && S.silver<(S.wageDebt||0) && !S._oweConfirmed){ S.screen='city'; var _ow=Math.round(S.wageDebt); var _gs=S.party.filter(function(p){return p.alive&&p.kind==='guard';}); var _pl=_gs.length>1; S.pendingEvent={h:'Leave without paying the guard?', t:"You still owe "+_ow+" s in back-pay and have not the silver to cover it. Ride out of "+c.name+" now and your "+(_pl?'guards':'guard')+" will down tools and walk off in disgust \u2014 and word spreads, so every guard you hire afterwards will cost more.", ch:[{l:'Go back and settle up',f:function(){}},{l:"Leave anyway \u2014 let "+(_pl?'them':'him')+" walk",f:function(){ S._oweConfirmed=true; S._departNow=true; }}]}; render(); return; }
+  S._oweConfirmed=false;
   if((S.wageDebt||0)>0){ const pay=Math.min(S.silver,S.wageDebt); S.silver-=pay; S.wageDebt-=pay; if(S.wageDebt>0){ const guards=S.party.filter(p=>p.alive&&p.kind==='guard'); const quit=guards.length; if(quit>0){ S.stiffed=S.stiffed||{}; S.stiffed[c.name]=(S.stiffed[c.name]||[]).concat(guards.map(g=>g.name)); S.stiffedOwed=S.stiffedOwed||{}; S.stiffedOwed[c.name]=(S.stiffedOwed[c.name]||0)+Math.round(S.wageDebt); S.party=S.party.filter(p=>!(p.alive&&p.kind==='guard')); S.hirePenalty=(S.hirePenalty||1)*Math.pow(1.25,quit); log(quit+" guard"+(quit>1?'s':'')+" you could not pay down tools and walk off in disgust. Word spreads; hiring will cost you more hereafter, and they will not have forgotten."); } S.wageDebt=0; } }
   if(isWest() && !S.returning && c.name==='Constantinople' && !S.onceFlags.stChris){ S.onceFlags.stChris=true; S.pendingEvent=stChristopher(); }
   if(d>0 && legHasMountain() && passDanger()>=0.85 && !S._forcePass){ S.screen='city'; S.pendingEvent=winterPassWarn(); render(); return; }
@@ -1327,6 +1417,11 @@ function evWildCamels(){
    {l:'Leave them be',f(){log("You and the wild camels regard each other across the sand, two parties with no use for one another.");}},
   ]};
 }
+function akChach(dest){ var origin=(dest==='Chach')?'Akhsikath':'Chach'; var via=(dest==='Chach')?"north-west across the Hungry Steppe and over the Jaxartes":"south-east over the Jaxartes into the Ferghana valley"; return {h:'The road to '+dest, t:"From "+origin+" a good caravan road runs "+via+" to "+dest+" \u2014 a week or so of easy lowland going between the two great valleys, neither steppe nor mountain.", ch:[
+   {l:'Take the road to '+dest, f:function(){ akChachGo(dest); }},
+   {l:'Stay in '+origin, f:function(){}}
+ ]}; }
+function akChachGo(dest){ var dd=6+ri(4); passDays(dd); if(S.dead)return; if(dest==='Chach'){ var st=fullRoute('k', isWest()); var ni=st.findIndex(function(x){return x.name==='Chach';}); if(ni>=0){ S.route='k'; S.routeChosen=true; S.steppeDecided=true; S.itin=st; S.idx=ni; S.dir=1; S.legKm=0; } } else { var st2=fullRoute('n', isWest()); var ni2=st2.findIndex(function(x){return x.name==='Akhsikath';}); if(ni2>=0){ S.route='n'; S.routeChosen=false; S.steppeDecided=true; S.itin=st2; S.idx=ni2; S.dir=1; S.legKm=0; } } S.water=waterMax(); if(typeof restockToNow==='function')restockToNow(dest); log("You follow the lowland road to "+dest+", "+dd+" days across the plains between the valleys."); S.screen='city'; }
 function oshSuyabShortcut(dest){
   dest=dest||'Suyab';
   var m=monthNum();
@@ -1406,7 +1501,7 @@ function desertDashEvent(from,to){ var mi=Math.round(gcMiles(DESERT_LL[from],DES
 function resolveDesertDash(from,to){ var bed=((from==='Yarkand'&&to==='Aksu')||(from==='Aksu'&&to==='Yarkand')); dashBegin(from,to,{bed:bed,lostChance:(bed?0.30:0.55)}); }
 function cityClone(nm,terr,dist,fracFallback){ var src=(typeof cityByName==='function')?cityByName(nm):null; var o=src?Object.assign({},src):{name:nm}; o.name=nm; if(terr)o.terr=terr; if(dist!=null)o.dist=dist; if(o.frac==null)o.frac=(fracFallback!=null?fracFallback:0.3); o.silent=false; o.hub=null; return o; }
 function dashBegin(fromLabel,to,opts){ opts=opts||{}; S.pendingEvent=null; var miles=(opts.miles!=null)?opts.miles:gcMiles(DESERT_LL[fromLabel],DESERT_LL[to]); var fromObj=cityClone(fromLabel,'desert',0,(opts.fromFrac!=null?opts.fromFrac:0.3)); var toObj=cityClone(to,'desert',1,opts.toFrac); var lc=(opts.lostChance!=null?opts.lostChance:0); S.dash={from:fromLabel,to:to,bed:!!opts.bed,hidden:!!opts.hidden,lostChance:lc,lostRolled:(lc>0?false:true),lostKm:0}; S.itin=[fromObj,toObj]; S.idx=0; S.dir=1; S.legKm=0; S.pace='s'; var days=Math.max(3,Math.round(miles/15)); var D=Math.max(1,daySpeed()); toObj.dist=Math.round(days*D); S.dash.lostKm=Math.round(toObj.dist*(0.35+rnd()*0.30)); S.screen='travel'; startJourney(); }
-function dashArrive(){ if(S.dash&&S.dash.kind==='vara'){ varaDashArrive(); return; } var to=S.dash.to, bed=S.dash.bed, wasLost=S.dash.hidden; S.dash=null; S.lost=null; S.water=waterMax(); landAtCity(to); if(wasLost){ log("At the last a smudge of green hardens out of the glare — the wells and walls of "+to+". You have walked out of the Taklamakan alive, which is more than most who lose the way in it."); } else if(bed){ log("You held to the dead river's bed where you could and your nerve where you could not, and the green of "+to+" hardens out of the haze at last. You have crossed the Taklamakan — and lived to be insufferable about it."); } else { log("Against every odds the desert offers, you held a true line by the sun and the lie of the dunes, and the towers of "+to+" lift from the glare. You have crossed the Taklamakan whole — a thing few live to boast of."); } S.screen='city'; }
+function dashArrive(){ if(S.dash&&S.dash.kind==='vara'){ varaDashArrive(); return; } if(S.dash&&S.dash.kind==='turfan'){ var _t=S.dash.to; S.dash=null; S.water=waterMax(); landAtCity(_t); log("The valley opens at last on the green hollow of Turfan, vine-shaded and furnace-hot, and you rejoin the road to Cathay among the northern oases."); if(S._dzTook){ S.pendingEvent=evDzReveal(S._dzTook); S._dzTook=null; } S.screen='city'; return; } var to=S.dash.to, bed=S.dash.bed, wasLost=S.dash.hidden; S.dash=null; S.lost=null; S.water=waterMax(); landAtCity(to); if(wasLost){ log("At the last a smudge of green hardens out of the glare — the wells and walls of "+to+". You have walked out of the Taklamakan alive, which is more than most who lose the way in it."); } else if(bed){ log("You held to the dead river's bed where you could and your nerve where you could not, and the green of "+to+" hardens out of the haze at last. You have crossed the Taklamakan — and lived to be insufferable about it."); } else { log("Against every odds the desert offers, you held a true line by the sun and the lie of the dunes, and the towers of "+to+" lift from the glare. You have crossed the Taklamakan whole — a thing few live to boast of."); } S.screen='city'; }
 function enterLost(from,to){ var a=DESERT_LL[from],b=DESERT_LL[to],latm=(a[1]+b[1])/2*Math.PI/180; var base=Math.atan2((b[1]-a[1]),(b[0]-a[0])*Math.cos(latm)); var theta=base+(rnd()*2-1)*0.5236; var dMi=gcMiles(a,b)*(0.3+rnd()*0.4); var lon=a[0]+(dMi*Math.cos(theta))/(69*Math.cos(latm)), lat=a[1]+(dMi*Math.sin(theta))/69; lon=Math.max(71.3,Math.min(94.7,lon)); lat=Math.max(35.3,Math.min(44.4,lat)); setLost([lon,lat]); S.hp=clamp(S.hp-6,0,100); if(S.hp<=0){S.cause='the desert';die();return;} log("The wind rises, the dunes shift, and somewhere out here the track simply ceases to be — you are no longer sure where you stand."); S.screen='lost'; }
 function lostEvent(){ var p=S.lost||[88,39]; var cands=Object.keys(DESERT_LL).map(function(n){return {n:n,d:gcMiles(p,DESERT_LL[n])};}).filter(function(x){return x.d<330;}).sort(function(x,y){return x.d-y.d;}).slice(0,5); var ch=cands.map(function(x){ return {l:'Make for '+x.n+' ('+roughDir(p,x.n)+')', f:function(){ headFromLost(x.n); }}; }); return {h:'LOST IN THE TAKLAMAKAN', t:"The dunes roll away the same in every quarter and the track is long gone. You no longer truly know where you stand — somewhere out past "+(S.lostHint||'the sands')+", you reckon, but the certainty drained off with the water. You must choose a direction and hold to it; out here, dithering kills as surely as a wrong guess.", ch:ch}; }
 function headFromLost(name){ dashBegin('the deep desert',name,{miles:gcMiles(S.lost,DESERT_LL[name]),hidden:true,lostChance:0.30}); }
@@ -1506,17 +1601,17 @@ function sellCamel(){ if(S.camels<=1){log("Your last camel is not for sale, unle
   const p=Math.round(camelPrice()*.85); S.camels--; S.silver+=p; S.water=Math.min(S.water,waterMax());
   log("You sell a camel for "+p+" silver. It leaves without looking back, which is more than you'd do."); render(); }
 function wageRate(){ return 1 + Math.floor(convoyValue()/10000); } // 1 s/day, +1 per 10,000 s of convoy value
-function accrueGuardWages(){ if(!S)return; const g=guardCount(); if(g>0){ const owe=g*wageRate(); if(S.silver>=owe){S.silver-=owe;} else { S.wageDebt=(S.wageDebt||0)+(owe-S.silver); S.silver=0; } } }
+function accrueGuardWages(){ if(!S)return; const owe=guardWageTotal(); if(owe>0){ if(S.silver>=owe){S.silver-=owe;} else { S.wageDebt=(S.wageDebt||0)+(owe-S.silver); S.silver=0; } } }
 function guardCost(){ return Math.round(40*Math.pow(1.1, guardCount())*(S.hirePenalty||1)); } // +10% per guard already kept; more if you've stiffed guards
 function guardName(){ const f=city()?city().frac:0.5; const bank = f<0.45?['Wei','Bao','Shan','Fei','Tieh','Jun'] : f<0.66?['Tarkan','Esen','Toghrul','Aybek','Qutuz','Bumin'] : f<0.85?['Roshan','Bahram','Sohrab','Dariush','Kaveh','Farrokh'] : ['Aspar','Tervas','Komes','Doukas','Bardanes','Petzeas']; const used=new Set(S.party.map(p=>p.name)); return bank.find(n=>!used.has(n)) || (pick(bank)+' the Younger'); }
 function hireGuard(){ const cn=city().name; S.released=S.released||{}; const pool=S.released[cn]||[]; const cost0=guardCost();
-  if(pool.length){ const r=pool[0]; const diff=Math.max(0, cost0-(r.deposit||0)); if(S.silver>=diff){ S.silver-=diff; pool.shift(); S.party.push({name:r.name,role:'a hired guard',kind:'guard',alive:true,hp:r.hp||100,deposit:cost0,region:(GUARD_CITY_REGION[cn]||''),skills:r.skills||{...pick(GUARD_SKILLS)}}); normalizeMember(S.party[S.party.length-1]); log("You take "+r.name+" back on — he has had your deposit already, so "+diff+" silver squares it."); } else log(r.name+" will sign on again for "+diff+" silver; you can't meet it just now."); render(); return; }
-  const cost=cost0; if(S.silver>=cost){ S.silver-=cost; S.party.push({name:guardName(),role:'a hired guard',kind:'guard',alive:true,hp:100,deposit:cost,region:(GUARD_CITY_REGION[cn]||''),skills:{...pick(GUARD_SKILLS)}}); normalizeMember(S.party[S.party.length-1]); log("You take on "+S.party[S.party.length-1].name+" for "+cost+" silver up front — a guard with reassuring scars."); } else log("That guard wants "+cost+" silver up front; you can't meet it."); render(); }
+  if(pool.length){ const r=pool[0]; const diff=Math.max(0, cost0-(r.deposit||0)); if(S.silver>=diff){ S.silver-=diff; pool.shift(); S.party.push({name:r.name,role:'a hired guard',kind:'guard',wage:wageRate(),alive:true,hp:r.hp||100,deposit:cost0,region:(GUARD_CITY_REGION[cn]||''),skills:r.skills||{...pick(GUARD_SKILLS)}}); normalizeMember(S.party[S.party.length-1]); log("You take "+r.name+" back on — he has had your deposit already, so "+diff+" silver squares it."); } else log(r.name+" will sign on again for "+diff+" silver; you can't meet it just now."); render(); return; }
+  const cost=cost0; if(S.silver>=cost){ S.silver-=cost; S.party.push({name:guardName(),role:'a hired guard',kind:'guard',wage:wageRate(),alive:true,hp:100,deposit:cost,region:(GUARD_CITY_REGION[cn]||''),skills:{...pick(GUARD_SKILLS)}}); normalizeMember(S.party[S.party.length-1]); log("You take on "+S.party[S.party.length-1].name+" for "+cost+" silver up front — a guard with reassuring scars."); } else log("That guard wants "+cost+" silver up front; you can't meet it."); render(); }
 function releaseGuard(idx){ const guards=S.party.filter(p=>p.alive&&p.kind==='guard'); const g=guards[idx]; if(!g)return; S.party=S.party.filter(p=>p!==g); const cn=city().name; S.released=S.released||{}; (S.released[cn]=S.released[cn]||[]).push({name:g.name,deposit:g.deposit||0,hp:g.hp||100,skills:g.skills}); log("You pay off "+g.name+" and release him in "+cn+"; he'd sign on again cheaply if you pass back through."); render(); }
 function openHire(){ if(!S||(S.screen!=='city'&&S.screen!=='port'))return; S.screen='hire'; render(); }
 function renderHire(m){
   const c=city(); const guards=S.party.filter(p=>p.alive&&p.kind==='guard'); const wr=wageRate();
-  const rows = guards.length ? guards.map((g,i)=>'<p style="margin:5px 0"><b>'+g.name+'</b> <span class="sub">— hired guard · '+wageRate()+' s/day</span> <button class="tiny" onclick="releaseGuard('+i+')">Release</button></p>').join('') : '<p class="sub">You keep no hired guards.</p>';
+  const rows = guards.length ? guards.map((g,i)=>'<p style="margin:5px 0"><b>'+g.name+'</b> <span class="sub">— hired guard · '+(g.wage||1)+' s/day</span> <button class="tiny" onclick="releaseGuard('+i+')">Release</button></p>').join('') : '<p class="sub">You keep no hired guards.</p>';
   m.innerHTML='<h2>Guards <span class="sub">· '+cityLabel(c)+'</span></h2>'+
    '<p class="sub">Hired guards take a deposit up front and <b>'+wr+' s each per day</b> on the road — the deposit is what it would cost to send them home from the far end. The richer your convoy, the more they charge (a fat caravan is a tempting one to rob, or to abandon). Companions who joined for love of the road draw no wage. You can only take on or release guards in a town.</p>'+
    '<div class="panel">'+rows+'</div>'+
@@ -1660,7 +1755,7 @@ function evRecruit(){
   const nm=pick(guardNamePool(city().name));
   return {h:'A HAND FOR HIRE',t:nm+", a caravan veteran between jobs, offers to sign on for "+fee+" silver up front — more than the going rate, but he is scarred, sober, handy in a fight, and "+_exd+" besides.",
   ch:[
-   {l:'Hire '+nm+' ('+fee+' s)',f(){ if(S.silver>=fee){S.silver-=fee;S.party.push({name:nm,role:'a hired guard',kind:'guard',alive:true,region:(GUARD_CITY_REGION[city().name]||''),skills:{...tmpl}}); normalizeMember(S.party[S.party.length-1]); log(nm+" joins the caravan and immediately criticises your watch-rotation.");} else log("You can't meet his price. He shrugs and waits for a richer caravan.");}},
+   {l:'Hire '+nm+' ('+fee+' s)',f(){ if(S.silver>=fee){S.silver-=fee;S.party.push({name:nm,role:'a hired guard',kind:'guard',wage:wageRate(),alive:true,region:(GUARD_CITY_REGION[city().name]||''),skills:{...tmpl}}); normalizeMember(S.party[S.party.length-1]); log(nm+" joins the caravan and immediately criticises your watch-rotation.");} else log("You can't meet his price. He shrugs and waits for a richer caravan.");}},
    {l:'Travel light',f(){log("You decline. Fewer mouths, fewer swords — a gamble either way.");}},
   ]};
 }
@@ -1907,7 +2002,7 @@ const FRONTIERS={
       papers:"An officer copies your names into a ledger of suspicious persons and lets you go."}
  }
 };
-const FRONTIER_LEGS={'Aleppo|Iconium':'Iconium','Akhsikath|Samarkand':'Samarkand','Kashgar|Akhsikath':'Akhsikath'};
+const FRONTIER_LEGS={'Aleppo|Iconium':'Iconium','Akhsikath|Samarkand':'Samarkand','Akhsikath|Kashgar':'Akhsikath'};
 function checkFrontierLeg(){
   const n=nextCity(); if(!n||!city()) return false;
   const fname=FRONTIER_LEGS[legPairKey(city().name,n.name)]; if(!fname) return false;
@@ -2764,10 +2859,10 @@ function recordSeen(){
 }
 function noteNeighbors(){
   const c=city(), out=[];
-  const back=backCity(); if(back) out.push(back);
+  const back=backHub(); if(back) out.push(back);
   if(!S.returning && !S.routeChosen && c.name==='Dunhuang'){ out.push(NORTH[0]); out.push(SOUTH[0]); } // Hami (north) & Miran (south)
-  else if(c.name==='Kashgar'){ const f=fwdCity(); if(f) out.push(f); const o=otherForkCity(); if(o) out.push(o); }
-  else { const f=fwdCity(); if(f) out.push(f); }
+  else if(c.name==='Kashgar'){ const f=fwdHub(); if(f) out.push(f); const o=otherForkCity(); if(o) out.push(o); }
+  else { const f=fwdHub(); if(f) out.push(f); }
   return out;
 }
 function noteBase(cityObj,g){
@@ -2787,8 +2882,8 @@ function renderNotes(m){
     const nb=seaEdges(c.name).map(e=>cityByName(e.to)).filter(Boolean).slice(0,3); const mid=Math.floor(nb.length/2);
     cols=[...nb.slice(0,mid).map(n=>({city:n})), {here:true}, ...nb.slice(mid).map(n=>({city:n}))];
   } else {
-    const back=backCity();
-    const fwds=[]; if(!S.returning && !S.routeChosen && c.name==='Dunhuang'){ fwds.push(NORTH[0],SOUTH[0]); } else if(c.name==='Kashgar'){ const f=fwdCity(); if(f)fwds.push(f); const o=otherForkCity(); if(o)fwds.push(o); } else { const f=fwdCity(); if(f)fwds.push(f); }
+    const back=backHub();
+    const fwds=[]; if(!S.returning && !S.routeChosen && c.name==='Dunhuang'){ fwds.push(NORTH[0],SOUTH[0]); } else if(c.name==='Kashgar'){ const f=fwdHub(); if(f)fwds.push(f); const o=otherForkCity(); if(o)fwds.push(o); } else { const f=fwdHub(); if(f)fwds.push(f); }
     cols=[...fwds.map(n=>({city:n})), {here:true}, ...(back?[{city:back}]:[])];
   }
   const head='<tr><th>Good</th>'+cols.map(col=>col.here?'<th class="num">here</th>':'<th class="num">'+cityLabel(col.city)+'</th>').join('')+'<th>buy / sell</th></tr>';
@@ -3825,7 +3920,6 @@ const ANAT_CITIES={
   aleppo:{x:1122,y:512,r:10,label:'Aleppo'},
   gortyn:{x:92,y:613,r:8,label:'Gortyn'},
   antioch:{x:1020,y:519,r:6,label:'Antioch',faint:true},
-  nicaea:{x:497,y:157,r:6,label:'Nicaea',faint:true},
   trebizond:{x:1337,y:109,r:7,label:'Trebizond',faint:true},
   alexandria:{x:512,y:932,r:8,label:'Alexandria',faint:true}
 };
@@ -3942,6 +4036,9 @@ function chartGo(name){ if(!S)return; var here=city()&&city().name;
   if(here==='Samarkand' && name==='Akhsikath' && !S.returning && isWest()){ S.route='n'; S.routeChosen=false; S.steppeDecided=true; S.itin=fullRoute('n', isWest()); var _si=S.itin.findIndex(function(x){return x.name==='Samarkand';}); var _oi=S.itin.findIndex(function(x){return x.name==='Akhsikath';}); if(_si>=0){ S.idx=_si; S.dir=(_oi>_si)?1:-1; S.legKm=0; } log("You leave the steppe junction at Samarkand and turn onto the settled road, down toward Akhsikath and the Pamir passes."); setOut(S.dir||1); return; }
   if(here==='Akhsikath' && name==='Suyab' && !S.returning){ S.pendingEvent=oshSuyabShortcut('Suyab'); S.screen=(S.seaMode?'port':'city'); render(); return; }
   if(here==='Suyab' && name==='Akhsikath' && !S.returning){ S.pendingEvent=oshSuyabShortcut('Akhsikath'); S.screen=(S.seaMode?'port':'city'); render(); return; }
+  if((here==='Samarkand'&&name==='Chach')||(here==='Chach'&&name==='Samarkand')){ if(S.route!=='k'){ S.route='k'; S.routeChosen=true; S.steppeDecided=true; S.itin=fullRoute('k', isWest()); var _hi=S.itin.findIndex(function(x){return x.name===here;}); if(_hi>=0){ S.idx=_hi; S.legKm=0; } } if(typeof mapSetOutTo==='function' && mapSetOutTo(name)) return; }
+  if((here==='Akhsikath'&&name==='Chach')||(here==='Chach'&&name==='Akhsikath')){ S.pendingEvent=akChach(name); S.screen=(S.seaMode?'port':'city'); render(); return; }
+
   if(SHORTCUTS[here] && SHORTCUTS[here].indexOf(name)>=0 && !S.returning){ S.pendingEvent=desertDashEvent(here,name); S.screen=(S.seaMode?'port':'city'); render(); return; }
   if(name===here){ S.screen=(S.seaMode?'port':'city'); render(); return; }
   var lk=(typeof findLink==='function')?findLink(here,name):null;
@@ -4215,11 +4312,12 @@ function renderCity(m){
   '<button onclick="tavern()">Tavern (3 s)</button>'+
   (S.debugExport?'<button onclick="exportLog()" title="Download the run-log for analysis">Export run-log</button>':'')+
   '</div><div style="margin-top:12px">'+
-  (chartForCity(c.name) ? '<button class="seal" onclick="openChart()">Set out</button>' : anatMapCity(c.name) ? '<button class="seal" onclick="openMap()">Set out</button>' :
+  (c.camp ? '<button class="seal" onclick="campLeave()">Strike camp and go on</button>' :
+   (chartForCity(c.name) ? '<button class="seal" onclick="openChart()">Set out</button>' : anatMapCity(c.name) ? '<button class="seal" onclick="openMap()">Set out</button>' :
    ((canFwd?'<button class="seal" onclick="setOut(1)">Set out for '+fwdLabel+'</button> ':'')+
     (back?'<button onclick="setOut(-1)">Turn back toward '+back.name+' ('+fmtDist(backLeg)+')</button>':'')+
     (xfork?'<button onclick="setOutToOtherFork()">Detour to '+xfork.name+' (other Taklamakan road, '+fmtDist(xfork.dist)+')</button>':'')+
-    seaEntryButtons(c)))+
+    seaEntryButtons(c))))+
   '</div>';
 }
 const SKY=[
@@ -4435,19 +4533,19 @@ function renderOutcome(m){
   m.innerHTML='<div class="panel event"><h3>'+(S.outcomeH||'OUTCOME')+'</h3><p>'+S.eventOutcome+'</p>'+
   '<button class="seal" onclick="continueOutcome()">Continue</button></div>';
 }
-function continueOutcome(){ S.eventOutcome=null; resumeAfterEvent(); }
+function continueOutcome(){ S.eventOutcome=null; if(S.deathQueue && S.deathQueue.length){ S.pendingEvent=deathDialog(); render(); return; } resumeAfterEvent(); }
 function evChoice(i){
   const e=S.pendingEvent; if(!e||!e.ch||!e.ch[i])return;
   const before=S.log.length;
   e.ch[i].f();
   if(S._inBattle){ return; }
   if(S.dead){ S.eventOutcome=null; resumeAfterEvent(); return; }
-  if(S.deathQueue && S.deathQueue.length && !(S.pendingEvent && S.pendingEvent!==e)){ S.pendingEvent=deathDialog(); render(); return; }
   if(S.pendingEvent && S.pendingEvent!==e){ render(); return; } // the choice queued a follow-up dialogue
   // gather whatever the choice just wrote to the log and show it as the outcome
   const added=[]; for(let k=0;k<S.log.length-before;k++) added.push(S.log[k].t);
-  if(added.length){ S.eventOutcome=added.reverse().join(' '); S.outcomeH=e.h; render(); }
-  else resumeAfterEvent();
+  if(added.length){ S.eventOutcome=added.reverse().join(' '); S.outcomeH=e.h; render(); return; }
+  if(S.deathQueue && S.deathQueue.length){ S.pendingEvent=deathDialog(); render(); return; }
+  resumeAfterEvent();
 }
 function renderEnd(m){
   const sold=S.onceFlags.soldOut;
