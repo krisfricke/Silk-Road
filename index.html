@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.03.02';
+const VERSION='2.03.05';
 const RESUME_B64="";
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
@@ -864,6 +864,8 @@ function cityShownGoods(c){
   const ranked=GOODS.filter(g=>(g.id!=='conut'||conutHere(c.name)) && (g.id!=='aloe'||aloeHere(c.name)) && !(g.id==='slaves'&&!SLAVERY)).sort((a,b)=>cityGoodRel(a,c)-cityGoodRel(b,c)).slice(0,N); // the goods this city is the best place to BUY
   const set={}; for(const g of ranked) set[g.id]=1;
   if(S) for(const g of GOODS) if((S.goods[g.id]||0)>0) set[g.id]=1; // anything you carry, so you can always SELL it
+  if(SLAVERY && OVR[c.name] && OVR[c.name].slaves!=null) set.slaves=1; // designated slave markets always list slaves, even minor-hub ports
+  if(aloeHere(c.name)) set.aloe=1; if(conutHere(c.name)) set.conut=1; // range-gated specialties always show in their home range
   return GOODS.filter(g=>set[g.id]);
 }
 function dealsIn(g,c){ return cityShownGoods(c).some(x=>x.id===g.id); }
@@ -1100,7 +1102,7 @@ function doHunt(terr, inTown, hunter){
    (skill>=2?' '+(hunter.you?'You make':(hunter.name.split(',')[0]+' makes'))+' it look easy.':'')+_ln;
 }
 function huntFood(){ if(!S||S.dead)return;
-  var inTown = (S.screen==='city');
+  var inTown = (S.screen==='city'||S.screen==='port');
   var terr = inTown ? ((city()&&city().terr)||'steppe') : legTerr();
   S.pendingEvent={h:'THE HUNT', t:"Game must be found and brought down. Send one good hand to range out quickly for the pot \u2014 or take a party afield and hunt it properly, hour by hour, for better or worse.", ch:[
     {l:'Savour the hunt \u2014 take a party out and play it through', f:function(){ hmStart(terr,inTown); }},
@@ -3622,7 +3624,7 @@ Object.assign(OVR,{
  'Basra':     {silk:60,musk:128,lapis:30,glass:14,coral:26,amber:50,pepper:64,wine:18,paper:10,conut:24,linen:24},
  'Dhofar':    {pepper:60,coral:42,glass:30,silk:50,musk:90,conut:16,linen:17},
  'Socotra':   {pepper:62,coral:38,silk:52,conut:18,linen:18},
- 'Zanzibar':  {pepper:58,coral:30,glass:26,silk:46,amber:30,conut:8},
+ 'Zanzibar':  {pepper:58,coral:30,glass:26,silk:46,conut:8},
  'Aden':      {pepper:62,glass:22,silk:52,coral:34,musk:100,amber:46,conut:22,linen:20},
  'Qulzum':    {glass:24,pepper:64,silk:58,coral:30,conut:20,linen:15,turq:16},
  'Fustat':    {glass:12,coral:28,silk:60,pepper:66,lapis:60,amber:52,wine:18,musk:120,paper:10,conut:21,linen:14},
@@ -3630,7 +3632,7 @@ Object.assign(OVR,{
 });
 const CITY_ADMIRE_SEA={}; for(const _p of SEA) CITY_ADMIRE_SEA[_p.name]=_p.adm;
 Object.assign(CITY_ADMIRE, CITY_ADMIRE_SEA);
-[['Basra',{pearls:28,ivory:66,indigo:44}],['Mantai',{pearls:34,indigo:24}],['Kollam',{pearls:40,frank:50,indigo:14}],['Aden',{pearls:50,ivory:55,frank:24}],['Zanzibar',{ivory:30}],['Dhofar',{frank:12}],['Socotra',{frank:16}],['Palembang',{indigo:22}],['Fustat',{ivory:70,indigo:40}],['Guangzhou',{pearls:90}],['Mantai',{cinn:16}],['Kollam',{cinn:22}],['Palembang',{cinn:30,nutmeg:22}],['Kauthara',{nutmeg:42}],['Constantinople',{wax:28}],['Aleppo',{wax:36}],['Iconium',{wax:34}],['Gortyn',{wax:34}],['Aden',{pearls:50,coral:34}],['Mantai',{pearls:34,nutmeg:60}],['Basra',{pearls:26}],['Zanzibar',{pelts:22}],['Aden',{pelts:60}],['Fustat',{pelts:64}],['Baghdad',{conut:22}],['Baghdad',{linen:26}],['Constantinople',{linen:38}],['Gortyn',{linen:34}],['Aleppo',{linen:30}],['Ephesus',{linen:30}],['Constantinople',{furs:28,slaves:72}],['Trebizond',{furs:22}],['Zanzibar',{slaves:60}],['Basra',{slaves:66}],['Samarkand',{slaves:70}],['Bukhara',{slaves:70}],['Kashgar',{slaves:76}],['Chang\'an',{slaves:84}]].forEach(function(e){ OVR[e[0]]=Object.assign(OVR[e[0]]||{},e[1]); });
+[['Basra',{pearls:28,ivory:66,indigo:44}],['Mantai',{pearls:34,indigo:24}],['Kollam',{pearls:40,frank:50,indigo:14}],['Aden',{pearls:50,ivory:55,frank:24}],['Zanzibar',{ivory:30}],['Dhofar',{frank:12}],['Socotra',{frank:16}],['Palembang',{indigo:22}],['Fustat',{ivory:70,indigo:40}],['Guangzhou',{pearls:90}],['Mantai',{cinn:16}],['Kollam',{cinn:22}],['Palembang',{cinn:30,nutmeg:22}],['Kauthara',{nutmeg:42}],['Constantinople',{wax:28}],['Aleppo',{wax:36}],['Iconium',{wax:34}],['Gortyn',{wax:34}],['Aden',{pearls:50,coral:34}],['Mantai',{pearls:34,nutmeg:60}],['Basra',{pearls:26}],['Zanzibar',{pelts:22}],['Aden',{pelts:60}],['Fustat',{pelts:64}],['Baghdad',{conut:22}],['Baghdad',{linen:26}],['Constantinople',{linen:38}],['Gortyn',{linen:34}],['Aleppo',{linen:30}],['Ephesus',{linen:30}],['Constantinople',{furs:28,slaves:72}],['Trebizond',{furs:22}],['Zanzibar',{slaves:60}],['Basra',{slaves:66}],['Samarkand',{slaves:70}],['Bukhara',{slaves:70}],['Kashgar',{slaves:76}],['Chang\'an',{slaves:84}],['Socotra',{aloe:10}],['Aden',{aloe:16}]].forEach(function(e){ OVR[e[0]]=Object.assign(OVR[e[0]]||{},e[1]); });
 
 /* the sea network as an undirected graph. d=base days, terr: land|canal|coast|deep|med (only coast/deep are monsoon-gated). */
 const SEA_EDGES=[
@@ -4055,7 +4057,7 @@ function renderPort(m){
   '<button onclick="admireCity()">Admire the city</button>'+
   '<button onclick="tavern()">Tavern (3 s)</button>'+
   (S.debugExport?'<button onclick="exportLog()" title="Download the run-log for analysis">Export run-log</button>':'')+
-  '</div><div style="margin-top:12px"><button onclick="openExplore()">Hunt nearby (1 day)</button> <button onclick="openOutfitter()">Outfitter</button> '+((S.goods.slaves>0)?'<button onclick="openCoffle()">The coffle ('+S.goods.slaves+')</button> ':'')+(anatPortMapCity(c.name)?'<button onclick="openMap()">Open the road map</button> ':'')+(chartForCity(c.name)?'<button onclick="openChart()">Open the chart</button> ':'')+((seaEdges(c.name).some(function(e){return e.terr==='land';}))?'<button onclick="S.screen=\'animals\';render()">Livestock market</button> ':'')+travel+((isSeaExitCity(c.name)&&totalAnimals()>0)?'<button onclick="stepAshore()">Step back ashore (keep to the land road)</button>':'')+'</div>';
+  '</div><div style="margin-top:12px"><button onclick="huntFood()">Hunt nearby (1 day)</button> <button onclick="openOutfitter()">Outfitter</button> '+((S.goods.slaves>0)?'<button onclick="openCoffle()">The coffle ('+S.goods.slaves+')</button> ':'')+(anatPortMapCity(c.name)?'<button onclick="openMap()">Open the road map</button> ':'')+(chartForCity(c.name)?'<button onclick="openChart()">Open the chart</button> ':'')+((seaEdges(c.name).some(function(e){return e.terr==='land';}))?'<button onclick="S.screen=\'animals\';render()">Livestock market</button> ':'')+travel+((isSeaExitCity(c.name)&&totalAnimals()>0)?'<button onclick="stepAshore()">Step back ashore (keep to the land road)</button>':'')+'</div>';
 }
 function portDepart(to){ if(!S)return; beginVoyage(S.portName, to); }
 const PORT_BIOME={Kauthara:"steaming coastal jungle, loud with gibbons and hornbills and hung with lianas",Palembang:"dense equatorial rainforest along the muddy river, where the rain falls warm and the leeches are democratic",Guangzhou:"subtropical hills of bamboo and banyan beyond the city wall",Mantai:"palm-fringed lagoons and dry thorn-scrub bright with peacocks",Kollam:"the wet green Malabar backwaters, pepper-vines and coconut and the cries of unseen birds",Dhofar:"monsoon-greened hills falling to a desert coast, frankincense trees gnarled in the gullies",Socotra:"a weird forest of dragon's-blood and bottle-trees on bare red mountains",Zanzibar:"mangrove channels and coastal forest, the air thick with clove and rot",Aden:"black volcanic crags above a near-waterless shore",Basra:"endless date-groves and reed-marshes where the great rivers meet",Fustat:"the green Nile floodplain that ends at once in bone-dry desert below the Pyramids",Alexandria:"flat salt-marsh and lagoon behind the dunes",Gortyn:"olive groves and vineyards under bare limestone mountains",Ephesus:"silted river-flats and dry Anatolian hills of scrub-oak and thyme",Qulzum:"utter desert, the mountains of Sinai shimmering across the gulf",Luoyang:"the loess hills and ploughed plains of the Yellow River",Yangzhou:"a green latticework of canals, paddy, and mulberry"};
