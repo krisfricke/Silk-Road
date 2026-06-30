@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.03.01';
+const VERSION='2.03.02';
 const RESUME_B64="";
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
@@ -1862,9 +1862,9 @@ function maybeFoodShortage(c){ if(!c||S.seaMode||c.silent)return; if(!S.shortage
   if(prev!=null && (S.day-prev)<330) return; if(rnd()<0.05){ S.shortage[nm]=S.day; S.pendingEvent=foodShortageEvent(c); } }
 function buyFood(){ if(typeof foodShort==='function' && foodShort()!=null){ log('Famine grips '+((city()||{}).name||'the town')+' — there are no cheap provisions to be had; what grain there is comes dear, through the bazaar.'); render(); return; }
   if(S.silver<10){log("Not enough silver for provisions.");render();return;}
-  if(!maritimeTown() && cargoW()+Math.round(30*FOOD_WT)>cargoCap()){log("No room left on the animals for provisions — buy a beast or sell goods first.");render();return;}
   S.silver-=10;S.food+=30;townCredit(city(),10);log("Provisions laid in: a month of grain, dried mutton, and the cook's optimism."); render();
 }
+function donateFood(){ if(!S)return; if(cargoW()<=cargoCap()){ render(); return; } var d=0; while(S.food>0 && cargoW()>cargoCap()){ S.food--; d++; } log("You give "+d+" unit"+(d!==1?'s':'')+" of food to the poor of "+((city()||{}).name||'the town')+" \u2014 more than the beasts can bear, and a kindness besides."); render(); }
 function waitDays(n){ // pass days in a city; stop early if provisions run out so no one starves unseen
   let i=0;
   for(;i<n && !S.dead;i++){
@@ -4046,7 +4046,7 @@ function renderPort(m){
   '<table><tr><th>Bazaar</th><th style="text-align:right">price</th><th style="text-align:right">avg&nbsp;paid</th><th style="text-align:right">held</th><th>buy / sell</th></tr>'+rows+'</table>'+
   '<p class="sub" style="margin:-2px 0 10px">Price is <span class="green">green</span> below what you last paid, <span class="blue">blue</span> above.'+(tradeSkill()>0?' Your haggling shaves every price in your favour; longer stays sharpen the edge.':'')+'</p>'+
   '<div>'+
-  '<button onclick="buyFood()">Provisions +30 (10 s)</button>'+
+  '<button onclick="buyFood()">Provisions +30 (10 s)</button>'+(cargoW()>cargoCap()?'<button onclick="donateFood()">Donate excess food to the poor</button>':'')+
   '<button onclick="S.screen=\'notes\';render()">Prices &amp; notes</button>'+
   '<button onclick="openHire()">Hire / release guards</button>'+
   '<button onclick="restCity()">Rest 3 days</button>'+
@@ -4532,7 +4532,7 @@ function renderCity(m){
   '<table><tr><th>Bazaar</th><th style="text-align:right">price</th><th style="text-align:right">avg&nbsp;paid</th><th style="text-align:right">held</th><th>buy / sell</th></tr>'+rows+'</table>'+
   '<p class="sub" style="margin:-2px 0 10px">Price is <span class="green">green</span> below what you last paid (worth buying), <span class="blue">blue</span> above (worth selling). <i>Italic</i> avg-paid means you\'ve sold out — your old cost, for reference.'+(tradeSkill()>0?' Your haggling shaves every price in your favour; longer stays sharpen the edge.':'')+'</p>'+
   '<div>'+
-  '<button onclick="buyFood()">Provisions +30 (10 s)</button>'+
+  '<button onclick="buyFood()">Provisions +30 (10 s)</button>'+(cargoW()>cargoCap()?'<button onclick="donateFood()">Donate excess food to the poor</button>':'')+
   '<button onclick="S.screen=\'animals\';render()">Livestock market</button>'+
   '<button onclick="S.screen=\'notes\';render()">Prices &amp; notes</button>'+
   '<button onclick="openHire()">Hire / release guards</button>'+
