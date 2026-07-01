@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.03.17';
+const VERSION='2.03.22';
 const RESUME_B64="";
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
@@ -577,7 +577,7 @@ function hmClock(round, tw){ var start=tw?18*60:6*60; var t=((start+round*HM_CON
 var HM_PACE={steppe:1.15,settled:1.0,desert:1.05,harsh:0.85,marsh:0.5,forest:0.55,rugged:0.5,mountain:0.45,jungle:0.4};
 function hmMove(){ var H=S.hm; var m=H.horsed?HM_CONF.horse_walk:HM_CONF.foot_walk; m*=(HM_PACE[H.terr]||1); if(H.round>HM_CONF.tire_round)m*=0.7; if(H.track)m*=0.6; m*=(1-Math.min(0.35,(H.meat||0)/800)); if(H.hunters&&H.hunters.length){ var _mn=Math.min.apply(null,H.hunters.map(function(p){return p.maxhp?p.hp/p.maxhp:1;})); m*=(0.55+0.45*_mn); } return m; }
 function hmSomeName(){ var a=S.hm.hunters.filter(function(p){return p.hp>0;}); return a.length?pick(a).name.split(',')[0]:'someone'; }
-function hmHit(p,dmg){ p.hp=Math.max(0,p.hp-dmg); if(p.hp>0 && dmg>0 && p.maxhp>0 && rnd()<dmg/p.maxhp){ p.maxhp++; if(p.you){ S.youHpBase=youCombHP()+1; } else if(p.ref){ p.ref.hpBase=combHP(p.ref)+1; } } }
+function hmHit(p,dmg){ p.hp=Math.max(0,p.hp-dmg); }
 function hmHealer(){ var best=null; S.hm.hunters.forEach(function(p){ if(p.hp>0 && (p.heal||0)>0 && (!best||p.heal>best.heal)) best=p; }); return best; }
 
 function hmHazard(tired){ var H=S.hm; var up=H.hunters.filter(function(p){return p.hp>0;}); if(!up.length)return false; var m=tired?1.6:1;
@@ -687,7 +687,7 @@ function hmPress(){ var H=S.hm; if(!H)return; if(H.timer){clearTimeout(H.timer);
 function hmFinish(how){ var H=S.hm; if(!H)return; if(H.timer){clearTimeout(H.timer);H.timer=null;}
  var hours=H.round*HM_CONF.round_min/60, L=H.L;
  H.hunters.forEach(function(p){ if(p.you){ S.hp=clamp(Math.round(100*p.hp/p.maxhp),0,100); } else if(p.ref){ p.ref.hp=Math.max(0,Math.round(100*p.hp/p.maxhp)); } });
- if(hours>=4){ H.hunters.forEach(function(p){ if(p.hp<=0) return; var _b=p.you?youCombHS():(p.ref?combHS(p.ref):p.hs); if(rnd()<cbImprove(_b)){ if(p.you){S.youHs=_b+1;} else if(p.ref){p.ref.hs=_b+1;} L.push('<span class="gold">'+p.name.split(',')[0]+' is the wiser for the day’s hunting — a lesson they won’t need twice.</span>'); } }); }
+ if(hours>=4){ var _hn=H.hunters.filter(function(p){return p.hp>0;}); var _skl=function(p){return p.you?youCombHS():(p.ref?combHS(p.ref):p.hs);}; var _n=_hn.length; if(_n>0){ var _mx=Math.max.apply(null,_hn.map(_skl)), _mn=Math.min.apply(null,_hn.map(_skl)); var _learn,_red; if(_n===1||_mx===_mn){ _learn=_hn; _red=1; } else { _learn=_hn.filter(function(p){return _skl(p)<_mx;}); _red=Math.max(1,_learn.length); } _learn.forEach(function(p){ var _b=_skl(p); if(rnd()<cbImprove(_b)/_red){ if(p.you){S.youHs=_b+1;} else if(p.ref){p.ref.hs=_b+1;} L.push('<span class="gold">'+p.name.split(',')[0]+' is the wiser for the day’s hunting — a lesson they won’t need twice.</span>'); } }); } }
 
  var pdead=false;
  H.hunters.forEach(function(p){ if(p.hp<=0){ if(p.you){ pdead=true; } else if(p.ref){ p.ref.alive=false; if(typeof noteDeath==='function')noteDeath(p.ref,'a hunting accident'); } } });
@@ -1622,12 +1622,18 @@ function evHotspring(){
    {l:'Press on — no time to bathe',f(){log("You eye the steam with longing and keep walking. The road does not wait; today, neither do you.");}},
   ]};
 }
+function nomadCamp(){
+  var f=((typeof nextCity==='function'&&nextCity())||city()||{}).frac; if(f==null)f=0.5;
+  if(f>=0.82) return {hail:"An Anatolian shepherds' camp hails you in from the high pastures",fare:"mutton, wine, and rough games of strength",revel:"mutton, wine, and games of strength",people:"herdsmen",dr:"wine"};
+  if(f<0.34) return {hail:"A Uyghur encampment hails you in from the grass",fare:"mutton, kumiss, wrestling, and more kumiss",revel:"mutton, kumiss, and wrestling",people:"Uyghurs",dr:"kumiss"};
+  return {hail:"A Karluk encampment hails you in from the grass",fare:"mutton, kumiss, wrestling, and more kumiss",revel:"mutton, kumiss, and wrestling",people:"Karluks",dr:"kumiss"};
+}
 function evFeast(){
-  const wine=(S.goods&&S.goods.wine)||0;
-  return {h:'HOSPITALITY',t:"A Karluk encampment hails you in from the grass. To refuse risks insult; to accept means mutton, kumiss, wrestling, and more kumiss — and the better part of a day."+(wine>0?" Their eyes settle, frankly, on the wine-jars in your packs.":""),
+  const wine=(S.goods&&S.goods.wine)||0; var N=nomadCamp();
+  return {h:'HOSPITALITY',t:N.hail+". To refuse risks insult; to accept means "+N.fare+" — and the better part of a day."+(wine>0?" Their eyes settle, frankly, on the wine-jars in your packs.":""),
   ch:[
-   {l:'Accept their hospitality (1 day)',f(){ passDays(1); if(S.dead)return; S.food+=14; S.hp=clamp(S.hp+6,0,100); const cook=bestAt('cook'); let s="A day and a night of mutton, kumiss, and wrestling you mostly lose. You leave heavier by a sheep's worth of hospitality."; if(wine>0){ S.goods.wine--; if(S.goods.wine<=0)S.basis.wine=0; s+=" A jar of your wine vanishes into the festivities, to roaring acclaim."; } S.turkHosp=(S.turkHosp||0)+1; log(s+(cook?' '+cook.name+' takes notes on the mutton.':'')); }},
-   {l:'Thank them and ride on',f(){ log("You make your excuses and keep to the road. The Karluks watch you go — faintly insulted, faintly relieved to keep more kumiss for themselves."); }},
+   {l:'Accept their hospitality (1 day)',f(){ passDays(1); if(S.dead)return; S.food+=14; S.hp=clamp(S.hp+6,0,100); const cook=bestAt('cook'); let s="A day and a night of "+N.revel+" you mostly lose. You leave heavier by a sheep's worth of hospitality."; if(wine>0){ S.goods.wine--; if(S.goods.wine<=0)S.basis.wine=0; s+=" A jar of your wine vanishes into the festivities, to roaring acclaim."; } S.turkHosp=(S.turkHosp||0)+1; log(s+(cook?' '+cook.name+' takes notes on the mutton.':'')); }},
+   {l:'Thank them and ride on',f(){ log("You make your excuses and keep to the road. The "+N.people+" watch you go — faintly insulted, faintly relieved to keep more "+N.dr+" for themselves."); }},
   ]};
 }
 function evWildCamels(){
@@ -2002,7 +2008,7 @@ function exGuardTavern(cn){ const owe=guardOweTotal(cn); return {h:'SETTLING UP'
   {l:'Pay the '+owe+' s',f(){ if(S.silver>=owe){ S.silver-=owe; delete S.stiffedOwed[cn]; if(S.stiffed)delete S.stiffed[cn]; S.exGuardWait=null; log("You pay in full. They finish their drinks, nod once, and are done with you."); } else { S.cause='a disgruntled former employee'; die(); log("You still cannot pay. The conversation ends the only way it was ever going to."); } } },
   {l:'Refuse, and go for your knife first',f(){ if(rnd()<0.15){ S.exGuardWait=null; delete S.stiffedOwed[cn]; if(S.stiffed)delete S.stiffed[cn]; S.hp=clamp(S.hp-20,0,100); log("Astonishingly, you get the first blow in — ugly, brief, and very nearly fatal to you. They decide you are not worth burying, and leave."); if(S.hp<=0){S.cause='a tavern brawl';die();} } else { S.cause='a disgruntled former employee'; die(); log("He was always going to be quicker. He shoots first."); } } },
 ]}; }
-function tavern(){ if(!S||S.dead)return; if(!S.seaMode && city() && (city().name==='Constantinople'||city().name==="Chang'an")){ S.screen='tavern'; S.tavView=null; render(); return; } passDays(1); if(S.dead){S.screen='dead';render();return;} restock(city().name,1); S.cityDay[city().name]=S.day; if(S.exGuardWait===city().name && guardOweTotal(city().name)>0){ S.pendingEvent=exGuardTavern(city().name); } else if((S.wageDebt||0)>0){ S.pendingEvent=guardPayEvent(); } else { S.pendingEvent=tavernEvent(); } render(); }
+function tavern(){ if(!S||S.dead)return; if(!S.seaMode && city() && (city().name==='Constantinople'||city().name==="Chang'an")){ S.screen='tavern'; S.tavView=null; S.pendingEvent=tavernEvent(); render(); return; } passDays(1); if(S.dead){S.screen='dead';render();return;} restock(city().name,1); S.cityDay[city().name]=S.day; if(S.exGuardWait===city().name && guardOweTotal(city().name)>0){ S.pendingEvent=exGuardTavern(city().name); } else if((S.wageDebt||0)>0){ S.pendingEvent=guardPayEvent(); } else { S.pendingEvent=tavernEvent(); } render(); }
 function jettison(){
   let dumped=[];
   while(cargoW()>cargoCap()){
@@ -2264,6 +2270,10 @@ function frontierEvent(spec){
 
 /* ---- local recruits, one per city ---- */
 const CITYFOLK={
+ 'Beshbalik':{name:'Il-Tegin',role:'a Uyghur horse-archer of the Beiting garrison',skills:{fight:2,hunt:1},tav:'a frontier drinking-hall of Tang soldiers, Uyghur riders, and Sogdian factors',join:'He can put three arrows in the air before the first strikes \u2014 and he knows the Dzungarian passes cold.'},
+ 'Talas':{name:'Fang Cheng',role:'a Tang papermaker, taken prisoner at the Talas fight',skills:{trade:2,cook:1},tav:'a Karluk town of felt tents and the new smell of drying paper',join:'Eleven years a captive of the Karluks; he taught them paper, and learned every price and road between here and Kashgar.'},
+ 'Ispijab':{name:'Ohrmazd',role:'a broker of the Ispijab caravan-market',skills:{trade:2,handle:1},tav:'a vast walled market-town where a hundred tongues haggle at once',join:'He knows every toll, every honest weigh-house, and every crooked one, from Chach to the Chu.'},
+ 'Chach':{name:'Tarkhan',role:'a horse-breaker of the Chach studs',skills:{handle:2,fight:1},tav:'loud with grooms and cavalry-men, the air of horses under the wine',join:'Chach breeds the finest cavalry mounts in the world, and he can gentle any of them \u2014 or ride it down.'},
  "Chang'an":{name:'Wen Shu',role:'a disgraced court clerk with a head for figures',skills:{trade:2},tav:'loud with off-duty soldiers and fresh rumour of the rebellion',join:'He can read three scripts and cheat in all of them.'},
  'Lanzhou':{name:'Tieh',role:'a Yellow River ferryman tired of the crossing',skills:{handle:2,fight:1},salty:true,tav:'thick with boatmen and the smell of river mud',join:'He knows every ford and every liar between here and the sea.'},
  'Wuwei':{name:'Ashina Bel',role:'a Turk horse-soldier between wars',skills:{fight:2,handle:1},tav:'a garrison drinking-hall, all dice and old grudges',join:'He carries the scars of a man who wins more fights than he starts.'},
@@ -2307,12 +2317,13 @@ const CITYFOLK={
 const CPL_ROSTER=[
  {id:'niketas',name:'Niketas',role:'a Byzantine customs-clerk turned freelance',skills:{trade:3}},
  {id:'bardas',name:'Halfdan',role:'a red-bearded axeman who has already crossed half the world from the cold North',skills:{fight:3}},
- {id:'eudokia',name:'Eudokia',role:'a physician of the city hospitals',skills:{cook:3}},
+ {id:'bardas',name:'Bardas',role:'a huntsman of the Thracian forests',skills:{hunt:2,fight:1}},
  {id:'leo',name:'Leo the Pilot',role:'a Bosphorus boatman and ship-handler',skills:{fight:2},salty:true},
  {id:'hasan',name:'Hasan',role:'an Arab merchant long settled in the City',skills:{trade:2,handle:1}},
  {id:'irene',name:'Irene',role:'a silk-factor’s clever widow',skills:{trade:2,cook:1}},
  {id:'tervel',name:'Tervel',role:'a Bulgar horseman from beyond the walls',skills:{fight:2,handle:1}},
  {id:'photios',name:'Photios',role:'a scholar who cooks to fund his books',skills:{cook:2,trade:1}},
+ {id:'vahan',name:'Vahan',role:'an Armenian drover who knows every mule-track east of the City',skills:{handle:2},join:'He can keep forty beasts on their feet and moving where other men would lose half the train.'},
  {id:'cplbard',name:'Alexios',role:'a kithara-player who introduces himself as a hero of song',skills:{trade:1,fight:1,handle:1},bard:true,join:'He can sing a hall to tears, charm a toll-keeper into a discount, pick a tune or a lock, and is sincerely convinced he is the hero of this story \u2014 yet useful far more often than that should allow, and the men step livelier for his songs.'}
 ];
 function topSkill(sk){ const names={trade:'a sharp trader',cook:'a fine cook and healer',handle:'a gifted camel-hand',hunt:'a hunter of note',fight:'a fighter'}; let best='a steady pair of hands',bv=0; for(const k in sk){ if(sk[k]>bv){bv=sk[k];best=names[k]||best;} } return best; }
@@ -3052,7 +3063,7 @@ const SHORT={
  'Theodoros':'the Greek muleteer',
  'Niketas':'the customs-clerk',
  'Halfdan':'the red-bearded axeman',
- 'Eudokia':'the city physician',
+ 'Bardas':'the Thracian huntsman',
  'Leo the Pilot':'the boatman',
  'Hasan':'the settled merchant',
  'Irene':'the silk-factor’s widow',
@@ -3067,7 +3078,7 @@ function pdesc(p){
 }
 
 /* ============ v0.9.6 — gendered pronouns ============ */
-const GENDER={ 'Shirin':'f','Maryam':'f','Mingyue':'f','Ratnadevi':'f','Bibi Gul':'f','Shahrbanu':'f','Eudokia':'f','Irene':'f' };
+const GENDER={ 'Shirin':'f','Maryam':'f','Mingyue':'f','Ratnadevi':'f','Bibi Gul':'f','Shahrbanu':'f','Irene':'f' };
 function pron(p){
   const g=(p&&p.g)||(p&&GENDER[p.name])||'m';
   if(g==='f') return {s:'she', o:'her', pp:'her'};
@@ -5055,7 +5066,7 @@ function renderTavern(m){
   if(!S.onceFlags.lostTraderSeen){ S.onceFlags.lostTraderSeen=true; }
   const scene="<p>You duck under the low lintel of <b>The Lost Trader\u2019s Tavern</b>, hard by the Golden Horn where the masts crowd thick as a winter wood. Lamplight, woodsmoke, and the reek of a hundred ports; a long room of Greeks and Rus, Sogdians and Jews and sun-blacked sailors, all talking at once in a dozen tongues. Behind the counter, <b>Quraq</b> \u2014 a small, sharp, big-eared man who has never once been seen to sleep \u2014 polishes a cup he has polished a thousand times, and misses nothing.</p>";
   let menu='<div style="margin:10px 0">'+
-    '<button onclick="tavRecruit()">Take a table \u2014 hire, and hear the news</button> '+
+    
     '<button onclick="tavGo(\'plaques\')">Read the brass plaques on the wall</button> '+
     '<button onclick="tavGo(\'talk\')">Listen to the talk of the room</button> '+
     '<button onclick="tavGo(\'chariot\')">Wager on the chariot races</button> '+
@@ -5152,10 +5163,11 @@ function defaultSimpleWeapon(p){
 function kitTargetMember(){ return (S.kitTarget==='you')? null : (livingParty()[S.kitTarget]||null); }
 function cbRole(p){ if(!p) return 'you'; if(p.kind==='guard') return 'guard'; var h=memSkill(p,'hunt'); if(h>=2 && h>=memSkill(p,'fight')) return 'hunter'; return 'other'; }
 const CB_BASE={ you:{hp:10,fs:8,die:7}, guard:{hp:12,fs:10,die:8}, hunter:{hp:8,fs:6,die:6}, other:{hp:6,fs:3,die:6} };
-function combFS(p){ return (p&&p.fs!=null)?p.fs:12; }
+function baseFS(p){ if(!p) return 6; if(p.kind==='guard'||p.role==='guard') return 12; var ft=memSkill(p,'fight'), hu=memSkill(p,'hunt'); if(ft>=2 && ft>=hu) return 12; if(hu>=2) return 8; return 6; }
+function combFS(p){ return (p&&p.fs!=null)?p.fs:baseFS(p); }
 function baseHS(role){ return role==='hunter'?12:(role==='guard'||role==='you')?6:3; }
 function combHS(p){ return (p&&p.hs!=null)?p.hs:baseHS(cbRole(p)); }
-function youCombFS(){ return (S.youFs!=null)?S.youFs:12; }
+function youCombFS(){ return (S.youFs!=null)?S.youFs:6; }
 function youCombHS(){ return (S.youHs!=null)?S.youHs:6; }
 function combHP(p){ if(p&&p.hpBase!=null)return p.hpBase; if(p&&p.cbStats&&p.cbStats.hp!=null)return p.cbStats.hp; return CB_BASE[cbRole(p)].hp; }
 function youCombHP(){ return (S.youHpBase!=null)?S.youHpBase:CB_BASE.you.hp; }
@@ -5501,7 +5513,7 @@ function changanTalk(){
 function renderTavernChangan(m){
   const scene="<p>You push aside the bead-curtain of <b>The Amber Cup</b>, a Sogdian wine-shop in the <b>Western Market</b> of Chang’an, and the roar of the greatest city on earth closes over you — Kuchean lutes, the click of dice, a dozen tongues haggling at once. Behind the counter stands <b>An Pasar</b>, a heavy, shrewd Sogdian of Bukhara stock whose family has poured wine on this corner for three generations; a <b>hu ji</b> — a green-eyed Western dancing-girl with an amber cup — moves among the tables filling bowls with grape-wine the colour of garnets. The rebellion has thinned the crowd, but not the racket.</p>";
   let menu='<div style="margin:10px 0">'+
-    '<button onclick="tavRecruit()">Take a table — hire, and hear the news</button> '+
+    
     '<button onclick="tavGo(\'plaques\')">Read the names lacquered on the pillar</button> '+
     '<button onclick="tavGo(\'talk\')">Listen to the talk of the market</button> '+
     '<button onclick="tavGo(\'cockfight\')">Wager on the cockfights</button> '+
