@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.03.14';
+const VERSION='2.03.17';
 const RESUME_B64="";
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
@@ -2119,7 +2119,7 @@ async function saveScore(entry){
     LEADERBOARD=board.slice(0,200);
     await STORE.set('silkroad_scores', JSON.stringify(LEADERBOARD));
   }catch(e){ if(LEADERBOARD){const i=LEADERBOARD.findIndex(e=>e.runId&&e.runId===entry.runId); if(i>=0)LEADERBOARD[i]=entry; else LEADERBOARD.push(entry); LEADERBOARD.sort((a,b)=>b.score-a.score);LEADERBOARD=LEADERBOARD.slice(0,200);} }
-  if(SB_ON && entry.runId){ try{ sbSend('scores?on_conflict=run_id','POST',{run_id:entry.runId, score:Math.round(entry.score||0), data:entry},'resolution=merge-duplicates,return=minimal').then(()=>{ if($('board')){ LEADERBOARD=null; loadBoard().then(()=>{ if($('board'))renderBoardInto($('board')); }); } }).catch(()=>{}); }catch(e){} }
+  if(SB_ON && entry.runId){ try{ sbSend('scores?on_conflict=run_id','POST',{run_id:entry.runId, score:Math.round(entry.score||0), data:entry},'resolution=merge-duplicates,return=minimal').then(function(r){ if(r&&!r.ok){ try{ r.text().then(function(t){ console.warn('[scores] Supabase write rejected', r.status, t); }); }catch(_){ } return; } if($('board')){ LEADERBOARD=null; loadBoard().then(()=>{ if($('board'))renderBoardInto($('board')); }); } }).catch(function(e){ console.warn('[scores] Supabase write error', e); }); }catch(e){} }
   if($('board')) renderBoardInto($('board'));
 }
 function recordRun(outcome){
@@ -2134,7 +2134,7 @@ function setBoardView(v){ BOARD_VIEW=v; if($('board'))renderBoardInto($('board')
 function renderBoardInto(el){
   const all=(LEADERBOARD||[]).slice();
   const tabs='<div style="margin-bottom:8px">'+BOARD_VIEWS.map(function(t){ return '<button class="tiny'+(BOARD_VIEW===t[0]?' seal':'')+'" onclick="setBoardView(\''+t[0]+'\')">'+t[1]+'</button>'; }).join(' ')+'</div>';
-  const estHead='<tr><th>#</th><th>Merchant</th><th style="text-align:right">Estate</th><th style="text-align:right">Days</th><th>Fate</th></tr>';
+  const estHead='<tr><th>#</th><th>Merchant</th><th style="text-align:right">Estate</th><th style="text-align:right">Days</th><th class="sub">Ver</th><th>Fate</th></tr>';
   const fastHead='<tr><th>#</th><th>Merchant</th><th style="text-align:right">Days</th><th style="text-align:right">Estate</th><th>Route</th></tr>';
   let head=estHead, list, fast=false;
   if(BOARD_VIEW==='fastest'){ fast=true; head=fastHead; list=all.filter(function(e){return e.roundtrip&&e.days;}).sort(function(a,b){return a.days-b.days;}).slice(0,3); }
@@ -2143,7 +2143,7 @@ function renderBoardInto(el){
   let body;
   if(!list.length){ body='<p class="sub">No ventures of this kind recorded yet.</p>'; }
   else if(fast){ body='<table>'+head+list.map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td class="num gold">'+e.days+'</td><td class="num">'+e.score+'</td><td class="sub">'+(e.route&&e.route!=='-'?(e.route==='N'?'northern':'southern'):'—')+'</td></tr>'; }).join('')+'</table>'; }
-  else { body='<table>'+head+list.map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td class="num gold">'+e.score+'</td><td class="num">'+(e.days||'—')+'</td><td class="sub">'+e.outcome+'</td></tr>'; }).join('')+'</table>'; }
+  else { body='<table>'+head+list.map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td class="num gold">'+e.score+'</td><td class="num">'+(e.days||'—')+'</td><td class="sub">'+(e.version||'\u2014')+'</td><td class="sub">'+e.outcome+'</td></tr>'; }).join('')+'</table>'; }
   el.innerHTML=tabs+body;
 }
 
@@ -4155,7 +4155,7 @@ function seaEntryButtons(c){
   return '';
 }
 /* ============ ANATOLIA REGION MAP (departure screen) ============ */
-const ANAT_IMG="Maps/anatolia_relief_setout.png";
+function anatImg(){ return "Maps/anatolia_relief_setout_"+((typeof chartSeason==='function')?chartSeason():'summer')+".png"; }
 const CHARTS={
  kashgar:{img:"Maps/kashgar762.png",seasonal:true,vbw:1500,vbh:747,title:"Kashgar and the western Tarim",cities:{Kashgar:{x:665,y:420,ldx:-150,ldy:8},Akhsikath:{x:133,y:244,ldx:0,ldy:16},Yarkand:{x:873,y:596,ldx:0,ldy:18},Aksu:{x:1377,y:138,ldx:-95,ldy:-2}},open:["Kashgar"]},
  steppe:{img:"Maps/steppe762.png",seasonal:true,vbw:1980,vbh:1064,title:"Sogdiana and the steppe road",cities:{Bukhara:{x:62,y:729,ldx:14,ldy:6},Samarkand:{x:439,y:746,ldx:-10,ldy:20},Chach:{x:780,y:501,ldx:0,ldy:-18},Ispijab:{x:783,y:355,ldx:-118,ldy:-2},Talas:{x:1089,y:266,ldx:0,ldy:-16},Akhsikath:{x:1104,y:559,ldx:0,ldy:18},Kashgar:{x:1772,y:773,ldx:-150,ldy:8},Suyab:{x:1655,y:281,ldx:-118,ldy:-4}},open:["Samarkand","Chach","Ispijab","Talas","Akhsikath","Suyab"]},
@@ -4230,7 +4230,7 @@ function renderMap(m){
     '<circle cx="237" cy="551" r="13" fill="#c0241a" stroke="#fff" stroke-width="3"/><text x="262" y="544" font-size="42" fill="#7a1208" stroke="#f7e9c8" stroke-width="6" paint-order="stroke">Constantinople</text>'+
     '<circle cx="4247" cy="889" r="13" fill="#c0241a" stroke="#fff" stroke-width="3"/><text x="4224" y="952" text-anchor="end" font-size="42" fill="#7a1208" stroke="#f7e9c8" stroke-width="6" paint-order="stroke">Chang\'an</text>'+
     '</g></g></svg>'+
-    '<img id="cncorr" src="Maps/anatolia_relief_setout.png" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0">'+
+    '<img id="cncorr" src="'+anatImg()+'" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0">'+
     '<div class="cnCap">Constantinople &mdash; the western end of the Silk Road. Your road runs east, across Anatolia and the deserts beyond, toward distant Cathay. <em>(tap to skip)</em></div></div>';
     cnPlayIntro({x0:0,y0:486,x1:816,y1:1083},2.0); return; } }
   function avail(id){ if(!links[id])return false; if(links[id]==='sea')return voyAllowed(ANAT_NAME[here],ANAT_NAME[id]); return true; }
@@ -4264,7 +4264,7 @@ function renderMap(m){
   var _onward=(_nx && !_onMap(_nx.name))? '<button class="seal" onclick="S.screen=\'city\';setOut(S.dir||1)">Set out on the main road \u2014 toward '+_nx.name+'</button> ' : '';
   m.innerHTML='<h2>Leave '+(city()?cityLabel(city()):'the city')+' <span class="sub">· choose your road</span></h2>'+
     '<div style="position:relative;max-width:800px;margin:6px auto;line-height:0">'+
-    '<img src="'+ANAT_IMG+'" alt="map of Anatolia" style="width:100%;display:block;border:5px solid #6b4f2a;border-radius:3px" onerror="this.style.visibility=\'hidden\'">'+
+    '<img src="'+anatImg()+'" alt="map of Anatolia" style="width:100%;display:block;border:5px solid #6b4f2a;border-radius:3px" onerror="this.style.visibility=\'hidden\'">'+
     '<svg viewBox="0 0 1402 999" preserveAspectRatio="xMidYMid meet" style="position:absolute;left:5px;top:5px;width:calc(100% - 10px);height:calc(100% - 10px)">'+s+'</svg></div>'+
     '<p class="sub" style="text-align:center;max-width:780px;margin:6px auto">Click a destination. The bright lines are roads open to you now \u2014 <span style="color:#e23b25">red overland</span> (with the caravan) or <span style="color:#2f8fb0">blue by ship</span> (sell the beasts, pay a fare). Faint lines are the roads that carry on from there.</p>'+
     '<div style="text-align:center;margin-top:8px">'+_onward+'<button onclick="S.screen=\''+(S.seaMode?'port':'city')+'\';render()">Back to the bazaar</button></div>';
@@ -5021,6 +5021,7 @@ function tavWriteGraffiti(){ var el=document.getElementById('graffititext'); var
   log('You scratch your mark on the wall of the world.'); render(); }
 const TAV_INTRO="Three regulars hold the long table. <b>Diogenes</b>, a lean Greek with a tongue like a flensing-knife, who holds every man a fool and most of them hypocrites, and says so. <b>Nithard</b>, a big Frank gone grey in the saddle, who reckons the world belongs to whoever is strong enough to take it and feels no need to apologise for it. And <b>Kanat</b> the Khwarazmian, careful and exact, forever asking what would follow if every man did as you propose. They are arguing, as ever — just now over <b>bukhts</b> — and shove out a stool for a fourth opinion.";
 const TOPICS={
+  inspiration:{trig:['inspiration','inspired','inspire','homage','tribute','oregon','trade wars','tradewars','land of dev','devastation','dungeons','dragons','d&d','credits','influence','influences'],t:"<b>Diogenes</b> sets down his cup and, oddly, seems to look clean through the wall — through the world itself. “Ah — the debt every road owes the roads walked before it. The whole of this long journey follows in the ruts of <b>The Oregon Trail</b> (1971), by Don Rawitsch, Bill Heinemann and Paul Dillenberger. This very tavern — the buying and the selling, the ports and the ledgers of it — is an homage to <b>Trade Wars 2002</b>, by Gary Martin. And this trick, of asking a stranger a plain word and getting a plain answer? That we had from <b>Land of Devastation</b>, by Scott M. Baker. The dice behind a man’s sword-arm and his luck tip their cap to <b>Dungeons &amp; Dragons</b> besides — and a hundred other old games have left their footprints in this dust.” He blinks, and is only a Greek in a Byzantine tavern once more. “…where was I?”"},
  bukht:{trig:['bukht','hybrid'],t:"\u201cA <b>bukht</b>,\u201d he says, \u201cis what you get crossing a one-humped <b>dromedary</b> on a two-humped <b>bactrian</b>. Carries more than either, complains less, and minds neither the burning <b>desert</b> nor the high cold. Worth every coin \u2014 if you can find one.\u201d"},
  animals:{trig:['animal','camel','bactrian','dromedary','mule','donkey','horse','beast','herd','livestock'],t:"\u201cYou buy your <b>mounts</b> and pack-beasts at the livestock market \u2014 <b>bactrians</b> for the cold, <b>dromedaries</b> for the sand, mules for the mountains, horses to outrun trouble. But mind: you can only drive as many as your people can <b>herd</b>. A big caravan wants more hands.\u201d"},
  mounts:{trig:['mount','mounts','riding','horse'],t:"\u201cA <b>horse</b> under a man is worth six on foot when the <b>bandits</b> come \u2014 you can run, or you can ride them down. But beasts are only as many as your <b>guards</b> and drivers can manage.\u201d"},
