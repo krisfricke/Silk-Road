@@ -129,13 +129,13 @@
   <div id="crew"></div>
   <div id="main"></div>
   <div id="log"></div>
-  <div style="text-align:center;color:#5d5141;font-size:.62rem;letter-spacing:.06em;padding:12px 2px 6px">lovingly vibe-coded by Kris Fricke · 2026 · in fond memory of <i>The Oregon Trail</i> (1971) by Don Rawitsch, Bill Heinemann &amp; Paul Dillenberger<br><a href="https://emo-snal.livejournal.com/453533.html" target="_blank" style="color:#7a6a4a">Feedback appreciated</a></div>
+  <div style="text-align:center;color:#5d5141;font-size:.62rem;letter-spacing:.06em;padding:12px 2px 6px">Lovingly vibe coded, obsessively fact checked, and neurotically micromanaged by Kris Fricke · 2026<br>in fond memory of <i>The Oregon Trail</i> (1971) by Don Rawitsch, Bill Heinemann &amp; Paul Dillenberger<br><a href="https://emo-snal.livejournal.com/453533.html" target="_blank" style="color:#7a6a4a">Feedback appreciated</a></div>
 </div>
 
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.03.07';
+const VERSION='2.03.14';
 const RESUME_B64="";
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
@@ -615,6 +615,7 @@ function hmStep(){ var H=S.hm; if(!H||H.phase!=='run')return; if(H.timer){clearT
  H.round++;
  if(!H.returning && H.round>0 && H.round%8===0){ H.L.push(H.horsed?'You halt to rest and water the horses, and chew a little dried meat.':'You halt a while to rest your legs and breathe.'); hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
  if(H.returning){ H.dist=Math.max(0,H.dist-hmMove()); } else { H.dist+=hmMove(); H._maxdist=Math.max(H._maxdist,H.dist); if(rnd()<0.34) H.sub=hmSub(H.terr); }
+ if(!H.returning && !H.dark && !H._lateWarned){ var _mv=Math.max(0.2,hmMove()); if(H.round + Math.ceil(H.dist/_mv) >= H.over + Math.round(60/HM_CONF.round_min)){ H._lateWarned=true; if(H.timer){clearTimeout(H.timer);H.timer=null;} H.L.push('<span class="red">The light is going and you are a fair way out. You feel maybe you should turn back before it gets dark; press on and you will be benighted out here in earnest.</span>'); hmShow('<button class="seal" onclick="hmHeadBack()">Turn back for camp now</button> <button onclick="hmPress()">Press on \u2014 one more push</button>'); return; } }
  if(H.returning && H.dist<=0.01){ return hmFinish('home'); }
  // no hardwired collapse: daylight bounds the hunt; the season decides the night
  if(!H._toldTired && H.round>=HM_CONF.tire_round){ H._toldTired=true; H.L.push('<span class="red">'+(H.horsed?'The horses are tiring':hmSomeName()+' is flagging')+' — some '+Math.round(H.round*HM_CONF.round_min/60)+' hours afield.</span>'); }
@@ -910,6 +911,7 @@ function consumeDay(travelling, terrOverride){
   if(S.food<0){S.food=0; applyDeprivation('hunger',6);}
   const terr=terrOverride||(travelling?legTerr():'settled');
   if(travelling) applyAnimalPeril(terr);
+  if(travelling && S.marmotPet && (terr==='desert'||terr==='harsh') && rnd()<(terr==='harsh'?0.14:0.08)){ S.marmotPet=false; log("The young marmot, a creature of cold mountain meadows, cannot bear the "+(terr==='harsh'?'deep desert':'desert')+" \u2014 it sickens in the heat and is dead by evening."+(livingParty().some(function(p){return p.nephew&&!p.grown;})?" Your nephew buries it in the sand, red-eyed and silent.":"")); }
   if(travelling) forceShedCargo();
   if(isNaN(S.water))S.water=waterMax();
   S.water-=(WATER_USE[terr]||0)*thirstFactor();
@@ -1027,6 +1029,7 @@ function stepDay(){
   if(checkPaykandLeg()) return;
   if(checkVarakhshaLeg()) return;
   if(checkAkChachCross()) return;
+  if(checkNephewMarmot()) return;
   if(checkSteppeStops()) return;
   const terr=legTerr();
   // winter passes: extra danger on mountain legs out of season
@@ -1777,7 +1780,7 @@ function buy(gid,n){
   if(S.priceLock[gid]==null) S.priceLock[gid]=p;   // only a completed deal settles the price for the visit
   S.silver-=q*p; addGoods(gid,q,p); S.stock[c.name][gid]-=q; townCredit(c,q*p);
   if(gid!=='slaves') log("Bought "+q+" "+g.u+(q>1?'s':'')+" of "+goodLogName(g,c)+" at "+p+" s"+(p<mp?" (haggled from "+mp+")":(p>mp?" (the price you settled here)":""))+((hg&&p<mp)?" — "+hg.p.name+" knows this trade":"")+(cargoW()>cargoCap()?" — the packs are over capacity; arrange more carriers before you set out":"")+".");
-  if(gid==='slaves'){ if(typeof soulsBuy==='function'){ soulsBuy(q,c.name); var _ad=souls().slice(Math.max(0,souls().length-q)).map(function(z){return z.name;}); log("Bought "+(_ad.length===1?"1 slave named <b>"+_ad[0]+"</b>":q+" slaves ("+_ad.join(', ')+")")+" at "+p+" s"+(q>1?" each":"")+(p<mp?" (haggled from "+mp+")":"")+(cargoW()>cargoCap()?" \u2014 the packs are over capacity; arrange more carriers before you set out":"")+"."); } livingParty().filter(p=>p.noSlaves).forEach(function(o){ S.party=S.party.filter(function(p){return p!==o;}); log("<b>"+o.name+"</b>, "+o.role+", learns what you have bought and is finished with you \u2014 he gathers his gear in silence, refuses your coin, and walks out of the caravan. A slaver travels without him."); }); }
+  if(gid==='slaves'){ if(typeof soulsBuy==='function'){ soulsBuy(q,c.name); var _ad=souls().slice(Math.max(0,souls().length-q)).map(function(z){return z.name;}); log("Bought "+(_ad.length===1?"1 slave named <b>"+_ad[0]+"</b>":q+" slaves ("+_ad.join(', ')+")")+" at "+p+" s"+(q>1?" each":"")+(p<mp?" (haggled from "+mp+")":"")+(cargoW()>cargoCap()?" \u2014 the packs are over capacity; arrange more carriers before you set out":"")+"."); } livingParty().filter(function(p){return p.noSlaves && !p.slaveWrath;}).forEach(function(o){ S.party=S.party.filter(function(p){return p!==o;}); log("<b>"+o.name+"</b>, "+o.role+", learns what you have bought and is finished with you \u2014 he gathers his gear in silence, refuses your coin, and walks out of the caravan. A slaver travels without him."); }); var _cn=livingParty().find(function(p){return p.slaveWrath;}); if(_cn){ S.pendingEvent=conanSlaveWrath(_cn); } }
   render();
 }
 function townCashNow(c){ if(!S||!c||(c.hub!=='minor' && !isBaghdadVillage(c.name)))return Infinity; S.townCash=S.townCash||{}; S.townCashDay=S.townCashDay||{}; var cap=c.cash||(isBaghdadVillage(c.name)?110:300);
@@ -1896,13 +1899,13 @@ function cityEvent(){
   const pool=[];
   const add=(w,f)=>{for(let i=0;i<w;i++)pool.push(f)};
   const nephew=livingParty().find(p=>p.nephew && !p.grown);
-  if(nephew && cooled('neph',60)) add(2,()=>evNephew(nephew));
+  if(nephew && cooled('neph', Math.round(60/(S.nephMischief||1)))) add(2,()=>evNephew(nephew));
   if(guardCount()>0 && cooled('brawl',35)) add(2,evBrawl);
   if(cooled('cutpurse',45)) add(2,evCutpurse);
   if(cooled('feastcity',30)) add(2,evCityFeast);
   if(cooled('recruit',50)) add(2,evRecruit);
   if(cooled('quiet',10)) add(5,evQuietMonth);
-  if(cooled('pest',60)) add(2,evPestilence);
+  if(cooled('pest', S.marmotPet?48:60)){ var _pw=2; var _pf=(city()&&city().frac); if(_pf>=0.36&&_pf<=0.58)_pw+=1; add(_pw,evPestilence); }
   if(!pool.length) return null;
   for(let i=0;i<6;i++){const e=pick(pool)(); if(e)return e;}
   return null;
@@ -2353,6 +2356,21 @@ function monsoonTavernGossip(){
   var to=pick(closed), when=monsoonWhen(here,to);
   return " A weather-creased ship's-master at the next bench grumbles to anyone who will listen that there will be no sailing for "+to+" until "+when+" \u2014 the wind sits dead against that course, and a cargo bound there must wait or rot.";
 }
+function conanTavern(scene){
+  if((S.goods.slaves||0)>0){
+    return {h:'THE TAVERN', t: scene+" A big northerner with a sword across his knees has been watching your camp — Conan, he gives as his name, from somewhere beyond the steppes, where the snow comes early and the forests have no end. He speaks of his road without boast or shame: a raid that burned his village and killed his kin, the years he was carried off and sold and worked in chains, and the day he broke them. Then his eye falls on what your people keep roped in the dark, and the warmth goes out of him. 'I have worn that rope,' he says, rising. 'I'll not sit at the fire of the man who buys it.' He is gone into the night.", ch:[{l:'Let him go',f(){ log("Conan would not take a slaver’s coin."); }}]};
+  }
+  return {h:'THE TAVERN', t: scene+" A big northerner with a sword across his knees falls into talk with you — Conan, he says, from beyond the steppes, where the snow comes early. He tells his road plainly, with neither boast nor shame: his village burned in a raid when he was a boy, his kin killed, and he himself carried off and sold. He wore the chain some years, and then one day he did not — and here he is, west of all that, looking for a road and a fight. He will not wear armour ('a man should trust his arm, not a smith'), but there are few arms in the world like his.", ch:[
+    {l:'Welcome Conan to the company',f(){ S.party.push({name:'Conan',role:'a northern wanderer, once a slave',skills:{fight:3},fs:36,hs:6,noArmor:true,noSlaves:true,slaveWrath:true,alive:true,kind:'companion',recruited:true,fromCity:'Suyab'}); log("Conan the northerner joins the caravan — worth three sword-hands, and he asks for no armour, only his share and the open road."); }},
+    {l:'Drink with him, but travel on as you are',f(){ log("You drink with Conan and leave him to find his own road west."); }}
+  ]};
+}
+function conanSlaveWrath(conan){
+  return {h:'CONAN’S RECKONING', t:"Conan comes through the camp like weather. He stops over the new-bought slaves, and when he turns to you his voice has gone very quiet. 'I wore that rope. I told you what I think of the men who sell it.' His hand is on his hilt. 'Strike the chains off them — now — or I strike you down where you stand. Choose.'", ch:[
+    {l:'Free them at once',f(){ var n=(S.goods.slaves||0); S.goods.slaves=0; S.basis.slaves=0; S.souls=[]; S.manumitted=(S.manumitted||0)+n; log("You strike the chains off. Conan watches every rope cut, then nods once. 'Good,' he says, and not another word. He stays."); }},
+    {l:'Refuse — they are bought and paid for',f(){ log("'Then you are no better than the man who sold me.' Conan kills you between one breath and the next, in your own camp, and walks out into the night a free man among the freed."); S.cause='Conan’s blade'; die(); }}
+  ]};
+}
 function tavernEvent(){
   const c=city();
   let cup="";
@@ -2370,6 +2388,8 @@ function tavernEvent(){
     S.onceFlags.halfdanMet=true; return halfdanTavern(scene);
   } else if(c.name==="Chang'an" && !S.onceFlags.kentoshiMet && !S.party.some(p=>p.name==='\u014ctomo no Yakatari'&&p.alive)){
     S.onceFlags.kentoshiMet=true; return kentoshiTavern(scene);
+  } else if(c.name==='Suyab' && !S.party.some(p=>p.name==='Conan'&&p.alive)){
+    return conanTavern(scene);
   } else {
     recruit=rollRecruit(c.name);
   }
@@ -2954,6 +2974,23 @@ function evFall(){
    {l:'Halt to set the bone (lose days)',f(){ const d=2+ri(3); passDays(d); if(S.dead)return; if(rnd()<Math.max(.03,.15-.05*cook)){v.alive=false;log(v.name+"'s hurts run deeper than they looked; fever takes hold and they die on the mountain.");} else log("You splint the leg and lose "+d+" days to it. "+v.name+" will limp a long while, but lives.");}},
    {l:'Carry them on and hope',f(){ if(rnd()<.25){v.alive=false;log(v.name+" does not survive being hauled over the pass with a shattered leg.");} else {S.hp=clamp(S.hp-6,0,100);log(v.name+" is strapped to a camel and endures a brutal descent, white with pain, but comes through it.");} }},
   ]};
+}
+function evNephewMarmot(neph){
+  var nn=neph.name.split(',')[0];
+  var healer=livingParty().find(function(p){ return p.alive && p!==neph && (((p.skills&&(p.skills.cook||0)>=2))||p.heal); });
+  var flea = healer? " "+healer.name.split(',')[0]+" eyes it and says the thing is crawling with fleas — it makes them nervous." : "";
+  return {h:'THE MARMOT', t:"Out on the steppe "+nn+" comes running with a bundle held tight in his coat — a fat young marmot, caught live at the mouth of a burrow, whistling and squirming. He wants, very badly, to keep it as a pet."+flea, ch:[
+    {l:'Let him keep it',f(){ S.marmotPet=true; S.nephMischief=0.75; log(nn+" is overjoyed. He names the marmot before the hour is out and feeds it half his supper. He is, for once, no trouble at all — though the felt-tent herders spit at the sight of it, and its fleas ride with you now."); }},
+    {l:'Make him release it',f(){ log("You make him let it go. It bolts for the nearest burrow and is gone down the hole in a heartbeat. "+nn+" sulks for an hour and has forgotten it by the next meal."); }},
+    {l:'Have it for the pot',f(){ var got=5+ri(6); S.food+=got; S.nephMischief=1.25; if(S.onceFlags)S.onceFlags['ev_neph']=null; log("Over his furious protests the marmot goes on the spit — "+got+" units of meat, and a nephew who will not speak to you for days and looks for small ways to make you regret it."); }}
+  ]};
+}
+function checkNephewMarmot(){ if(!S||S.seaMode||S.pendingEvent||S.screen!=='travel'||(S.onceFlags&&S.onceFlags.marmotPetDone))return false;
+  var neph=livingParty().find(function(p){return p.nephew && !p.grown;}); if(!neph)return false;
+  var f=(nextCity()||city()||{}).frac; if(f==null||f<0.37||f>0.56)return false;                 // the Zhetysu/Sogdian steppe: marmot country
+  var terr=(typeof legTerr==='function')?legTerr():'steppe'; if(terr!=='steppe'&&terr!=='mountain'&&terr!=='rugged')return false;
+  if(S.legKm < legDist()*0.3)return false;
+  S.onceFlags=S.onceFlags||{}; S.onceFlags.marmotPetDone=true; S.journeying=false; clearJourney(); S.pendingEvent=evNephewMarmot(neph); render(); return true;
 }
 function evPestilence(){
   markEv('pest');
@@ -3613,9 +3650,9 @@ function cityByName(n){ return ALLCITY_BYNAME[n]; }
 
 /* exotic-good price overrides at the sea ports (source = cheap, far market = dear) */
 Object.assign(OVR,{
- 'Luoyang':   {silk:10,tea:5,paper:7,jade:14,musk:14,pepper:50,coral:152,amber:136,glass:60,wine:82,lapis:70},
- 'Yangzhou':  {silk:11,tea:5,paper:8,jade:16,musk:16,pepper:46,coral:150,amber:134,glass:58,wine:80,lapis:72},
- 'Guangzhou': {silk:13,tea:6,paper:9,jade:18,musk:18,pepper:40,coral:146,amber:130,glass:56,wine:78,lapis:74,conut:10},
+ 'Luoyang':   {silk:10,tea:4,paper:7,jade:14,musk:14,pepper:50,coral:152,amber:136,glass:60,wine:82,lapis:70},
+ 'Yangzhou':  {silk:11,tea:3,paper:8,jade:16,musk:16,pepper:46,coral:150,amber:134,glass:58,wine:80,lapis:72},
+ 'Guangzhou': {silk:13,tea:3,paper:9,jade:18,musk:18,pepper:40,coral:146,amber:130,glass:56,wine:78,lapis:74,conut:10},
  'Kauthara':  {pepper:34,silk:26,tea:14,glass:50,coral:122,jade:38,musk:30,conut:9},
  'Palembang': {pepper:22,silk:30,tea:18,glass:46,coral:120,jade:42,paper:24,conut:9},
  'Mantai':    {pepper:26,silk:40,coral:58,glass:42,musk:40,conut:8},
@@ -3632,6 +3669,8 @@ Object.assign(OVR,{
 const CITY_ADMIRE_SEA={}; for(const _p of SEA) CITY_ADMIRE_SEA[_p.name]=_p.adm;
 Object.assign(CITY_ADMIRE, CITY_ADMIRE_SEA);
 [['Basra',{pearls:28,ivory:66,indigo:44}],['Mantai',{pearls:34,indigo:24}],['Kollam',{pearls:40,frank:50,indigo:14}],['Aden',{pearls:50,ivory:55,frank:24}],['Zanzibar',{ivory:30}],['Dhofar',{frank:12}],['Socotra',{frank:16}],['Palembang',{indigo:22}],['Fustat',{ivory:70,indigo:40}],['Guangzhou',{pearls:90}],['Mantai',{cinn:16}],['Kollam',{cinn:22}],['Palembang',{cinn:30,nutmeg:22}],['Kauthara',{nutmeg:42}],['Constantinople',{wax:28}],['Aleppo',{wax:36}],['Iconium',{wax:34}],['Gortyn',{wax:34}],['Aden',{pearls:50,coral:34}],['Mantai',{pearls:34,nutmeg:60}],['Basra',{pearls:26}],['Zanzibar',{pelts:22}],['Aden',{pelts:60}],['Fustat',{pelts:64}],['Baghdad',{conut:22}],['Baghdad',{linen:26}],['Constantinople',{linen:38}],['Gortyn',{linen:34}],['Aleppo',{linen:30}],['Ephesus',{linen:30}],['Constantinople',{furs:28,slaves:72}],['Trebizond',{furs:22}],['Zanzibar',{slaves:60}],['Basra',{slaves:66}],['Samarkand',{slaves:70}],['Bukhara',{slaves:70}],['Kashgar',{slaves:76}],['Chang\'an',{slaves:84}],['Socotra',{aloe:10}],['Aden',{aloe:16}]].forEach(function(e){ OVR[e[0]]=Object.assign(OVR[e[0]]||{},e[1]); });
+/* tea DEMAND curve: rises steeply to the steppe/Sogdian nomad markets (the tea-horse trade), then only inches up to Constantinople — so the middle is the place to sell, not the far end */
+[['Beshbalik',{tea:16}],['Suyab',{tea:22}],['Talas',{tea:25}],['Ispijab',{tea:26}],['Chach',{tea:27}],['Samarkand',{tea:27}],['Bukhara',{tea:28}],['Merv',{tea:28}],['Nishapur',{tea:28}],['Rey',{tea:29}],['Baghdad',{tea:29}],['Aleppo',{tea:29}],['Iconium',{tea:30}],['Constantinople',{tea:30}]].forEach(function(e){ OVR[e[0]]=Object.assign(OVR[e[0]]||{},e[1]); });
 
 /* the sea network as an undirected graph. d=base days, terr: land|canal|coast|deep|med (only coast/deep are monsoon-gated). */
 const SEA_EDGES=[
@@ -5364,14 +5403,14 @@ function kitTargetGear(){ return (S.kitTarget==='you')? youGear() : (livingParty
 function kitTargetName(){ return (S.kitTarget==='you')? (S.name||'You') : (livingParty()[S.kitTarget]? livingParty()[S.kitTarget].name.split(',')[0] : 'You'); }
 function setKitTarget(t){ S.kitTarget=t; render(); }
 function armorResale(id){ var c=city(); var k=(c&&typeof cityKit==='function')?cityKit(c.name):[]; for(var i=0;i<k.length;i++){ if(k[i][0]==='armor'&&k[i][1]===id) return Math.round(k[i][2]*0.5); } var fb={leather:12,lamellar:42,mail:62}; return fb[id]||Math.round(((ARMOR[id]&&ARMOR[id].hp)||1)*18); }
-function kitBuy(slot,id,price){
+function kitBuy(slot,id,price){ if(slot==='armor'){ var _km=kitTargetMember(); if(_km && _km.noArmor){ log(_km.name.split(',')[0]+' will not wear armour \u2014 he trusts his arm, not a smith.'); render(); return; } }
   if(S.silver<price){ log('You cannot spare the '+price+' s for '+gLabel(slot,id)+'.'); render(); return; }
   var g=kitTargetGear(); var had=g[slot];
   if(had===id){ log(kitTargetName()+' already carries '+gLabel(slot,id)+'.'); render(); return; }
   S.silver-=price; g[slot]=id;
   if(slot==='armor' && had){
     var oldL=gLabel('armor',had), resale=armorResale(had), cands=[];
-    livingParty().forEach(function(pp){ if(pp!==kitTargetMember() && (!pp.gear||!pp.gear.armor)) cands.push({nm:pp.name.split(',')[0], set:(function(q){return function(){ if(!q.gear)q.gear={armor:null,bow:null,weapon:null,cloak:null}; q.gear.armor=had; };})(pp)}); });
+    livingParty().forEach(function(pp){ if(pp!==kitTargetMember() && (!pp.gear||!pp.gear.armor) && !pp.noArmor) cands.push({nm:pp.name.split(',')[0], set:(function(q){return function(){ if(!q.gear)q.gear={armor:null,bow:null,weapon:null,cloak:null}; q.gear.armor=had; };})(pp)}); });
     if(S.kitTarget!=='you' && !youGear().armor) cands.push({nm:(S.name||'You'), set:function(){ youGear().armor=had; }});
     log(kitTargetName()+' is outfitted with '+gLabel('armor',id)+' ('+price+' s).');
     if(cands.length){
