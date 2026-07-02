@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.03.22';
+const VERSION='2.05.06';
 const RESUME_B64="";
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
@@ -164,28 +164,33 @@ const GOODS=[
  {id:'slaves',n:'Slaves',     u:'soul',  wt:5, e:120, w:115},
  {id:'aloe',  n:'Aloe',      u:'cake',  wt:1, e:18,  w:46},
  {id:'felt',  n:'Felt',      u:'roll',  wt:3, e:12,  w:32},
+ {id:'naphtha', n:'Naphtha',  u:'jar',   wt:3, e:52,  w:74},
+ {id:'asbestos',n:'Asbestos', u:'bolt',  wt:1, e:210, w:232},
 ];
-const STOCKBASE={silk:55,tea:80,paper:65,musk:9,jade:22,pepper:45,lapis:16,glass:38,coral:11,amber:10,wine:30,pearls:7,ivory:9,frank:30,indigo:24,cinn:20,wax:24,nutmeg:16,pelts:8,conut:35,linen:22,furs:24,slaves:6,aloe:14,felt:30,turq:16};
+const STOCKBASE={silk:55,tea:80,paper:65,musk:9,jade:22,pepper:45,lapis:16,glass:38,coral:11,amber:10,wine:30,pearls:7,ivory:9,frank:30,indigo:24,cinn:20,wax:24,nutmeg:16,pelts:8,conut:35,linen:22,furs:24,slaves:6,aloe:14,felt:30,turq:16,naphtha:26,asbestos:2};
 const CONUT_TROPICAL=new Set(['Guangzhou','Kauthara','Palembang','Mantai','Kollam','Zanzibar']);
 let SLAVERY=true;   /* <- the slave trade. flip to false to key it off entirely */
 function slaveryOn(){ return SLAVERY; }
 function conutHere(nm){ return CONUT_TROPICAL.has(nm); }
 const ALOE_RANGE=new Set(['Socotra','Aden']);
 function aloeHere(nm){ return ALOE_RANGE.has(nm); }
+const NAPHTHA_RANGE=new Set(['Baghdad','Rey']);
+function naphthaHere(nm){ return NAPHTHA_RANGE.has(nm); }
+const ASBESTOS_RANGE=new Set(['Khotan','Hami']);
+function asbestosHere(nm){ return ASBESTOS_RANGE.has(nm); }
+const FLAMMABLE=new Set(['silk','tea','paper','wine','frank','wax','cinn','pepper','nutmeg','indigo','linen','furs','pelts','felt','aloe','musk','ivory','amber','conut','naphtha']);
 function baghdadVillage(){ return gameDate().t < Date.UTC(762,6,30); }
 function isBaghdadVillage(nm){ return nm==='Baghdad' && baghdadVillage(); } // coconuts are stocked/buyable only in their tropical production range; they can still be SOLD anywhere you carry them (prices exist everywhere)
-const CAMEL_PRICE={"Chang'an":80,Lanzhou:72,Wuwei:52,Dunhuang:60,Hami:58,Turfan:62,Kucha:64,Aksu:62,
- Miran:60,Khotan:66,Yarkand:62,Kashgar:60,Akhsikath:70,Samarkand:74,Bukhara:74,Merv:66,Nishapur:80,
- Rey:86,Baghdad:96,Aleppo:104,Iconium:110,Constantinople:124};
 const OVR={
+ 'Hami':{asbestos:50},
  "Chang'an":{coral:160,amber:140,wine:82},'Lanzhou':{coral:150,amber:132,wine:74,musk:62},'Wuwei':{coral:146,wine:70,musk:56},
  'Dunhuang':{coral:138,amber:124,wine:66,musk:50},
- 'Khotan':{jade:12,musk:22,coral:128},'Yarkand':{jade:20,musk:30,pepper:34},'Miran':{musk:34},'Kashgar':{pepper:18,musk:44,jade:30,felt:11},
+ 'Khotan':{jade:12,musk:22,coral:128,asbestos:55},'Yarkand':{jade:20,musk:30,pepper:34},'Miran':{musk:34},'Kashgar':{pepper:18,musk:44,jade:30,felt:11},
  'Turfan':{wine:22}, /* Turfan grows its own grapes — western wine finds no buyers here */
  'Akhsikath':{pepper:24,felt:10},'Samarkand':{pepper:30,lapis:11,paper:7},'Bukhara':{lapis:7,paper:7},
  'Beshbalik':{felt:7,furs:34},'Suyab':{felt:7,furs:35},'Talas':{felt:8,furs:36},'Chach':{felt:9,furs:40},
- 'Merv':{paper:8,lapis:32},'Nishapur':{paper:9,turq:14},'Rey':{paper:10,wine:24},
- 'Baghdad':{paper:10,glass:12,silk:60,musk:128,lapis:62,amber:52,coral:28,wine:18}, /* Gulf coral entrepôt; musk worth a fortune here */
+ 'Merv':{paper:8,lapis:32},'Nishapur':{paper:9,turq:14},'Rey':{paper:10,wine:24,naphtha:20},
+ 'Baghdad':{paper:10,glass:12,silk:60,musk:128,lapis:62,amber:52,coral:28,wine:18,naphtha:22}, /* Gulf coral entrepôt; musk worth a fortune here */
  'Socotra':{aloe:14}, 'Aden':{aloe:22},
  'Aleppo':{glass:14,silk:66,musk:138,jade:62,lapis:66,pepper:74,coral:34,amber:46,wine:16},
  'Iconium':{glass:20,silk:70,musk:144,coral:44,wine:18},
@@ -324,18 +329,18 @@ const SPEED_MOD={settled:1,steppe:1,desert:.85,harsh:.75,mountain:.6,rugged:.7,f
 const WATER_USE={settled:0,steppe:0,desert:1.8,harsh:2.2,mountain:0,forest:0,rugged:0.6,marsh:0}; // people & thirsty beasts drink only in the deep desert
 const PACES={c:{n:'Leisurely',sp:.8,hp:+.4},s:{n:'Normal',sp:1,hp:-.2},g:{n:'Grueling',sp:1.3,hp:-1.6}};
 const MONTHS=['third','fourth','fifth','sixth','seventh','eighth','ninth','tenth','eleventh','twelfth','first','second'];
-const NEPHEW={id:'nephew',name:'Little Tang',role:'your nephew, more enthusiasm than sense',kind:'companion',nephew:true,skills:{trade:0,cook:0,handle:0,hunt:1,fight:1}};
-const PEI_BARD={id:'changbard',name:'Pei Lang',role:"a pipa-player of the Emperor's scattered Pear Garden troupe",skills:{cook:1,trade:1,handle:1},bard:true,join:"Trained in the Pear Garden \u2014 the Emperor's own academy of music \u2014 before the rebellion scattered the players, Pei Lang has been singing for his supper ever since. He can lift a footsore camp with a tune, sweeten a magistrate at a checkpoint, and put a name to every ruin between here and Samarkand."};
+const NEPHEW={id:'nephew',name:'Little Tang',role:'your nephew, more enthusiasm than sense',kind:'companion',nephew:true,skills:{trade:0,cook:0,handle:0},fs:5,hs:3};
+const PEI_BARD={id:'changbard',name:'Pei Lang',role:"a pipa-player of the Emperor's scattered Pear Garden troupe",skills:{cook:1,trade:1,handle:1},fs:6,hs:3,bard:true,join:"Trained in the Pear Garden \u2014 the Emperor's own academy of music \u2014 before the rebellion scattered the players, Pei Lang has been singing for his supper ever since. He can lift a footsore camp with a tune, sweeten a magistrate at a checkpoint, and put a name to every ruin between here and Samarkand."};
 const ROSTER=[
  PEI_BARD,
- {id:'liqing',name:'Li Qing',role:'your cousin, keeper of the accounts',skills:{trade:3,cook:0,handle:0,hunt:0,fight:0}},
- {id:'vandak',name:'Vandak',role:'a Sogdian guide of flexible honesty',skills:{trade:1,cook:0,handle:1,hunt:1,fight:1}},
- {id:'gao',name:'Old Gao',role:'a camel-puller of thirty years',skills:{trade:0,cook:1,handle:3,hunt:1,fight:0}},
- {id:'pugu',name:'Pugu',role:'a cook of small miracles',skills:{trade:0,cook:3,handle:0,hunt:2,fight:0}},
- {id:'ruzbeh',name:'Ruzbeh',role:'a Persian caravan-guard',skills:{trade:0,cook:0,handle:1,hunt:0,fight:3}},
- {id:'shirin',name:'Shirin',role:'a physician of Merv',skills:{trade:1,cook:3,handle:0,hunt:0,fight:0}},
- {id:'bayan',name:'Bayan',role:'a Turkic scout and hunter',skills:{trade:0,cook:0,handle:1,hunt:3,fight:1}},
- {id:'maryam',name:'Maryam',role:'a Sogdian trader, twice widowed, never cheated',skills:{trade:2,cook:1,handle:0,hunt:0,fight:1}},
+ {id:'liqing',name:'Li Qing',role:'your cousin, keeper of the accounts',skills:{trade:3,cook:0,handle:0},fs:6,hs:3},
+ {id:'vandak',name:'Vandak',role:'a Sogdian guide of flexible honesty',skills:{trade:1,cook:0,handle:1},fs:6,hs:3},
+ {id:'gao',name:'Old Gao',role:'a camel-puller of thirty years',skills:{trade:0,cook:1,handle:3},fs:6,hs:3},
+ {id:'pugu',name:'Pugu',role:'a cook of small miracles',skills:{trade:0,cook:3,handle:0},fs:8,hs:12},
+ {id:'ruzbeh',name:'Ruzbeh',role:'a Persian caravan-guard',skills:{trade:0,cook:0,handle:1},fs:12,hs:3},
+ {id:'shirin',name:'Shirin',role:'a physician of Merv',skills:{trade:1,cook:3,handle:0},fs:6,hs:3},
+ {id:'bayan',name:'Bayan',role:'a Turkic scout and hunter',skills:{trade:0,cook:0,handle:1},fs:8,hs:12},
+ {id:'maryam',name:'Maryam',role:'a Sogdian trader, twice widowed, never cheated',skills:{trade:2,cook:1,handle:0},fs:6,hs:3},
 ];
 const GUARD_NAMES=['Bhima','Tarkan','Yusuf','Sabir','Khorel','Ganzorig','Demir','Roshan','Esen','Toghrul','Aspar','Wei'];
 const GUARD_REGIONS={
@@ -349,7 +354,7 @@ const GUARD_REGIONS={
 };
 const GUARD_CITY_REGION={Yangzhou:'china',Guangzhou:'china',Luoyang:'china',"Chang'an":'china',Lanzhou:'china',Wuwei:'china',Dunhuang:'china',Hami:'steppe',Turfan:'steppe',Kucha:'steppe',Aksu:'steppe',Kashgar:'steppe',Miran:'steppe',Khotan:'steppe',Yarkand:'steppe',Akhsikath:'steppe',Samarkand:'steppe',Bukhara:'steppe',Merv:'steppe',Nishapur:'arab',Rey:'arab',Kauthara:'seasia',Palembang:'seasia',Mantai:'india',Kollam:'india',Basra:'arab',Dhofar:'arab',Aden:'arab',Socotra:'arab',Qulzum:'arab',Baghdad:'arab',Aleppo:'arab',Zanzibar:'africa',Fustat:'egypt',Alexandria:'egypt'};
 function guardNamePool(cn){ const r=GUARD_CITY_REGION[cn]; return (r&&GUARD_REGIONS[r])||GUARD_NAMES; }
-const GUARD_SKILLS=[{trade:0,cook:0,handle:0,hunt:1,fight:2},{trade:0,cook:0,handle:1,hunt:0,fight:2},{trade:0,cook:1,handle:0,hunt:2,fight:2}];
+const GUARD_SKILLS=[{trade:0,cook:0,handle:0},{trade:0,cook:0,handle:1},{trade:0,cook:1,handle:0}];
 const RUMORS=[
  "Musk is worth more than its weight in gold west of the Pamirs. It weighs almost nothing. Think about it.",
  "They say the prisoners taken at Talas taught Samarkand to make paper. Sell your reams before the Onion Mountains, friend.",
@@ -464,7 +469,7 @@ function devConan(){ newGame('Conan', null, null, 'cpl');
   S.route='k'; S.routeChosen=true; S.steppeDecided=true; S.itin=fullRoute('k', isWest());
   var si=S.itin.findIndex(function(x){return x.name==='Samarkand';}); if(si>=0){ S.idx=si; }
   var ci=S.itin.findIndex(function(x){return x.name==='Chach';}); S.dir=(ci>si)?1:-1; S.legKm=0;
-  S.youSkills={fight:16,hunt:16,archery:10}; S.silver=2000;
+  S.youFs=16; S.youHs=16; S.silver=2000;
   if(typeof restockToNow==='function') restockToNow('Samarkand');
   S.pendingEvent=null; S.screen='city'; S.log=[];
   log("[dev] Conan the Barbarian sets out from Samarkand on the steppe road — FS/HS 16, 2000 s. East to Chach and the northern fork.");
@@ -504,7 +509,7 @@ function turfanDivert(){ var HERE=[86.9,44.2], TURF=[89.18,42.93]; var miles=gcM
 var HM_CONF={ round_min:30, round_ms:2000, horse_walk:1.6, foot_walk:0.9, track_div:24, horse_fs:6,
   game_enc:{steppe:0.09,settled:0.08,mountain:0.085,desert:0.032,harsh:0.03,marsh:0.10,jungle:0.11,forest:0.10,rugged:0.07},
   pred_base:0.0013, pred_terr:{steppe:1.0,settled:0.8,mountain:1.6,desert:0.7,harsh:1.2,marsh:1.3,jungle:1.9,forest:1.4,rugged:1.1},
-  night_pred:0.065, tire_round:16, collapse_round:28, forage_div:38, herb_frac:0.12,
+  night_pred:0.065, tire_round:24, collapse_round:36, forage_div:38, herb_frac:0.12,
   forage_terr:{steppe:1.0,settled:1.1,mountain:0.9,desert:0.4,harsh:0.4,marsh:1.1,jungle:1.3,forest:1.1,rugged:0.8} };
 var HUNT_LL={Suyab:42.8,Talas:42.5,Ispijab:42.3,Chach:41.3,Akhsikath:41.0,Kashgar:39.5,Aksu:41.2,Kucha:41.7,Beshbalik:44.1,Hami:42.8,Almaliq:44.0,Bole:44.9,Almatu:43.25,'a Karluk camp':43.8};
 function huntLatitude(){ try{ var nm=(city()||{}).name; if(HUNT_LL[nm]!=null) return HUNT_LL[nm]; var t=(typeof CITY_LL!=='undefined'&&CITY_LL[nm])||(typeof DESERT_LL!=='undefined'&&DESERT_LL[nm]); if(t&&t.length>1&&isFinite(t[1])) return t[1]; }catch(e){} return 40; } // latitude of the current position; the Amber Road need only add its cities to HUNT_LL/CITY_LL
@@ -567,24 +572,25 @@ function hmDayRounds(){ return Math.round(daylightHours(monthNum())*60/HM_CONF.r
 function hmSub(terr){ var a=HM_SUBTERR[terr]||HM_SUBTERR.steppe; return pick(a); }
 function hmIsForest(sub){ return /forest|wood|brake|thicket|orchard|bamboo|fig|carr/.test(sub||''); }
 function hmPickFrom(pool){ if(!pool.length)return null; var tot=pool.reduce(function(s,a){return s+a.w;},0); var r=rnd()*tot; for(var i=0;i<pool.length;i++){ r-=pool[i].w; if(r<=0)return pool[i]; } return pool[pool.length-1]; }
-function hmPickGame(terr){ return hmPickFrom(HM_PREY.filter(function(a){return !a.pred && a.terr.indexOf(terr)>=0;})) || hmPickFrom(HM_PREY.filter(function(a){return !a.pred;})); }
+const HM_NOCT=new Set(['hare','deer','onager','boar','marshdeer','muntjac','sambar']);
+function hmPickGame(terr,dark){ var pool=HM_PREY.filter(function(a){return !a.pred && a.terr.indexOf(terr)>=0;}); if(!pool.length)pool=HM_PREY.filter(function(a){return !a.pred;}); if(dark)pool=pool.map(function(a){return Object.assign({},a,{w:a.w*(HM_NOCT.has(a.id)?2.2:0.35)});}); return hmPickFrom(pool); }
 function hmPickPred(terr,night){ var pool=HM_PREY.filter(function(a){return a.pred && a.terr.indexOf(terr)>=0;}); if(!pool.length)pool=HM_PREY.filter(function(a){return a.pred;}); if(night)pool=pool.map(function(a){return Object.assign({},a,{w:(a.id==='wolves'?a.w*4:a.w)});}); return hmPickFrom(pool); }
 function hmHsBest(){ return Math.max.apply(null,S.hm.hunters.map(function(p){return p.hs;})); }
 function hmHsWorst(){ return Math.min.apply(null,S.hm.hunters.map(function(p){return p.hs;})); }
-function hmKill(){ var hs=S.hm.hunters.map(function(p){return p.hs;}).sort(function(a,b){return b-a;}); var st=hs[0]; for(var i=1;i<hs.length;i++)st+=hs[i]*0.2; if(!S.hm.bowed)st*=0.7; return st; }
+function hmKill(){ var hs=S.hm.hunters.map(function(p){return p.hs;}).sort(function(a,b){return b-a;}); var st=0; for(var i=0;i<hs.length;i++)st+=hs[i]/(i+1); if(!S.hm.bowed)st*=0.7; return st; }
 function hmFS(p){ return p.fs + ((S.hm&&S.hm.horsed)?HM_CONF.horse_fs:0); }
-function hmClock(round, tw){ var start=tw?18*60:6*60; var t=((start+round*HM_CONF.round_min)%1440+1440)%1440; var hh=Math.floor(t/60), mm=t%60; return (hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm; }
+function hmClock(round, tw){ var dh=daylightHours(monthNum()); var start=Math.round(tw?(12+dh/2)*60:(12-dh/2)*60); var t=((start+round*HM_CONF.round_min)%1440+1440)%1440; var hh=Math.floor(t/60), mm=t%60; return (hh<10?'0':'')+hh+':'+(mm<10?'0':'')+mm; }
 var HM_PACE={steppe:1.15,settled:1.0,desert:1.05,harsh:0.85,marsh:0.5,forest:0.55,rugged:0.5,mountain:0.45,jungle:0.4};
-function hmMove(){ var H=S.hm; var m=H.horsed?HM_CONF.horse_walk:HM_CONF.foot_walk; m*=(HM_PACE[H.terr]||1); if(H.round>HM_CONF.tire_round)m*=0.7; if(H.track)m*=0.6; m*=(1-Math.min(0.35,(H.meat||0)/800)); if(H.hunters&&H.hunters.length){ var _mn=Math.min.apply(null,H.hunters.map(function(p){return p.maxhp?p.hp/p.maxhp:1;})); m*=(0.55+0.45*_mn); } return m; }
+function hmMove(){ var H=S.hm; var m=H.horsed?HM_CONF.horse_walk:HM_CONF.foot_walk; m*=(HM_PACE[H.terr]||1); if(H.round>HM_CONF.tire_round)m*=0.7; if(H.track)m*=0.6; m*=(1-Math.min(0.35,(H.meat||0)/800)); if(H.hunters&&H.hunters.length){ var _mn=Math.min.apply(null,H.hunters.map(function(p){return p.maxhp?p.hp/p.maxhp:1;})); m*=(0.55+0.45*_mn); var _lm=Math.min.apply(null,H.hunters.map(function(p){return p.lame||1;})); m*=_lm; } return m; }
 function hmSomeName(){ var a=S.hm.hunters.filter(function(p){return p.hp>0;}); return a.length?pick(a).name.split(',')[0]:'someone'; }
 function hmHit(p,dmg){ p.hp=Math.max(0,p.hp-dmg); }
 function hmHealer(){ var best=null; S.hm.hunters.forEach(function(p){ if(p.hp>0 && (p.heal||0)>0 && (!best||p.heal>best.heal)) best=p; }); return best; }
 
 function hmHazard(tired){ var H=S.hm; var up=H.hunters.filter(function(p){return p.hp>0;}); if(!up.length)return false; var m=tired?1.6:1;
  var fallP=((H.terr==='mountain')?0.012:(H.terr==='jungle'?0.006:0.002))*m; if(/scree|ridge|boulder|cliff|slope/.test(H.sub))fallP+=0.012*m;
- if(rnd()<fallP){ var w1=pick(up); var dm=hmD(6); hmHit(w1,dm); H.L.push('<span class="red">'+w1.name.split(',')[0]+' loses footing on '+H.sub+' — −'+dm+' HP'+(w1.hp<=0?', badly hurt':'')+'.</span>'); if(H.hunters.every(function(p){return p.hp<=0;}))return hmFinish('lost'),true; return true; }
+ if(rnd()<fallP){ var w1=pick(up); var dm=hmD(6); hmHit(w1,dm); if(w1.hp>0)w1.lame=Math.min(w1.lame||1,0.6); H.L.push('<span class="red">'+w1.name.split(',')[0]+' loses footing on '+H.sub+' — −'+dm+' HP'+(w1.hp<=0?', badly hurt':', and favours the leg after — slow going now')+'.</span>'); if(H.hunters.every(function(p){return p.hp<=0;}))return hmFinish('lost'),true; return true; }
  var snakeP=({steppe:0.004,settled:0.004,mountain:0.003,desert:0.006,harsh:0.003,marsh:0.009,jungle:0.011,forest:0.005,rugged:0.004}[H.terr]||0.004)*m;
- if(rnd()<snakeP){ var w2=pick(up); var dm2=hmD(6); hmHit(w2,dm2); H.L.push('<span class="red">'+w2.name.split(',')[0]+' is struck by a snake in '+H.sub+' — −'+dm2+' HP.</span>'); if(H.hunters.every(function(p){return p.hp<=0;}))return hmFinish('lost'),true; return true; }
+ if(rnd()<snakeP){ var w2=pick(up); var dm2=hmD(6); hmHit(w2,dm2); if(w2.hp>0)w2.lame=Math.min(w2.lame||1,0.5); H.L.push('<span class="red">'+w2.name.split(',')[0]+' is struck by a snake in '+H.sub+' — −'+dm2+' HP'+(w2.hp<=0?'':', the limb swelling — hard going the rest of the day')+'.</span>'); if(H.hunters.every(function(p){return p.hp<=0;}))return hmFinish('lost'),true; return true; }
  return false; }
 function hmForage(){ var H=S.hm; var fr=hmHealer(); if(!fr)return false; var hl=fr.heal; var tf=(HM_CONF.forage_terr[H.terr]!=null?HM_CONF.forage_terr[H.terr]:1);
  if(rnd() < tf*hl/(hl+HM_CONF.forage_div)){ var y=4+ri(7); H.meat+=y; S.food+=y; H.L.push('<span class="gold">'+fr.name.split(',')[0]+' gathers roots, greens and fruit along the way — +'+y+' food.</span>'); return true; } return false; }
@@ -615,7 +621,7 @@ function hmStep(){ var H=S.hm; if(!H||H.phase!=='run')return; if(H.timer){clearT
  H.round++;
  if(!H.returning && H.round>0 && H.round%8===0){ H.L.push(H.horsed?'You halt to rest and water the horses, and chew a little dried meat.':'You halt a while to rest your legs and breathe.'); hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
  if(H.returning){ H.dist=Math.max(0,H.dist-hmMove()); } else { H.dist+=hmMove(); H._maxdist=Math.max(H._maxdist,H.dist); if(rnd()<0.34) H.sub=hmSub(H.terr); }
- if(!H.returning && !H.dark && !H._lateWarned){ var _mv=Math.max(0.2,hmMove()); if(H.round + Math.ceil(H.dist/_mv) >= H.over + Math.round(60/HM_CONF.round_min)){ H._lateWarned=true; if(H.timer){clearTimeout(H.timer);H.timer=null;} H.L.push('<span class="red">The light is going and you are a fair way out. You feel maybe you should turn back before it gets dark; press on and you will be benighted out here in earnest.</span>'); hmShow('<button class="seal" onclick="hmHeadBack()">Turn back for camp now</button> <button onclick="hmPress()">Press on \u2014 one more push</button>'); return; } }
+ if(!H.returning && !H.dark && !H._lateWarned){ var _mv=Math.max(0.2,hmMove()); if(H.round + Math.ceil(H.dist/_mv) >= H.over + Math.round(60/HM_CONF.round_min)){ H._lateWarned=true; if(H.timer){clearTimeout(H.timer);H.timer=null;} H.L.push('<span class="red">You have ranged a long way out, and you reckon the road back against the sun: go much further and you will not win to camp before dark. Best turn back now, or press on and chance being benighted out here.</span>'); hmShow('<button class="seal" onclick="hmHeadBack()">Turn back for camp now</button> <button onclick="hmPress()">Press on \u2014 one more push</button>'); return; } }
  if(H.returning && H.dist<=0.01){ return hmFinish('home'); }
  // no hardwired collapse: daylight bounds the hunt; the season decides the night
  if(!H._toldTired && H.round>=HM_CONF.tire_round){ H._toldTired=true; H.L.push('<span class="red">'+(H.horsed?'The horses are tiring':hmSomeName()+' is flagging')+' — some '+Math.round(H.round*HM_CONF.round_min/60)+' hours afield.</span>'); }
@@ -628,9 +634,10 @@ function hmStep(){ var H=S.hm; if(!H||H.phase!=='run')return; if(H.timer){clearT
    var _sn=(typeof hmSeason==='function')?hmSeason():'spring', _dr=H.round-H.over;
    if(_sn==='summer'){ if(_dr>=3){ H.L.push('<span class="gold">Too far to reach camp by dark — you make a fireless camp under the stars and turn for home at first light.</span>'); if(typeof passDays==='function')passDays(1); return hmFinish('benighted'); } }
    else { var _sev=(_sn==='winter')?1.0:0.4; var _ex=Math.round(_sev*(3+ri(4))*(1+0.18*_dr)); var _dd=[]; H.hunters.forEach(function(p){ if(p.hp>0){ p.hp=Math.max(0,p.hp-_ex); if(p.hp<=0)_dd.push(p.name.split(',')[0]); } }); H.L.push('<span class="red">'+(_sn==='winter'?'The night cold is murderous':'The night cold bites deep')+' — '+_ex+' HP lost'+(_dd.length?'; '+_dd.join(', ')+' will not rise again':'')+'.</span>'); var _you=H.hunters.find(function(p){return p.you;}); if((_you&&_you.hp<=0)||H.hunters.every(function(p){return p.hp<=0;})){ return hmFinish(_sn==='winter'?'frozen':'home'); } }
-   if(rnd()<HM_CONF.night_pred*(HM_CONF.pred_terr[H.terr]||1)*(H.returning?0.6:1)){ return hmPredator(hmPickPred(H.terr,true)); }
-   var risk=((H.terr==='jungle')?0.45:(H.terr==='mountain'||hmIsForest(H.sub))?0.26:0.15)*(1+0.12*(H.round-H.over))*(tired?1.6:1)*(H.returning?0.7:1);
+   if(rnd()<HM_CONF.night_pred*(HM_CONF.pred_terr[H.terr]||1)){ return hmPredator(hmPickPred(H.terr,true)); }
+   var risk=((H.terr==='jungle')?0.45:(H.terr==='mountain'||hmIsForest(H.sub))?0.26:0.15)*(1+0.12*(H.round-H.over))*(tired?1.6:1);
    if(rnd()<risk){ return hmMishap(); }
+   if(rnd() < (HM_CONF.game_enc[H.terr]||0.10)){ return hmEncounter(hmPickGame(H.terr,true)); }
    H.L.push(pick(['The dark is full of small sounds; you press on by starlight.','Something coughs in the blackness, off to the side.','You stumble on, eyes straining, hands out before you.','An owl ghosts past, low and silent.']));
    hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return;
  }
@@ -639,14 +646,20 @@ function hmStep(){ var H=S.hm; if(!H||H.phase!=='run')return; if(H.timer){clearT
    if(hmHazard(tired)){ if(S.hm&&S.hm.phase==='run'){ hmShow(); hmTimer(hmStep,HM_CONF.round_ms);} return; }
    var b=hmHsBest();
    if(rnd() < HM_CONF.pred_base*Math.min(6,12/Math.max(3,b))*(HM_CONF.pred_terr[H.terr]||1)){ return hmPredator(hmPickPred(H.terr)); }
-   if(rnd() < (HM_CONF.game_enc[H.terr]||0.10)){ return hmEncounter(hmPickGame(H.terr)); }
+   if(rnd() < (HM_CONF.game_enc[H.terr]||0.10)){ return hmEncounter(hmPickGame(H.terr,H.dark)); }
    if(hmForage()){ hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
    { var _tl=pick(HM_TRAV[H.terr]||HM_TRAV.steppe); H.L.push(_tl); (H._trail=H._trail||[]).push(_tl); }
- } else { { H._trail=H._trail||[]; var _bk=H._trail.length?H._trail.pop():pick(HM_DULL[H.terr]||HM_DULL.steppe); if(/dust.?devil/i.test(_bk)) _bk=pick(HM_DULL[H.terr]||HM_DULL.steppe); H.L.push(_bk+' <span class="sub">— about '+H.dist.toFixed(1)+' mi to camp.</span>'); } }
+ } else {
+   if(hmHazard(tired)){ if(S.hm&&S.hm.phase==='run'){ hmShow(); hmTimer(hmStep,HM_CONF.round_ms);} return; }
+   var b=hmHsBest();
+   if(rnd() < HM_CONF.pred_base*Math.min(6,12/Math.max(3,b))*(HM_CONF.pred_terr[H.terr]||1)){ return hmPredator(hmPickPred(H.terr)); }
+   if(rnd() < (HM_CONF.game_enc[H.terr]||0.10)){ return hmEncounter(hmPickGame(H.terr,H.dark)); }
+   if(hmForage()){ hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
+   { H._trail=H._trail||[]; var _bk=H._trail.length?H._trail.pop():pick(HM_DULL[H.terr]||HM_DULL.steppe); if(/dust.?devil/i.test(_bk)) _bk=pick(HM_DULL[H.terr]||HM_DULL.steppe); H.L.push(_bk+' <span class="sub">— about '+H.dist.toFixed(1)+' mi to camp.</span>'); } }
  hmShow(); hmTimer(hmStep,HM_CONF.round_ms); }
 
 function hmEncounter(a){ var H=S.hm; if(!a)return (hmShow(),hmTimer(hmStep,HM_CONF.round_ms)); if(a.pred) return hmPredator(a);
- var b=hmHsBest(); if(rnd()>=b/(b+a.perc)){ H.L.push('Something rustles in '+H.sub+' and is gone — you never get eyes on it.'); hmTrack(a); hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
+ var b=hmHsBest()*(H.dark?0.6:1)*(H.returning?0.8:1); if(rnd()>=b/(b+a.perc)){ H.L.push('Something rustles in '+H.sub+' and is gone — you never get eyes on it.'); hmTrack(a); hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
  hmStalk(a); }
 function hmStalk(a){ var H=S.hm; var w=hmHsWorst();
  if(rnd()>=w/(w+a.stealth)){ H.L.push('You make out '+a.n+' in '+H.sub+' — but a careless step sends it bounding away.'); hmTrack(a); hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
@@ -670,11 +683,20 @@ function hmPredator(a){ var H=S.hm; if(!a)return (hmShow(),hmTimer(hmStep,HM_CON
 function hmPredWithdraw(){ var H=S.hm; H.L.push('You back off slow, weapons up, and leave the beast its ground.'); H._pred=null; hmResume(); }
 function hmPredRound(){ var H=S.hm; var P=H._pred; var a=P.a; if(H.timer){clearTimeout(H.timer);H.timer=null;} var rl=[];
  H.hunters.forEach(function(p){ if(p.hp<=0)return; if(rnd()<a.fs/(a.fs+hmFS(p))){ var dmg=hmD(a.dmg); hmHit(p,dmg); rl.push('<span class="red">'+p.name.split(',')[0]+' is mauled −'+dmg+(p.hp<=0?', down!':'')+'</span>'); } else { var dd=hmD(p.die); P.hp-=dd; rl.push(p.name.split(',')[0]+' lands a blow −'+dd); } });
- H.L.push(hmCap(a.n)+' ('+Math.max(0,P.hp)+' HP left): '+rl.join('; ')+'.');
+ H.L.push(hmCap(a.n)+': '+rl.join('; ')+'. <span class="sub">('+Math.max(0,P.hp)+' HP left)</span>');
  if(P.hp<=0){ var y=18+ri(18); H.meat+=y; H.kills++; S.food+=y; H.L.push('<span class="gold">'+hmCap(a.n)+' is down — a hard, dangerous kill. +'+y+' food, and a hide to brag on.</span>'); H._pred=null; return hmResume(); }
  if(H.hunters.every(function(p){return p.hp<=0;})){ H.L.push('<span class="red"><b>The beast stands over the fallen. The hunt is a disaster.</b></span>'); return hmFinish('lost'); }
  hmShow('<button class="seal" onclick="hmPredRound()">Fight on</button> <button onclick="hmPredFlee()">Break off and run</button>'); }
-function hmPredFlee(){ var H=S.hm; var a=H._pred.a; var rl=[]; H.hunters.forEach(function(p){ if(p.hp<=0)return; if(rnd()<0.45){ var dmg=hmD(a.dmg); hmHit(p,dmg); rl.push('<span class="red">'+p.name.split(',')[0]+' is raked as they break −'+dmg+'</span>'); } }); H.L.push('You break off and run'+(rl.length?': '+rl.join('; '):' — clean away')+'.'); H._pred=null; hmResume(); }
+function hmPredFlee(){ var H=S.hm; var P=H._pred, a=P.a; var down=H.hunters.filter(function(p){return p.hp<=0;}).length; var up=H.hunters.filter(function(p){return p.hp>0;}); var horsed=!!H.horsed;
+  var canBreak = down>0 || horsed || rnd()<0.15;   // a fallen comrade occupies the pack; horses can outrun it; otherwise it runs you down
+  if(canBreak){ var rl=[]; up.forEach(function(p){ if(rnd()<0.35){ var dmg=hmD(a.dmg); hmHit(p,dmg); rl.push('<span class="red">'+p.name.split(',')[0]+' is raked as they break −'+dmg+(p.hp<=0?', down!':'')+'</span>'); } });
+    H.L.push((down>0?'The pack falls on the fallen, and in the chaos the rest break clear':(horsed?'You wheel the horses and outpace it':'You scramble clear of it'))+(rl.length?': '+rl.join('; '):' — away')+'.');
+    if(H.hunters.every(function(p){return p.hp<=0;})) return hmFinish('lost');
+    H._pred=null; return hmResume(); }
+  var rl=[]; up.forEach(function(p){ var dmg=hmD(a.dmg)+hmD(a.dmg); hmHit(p,dmg); rl.push('<span class="red">'+p.name.split(',')[0]+(p.hp<=0?' is pulled down and killed':' is savaged −'+dmg)+'</span>'); });
+  H.L.push('<span class="red">You cannot outrun it — turning to flee, '+a.n+' runs you down: '+rl.join('; ')+'.</span>');
+  if(H.hunters.every(function(p){return p.hp<=0;})) return hmFinish('lost');
+  hmShow('<button class="seal" onclick="hmPredRound()">Turn and fight</button> <button onclick="hmPredFlee()">Try again to break away</button>'); }
 function hmMishap(){ var H=S.hm; var up=H.hunters.filter(function(p){return p.hp>0;}); var who=pick(up)||H.hunters[0]; var jung=(H.terr==='jungle');
  if(rnd()<(jung?0.4:0.5)){ var dmg=hmD(6); hmHit(who,dmg); H.L.push('<span class="red">In the '+(jung?'black tangle':'dark')+', '+who.name.split(',')[0]+' takes a bad fall — −'+dmg+' HP'+(who.hp<=0?', and does not rise':'')+'.</span>'); }
  else { H.dist+=hmMove()*(jung?3:2); H.L.push('<span class="red">'+(jung?'The canopy blots out the stars and every game-trail looks the same; you blunder in circles, only straying further from camp.':'You lose the way in the dark and stray further from camp before getting your bearings.')+'</span>'); }
@@ -731,6 +753,8 @@ function makeStock(allCities){
     if(g.id==='conut' && !conutHere(c.name)){ stock[c.name][g.id]=0; continue; }
     if(g.id==='slaves' && !SLAVERY){ stock[c.name][g.id]=0; continue; }
     if(g.id==='aloe' && !aloeHere(c.name)){ stock[c.name][g.id]=0; continue; }
+    if(g.id==='naphtha' && !naphthaHere(c.name)){ stock[c.name][g.id]=0; continue; }
+    if(g.id==='asbestos' && !asbestosHere(c.name)){ stock[c.name][g.id]=0; continue; }
     if(isBaghdadVillage(c.name)){ const ok=(g.id==='linen'||g.id==='wax'||g.id==='wine'); stock[c.name][g.id]= ok?Math.max(1,Math.round(2+rnd()*4)):0; continue; }
     const base=(OVR[c.name]&&OVR[c.name][g.id]!=null)?OVR[c.name][g.id]:g.e+(g.w-g.e)*c.frac;
     const cheap=goodMin(g);
@@ -792,6 +816,8 @@ function restock(cityName,days){
   for(const g of GOODS){
     if(g.id==='conut' && !conutHere(cityName)){ S.stock[cityName][g.id]=0; continue; }
     if(g.id==='aloe' && !aloeHere(cityName)){ S.stock[cityName][g.id]=0; continue; }
+    if(g.id==='naphtha' && !naphthaHere(cityName)){ S.stock[cityName][g.id]=0; continue; }
+    if(g.id==='asbestos' && !asbestosHere(cityName)){ S.stock[cityName][g.id]=0; continue; }
     if(isBaghdadVillage(cityName)){ const ok=(g.id==='linen'||g.id==='wax'||g.id==='wine'); S.stock[cityName][g.id]= ok?Math.min(8,(S.stock[cityName][g.id]||0)+days):0; continue; }
     const base=(OVR[cityName]&&OVR[cityName][g.id]!=null)?OVR[cityName][g.id]:g.e+(g.w-g.e)*(c.frac||.5);
     const cheap=goodMin(g);
@@ -804,7 +830,7 @@ function restock(cityName,days){
 function slaveCount(){ return Math.max(0,Math.round((S&&S.goods&&S.goods.slaves)||0)); }
 function slaveCap(){ if(!S)return 0; var c=2; // you, the master, keep two in hand
   var bard=false;
-  (typeof livingParty==='function'?livingParty():[]).forEach(function(p){ if(p.bard){bard=true;return;} c += (p.kind==='guard')?3 : (p.cls==='fighter')?2 : 1; });
+  (typeof livingParty==='function'?livingParty():[]).forEach(function(p){ if(p.bard){bard=true;return;} c += (p.kind==='guard')?3 : (combFS(p)>=12)?2 : 1; });
   if(bard) c=Math.round(c*1.2); // the bard watches no one, but keeps the rest in better order: +20%
   return c; }
 function slaveWarnHtml(){ var n=slaveCount(); if(n<=0)return ''; var cap=slaveCap(); if(n<=cap)return ''; return '<p style="color:#8a2f12;font-weight:bold;margin:4px 0 8px">\u26A0 You hold '+n+' slaves but your party can keep only '+cap+' in hand \u2014 expect some to slip away on the road, or worse.</p>'; }
@@ -866,7 +892,7 @@ function cityShownGoods(c){
   const set={}; for(const g of ranked) set[g.id]=1;
   if(S) for(const g of GOODS) if((S.goods[g.id]||0)>0) set[g.id]=1; // anything you carry, so you can always SELL it
   if(SLAVERY && OVR[c.name] && OVR[c.name].slaves!=null) set.slaves=1; // designated slave markets always list slaves, even minor-hub ports
-  if(aloeHere(c.name)) set.aloe=1; if(conutHere(c.name)) set.conut=1; // range-gated specialties always show in their home range
+  if(aloeHere(c.name)) set.aloe=1; if(conutHere(c.name)) set.conut=1; if(naphthaHere(c.name)) set.naphtha=1; if(asbestosHere(c.name)) set.asbestos=1; // range-gated specialties always show in their home range
   return GOODS.filter(g=>set[g.id]);
 }
 function dealsIn(g,c){ return cityShownGoods(c).some(x=>x.id===g.id); }
@@ -939,10 +965,10 @@ function daySpeed(){
   sp*=speedMult(terr);                 // the caravan moves only as fast as its slowest-suited beast — count does not matter
   if(cargoW()>cargoCap()){sp*=.5;}     // overloaded
   if(totalAnimals()===0)sp*=.7;        // on foot, shouldering the loads yourselves
-  if(S.hp<40)sp*=.8;
+  var _wh=S.hp; var _lp=(typeof livingParty==='function')?livingParty():[]; for(var _i=0;_i<_lp.length;_i++){ var _h=(_lp[_i].hp==null?100:_lp[_i].hp); if(_h<_wh)_wh=_h; } if(_wh<70)sp*=Math.max(0.6,0.6+0.4*(_wh/70)); // a badly hurt hand slows the whole train
   return Math.round(sp);
 }
-function legEventChance(terr){return {settled:.16,steppe:.2,desert:.2,harsh:.24,mountain:.24}[terr];}
+function legEventChance(terr){return {settled:.16,steppe:.2,desert:.2,harsh:.24,mountain:.24,rugged:.22,forest:.2,marsh:.2}[terr]||.18;}
 let journeyTimer=null;
 const DAY_MS=1500; // one fixed, brisk day cadence
 function clearJourney(){ if(journeyTimer){clearInterval(journeyTimer);journeyTimer=null;} }
@@ -1045,13 +1071,13 @@ function stepDay(){
 function setPaceLive(k){ S.pace=k; const r=$('pacelive'); if(r)[...r.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.k===k)); }
 function makeCamp(){ S.journeying=false; clearJourney(); log("You make camp where you stand. The fire is small; the stars are not."); render(); }
 function restHunter(reqHale){ var best=null,bs=-1; (typeof livingParty==='function'?livingParty():[]).forEach(function(p){ if(reqHale && memHp(p)<85) return; var hs=combHS(p); if(hs>bs){bs=hs;best=p;} }); if((!reqHale || S.hp>=85) && youCombHS()>bs){ best={you:true,name:(S.name||'You')}; } return best; }
-function travelRest(){ if(!S)return; S.journeying=false; clearJourney(); var _terr=(typeof legTerr==='function')?legTerr():'steppe'; var _ah=0; for(var _d=0;_d<3 && !S.dead;_d++){ { var _fl=(S.food < foodNeed()); var _hh=restHunter(!_fl); if(_hh){ var _m=doHunt(_terr,false,_hh); if(!S.dead){ log(_m); huntXP(_hh); _ah++; } } } passDays(1); } if(S.dead){render();return;} S.hp=clamp(S.hp+6,0,100); if(typeof healMembers==='function')healMembers(12); if(typeof healSouls==='function')healSouls(8); log("You hold camp three days by the road — fires kept and the worst-off resting"+(_ah?", and a hale hand ranges out for the pot.":". The ailing mend a little.")); render(); }
+function travelRest(){ if(!S)return; S.journeying=false; clearJourney(); var _terr=(typeof legTerr==='function')?legTerr():'steppe'; var _ah=0; for(var _d=0;_d<3 && !S.dead;_d++){ { var _fl=(S.food < foodNeed()); var _hh=restHunter(!_fl); if(_hh){ var _m=doHunt(_terr,false,_hh); if(!S.dead){ log(_m); _ah++; } } } passDays(1); } if(S.dead){render();return;} S.hp=clamp(S.hp+6,0,100); if(typeof healMembers==='function')healMembers(12); if(typeof healSouls==='function')healSouls(8); log("You hold camp three days by the road — fires kept and the worst-off resting"+(_ah?", and a hale hand ranges out for the pot.":". The ailing mend a little.")); render(); }
 function skipToStop(){ S.journeying=false; clearJourney(); pressOn(); }
-function grantHuntXP(hunter,skill){ if(rnd()<cbImprove(skill)){ if(hunter.you){ bumpYouSkill('hunt'); } else if(hunter.skills){ hunter.skills.hunt=skill+1; if(hunter.skills.archery!=null && hunter.skills.archery<hunter.skills.hunt) hunter.skills.archery=hunter.skills.hunt; } return true; } return false; }
+function grantHuntXP(hunter,skill){ var hs=(hunter&&hunter.you)?youCombHS():combHS(hunter); if(rnd()<cbImprove(hs)){ if(hunter.you){ S.youHs=hs+1; } else { hunter.hs=hs+1; } return true; } return false; }
 function doHunt(terr, inTown, hunter){
   // returns a log message; caller handles the day passing and render
-  hunter=hunter||pickHunter(terr)||bestAt('hunt')||pick(livingParty())||{name:'You',skills:{hunt:0}};
-  let skill=hunter.you ? youSkill('hunt') : ((hunter.skills&&hunter.skills.hunt)||0);
+  hunter=hunter||pickHunter(terr)||bestHunter()||pick(livingParty())||{you:true,name:(S.name||'You')};
+  let skill=huntComp(hunter);
   const _suit=huntSuit(hunter,terr);
   const bigTown = inTown && ['Chang\'an','Lanzhou','Dunhuang','Kashgar','Samarkand','Bukhara','Merv','Rey','Baghdad','Aleppo','Constantinople'].includes(city().name);
   // hunting scares wild bactrians off the area for a month
@@ -1109,17 +1135,15 @@ function huntFood(){ if(!S||S.dead)return;
   var terr = inTown ? ((city()&&city().terr)||'steppe') : legTerr();
   S.pendingEvent={h:'THE HUNT', t:"Game must be found and brought down. Send one good hand to range out quickly for the pot \u2014 or take a party afield and hunt it properly, hour by hour, for better or worse.", ch:[
     {l:'Savour the hunt \u2014 take a party out and play it through', f:function(){ hmStart(terr,inTown); }},
-    {l:'Quick hunt \u2014 send your best hand for the pot', f:function(){ var h=bestAt('hunt')||((youSkill('hunt')>0)?{you:true,name:(S.name||'You')}:null)||livingParty()[0]||{you:true,name:(S.name||'You')}; huntWith(h,terr,inTown); }},
+    {l:'Quick hunt \u2014 send your best hand for the pot', f:function(){ var h=bestHunter()||{you:true,name:(S.name||'You')}; huntWith(h,terr,inTown); }},
     {l:'Never mind', f:function(){}}
   ]};
   render();
 }
-function huntXP(h){ if(!h || h.alive===false) return; if(h.you || h.name===(S.name||'You')){ var hs=youCombHS(); if(rnd()<cbImprove(hs)){ S.youHs=hs+1; log('<span class="gold">You return the wiser for the day’s hunting.</span>'); } } else { var cur=combHS(h); if(rnd()<cbImprove(cur)){ h.hs=cur+1; log('<span class="gold">'+h.name.split(',')[0]+' returns the wiser for the day’s hunting.</span>'); } } }
 function huntWith(hunter,terr,inTown){
   const msg=doHunt(terr, inTown, hunter);
   consumeDay(false, inTown?'settled':terr);
   if(inTown && !S.dead && !(city()&&city().camp)){ S.dealDays+=1; restock(city().name,1); S.cityDay[city().name]=S.day; }
-  if(!S.dead) huntXP(hunter);
   if(!S.dead) log(msg);
   if(!S.dead) maybeHuntress(terr);
 }
@@ -1159,7 +1183,7 @@ function pressOn(){ // synchronous fast-forward to next event / arrival (the "sk
   render();
 }
 function arrive(){
-  S._oweConfirmed=false; S.dzungar=null; S._stop_Almaty=false; S._stop_Almaliq=false; S._stop_Bole=false;
+  S._oweConfirmed=false; S.dzungar=null; S._stop_Almaty=false; S._stop_Almaliq=false; S._stop_Bole=false; S._stop_TurfanFork=false;
   if(S.dash){ dashArrive(); return; }
   const dir=S.dir||1;
   S.idx+=dir; S.legKm=0; S.dealDays=0; S.dir=1; S.priceLock={}; S.lostOk=null; // arriving resets to 'forward' for the city menu; fresh prices for the new market
@@ -1293,7 +1317,7 @@ function loseRandomGoods(frac){
   return n+' '+g.u+(n>1?'s':'')+' of '+g.n.toLowerCase();
 }
 function noteDeath(v, cause){ if(!S||!v)return; recoverGear(v); cause=cause||S.cause||''; S.deathQueue=S.deathQueue||[]; S.deathQueue.push({name:v.name, role:v.role, cause:cause}); if(!S.seaMode){ S.companionGraves=S.companionGraves||[]; const a=city()&&city().name, b=nextCity()?nextCity().name:null; S.companionGraves.push({name:v.name, role:v.role, cause:cause, a:a, b:b, day:S.day, mourned:false}); } }
-function deathDialog(){ const q=S.deathQueue||[]; S.deathQueue=[]; if(!q.length)return null; const one=q.length===1; const list=q.map(d=>d.name+(d.role?', '+d.role:'')).join('; '); const cz=q[0].cause?(' \u2014 '+q[0].cause):''; const body=one?(q[0].name+", "+q[0].role+", is dead"+cz+". You raise what marker the ground allows, and go on \u2014 the company quieter, the watch thinner."):("The road has taken "+list+". You bury them as the ground allows and go on, the caravan much diminished."); return {h:one?'A DEATH IN THE COMPANY':'DEATHS IN THE COMPANY', t:body, ch:[{l:'Bow your head and go on',f(){ if((S.spoils||[]).length){ var _sp=spoilEvent(); if(_sp)S.pendingEvent=_sp; } }}]}; }
+function deathDialog(){ const q=S.deathQueue||[]; S.deathQueue=[]; if(!q.length)return null; const one=q.length===1; const list=q.map(d=>d.name).join('; '); const cz=q[0].cause?(' \u2014 '+q[0].cause):''; const body=one?(q[0].name+", "+q[0].role+", is dead"+cz+". You raise what marker the ground allows, and go on \u2014 the company quieter, the watch thinner."):("The road has taken "+list+". You bury them as the ground allows and go on, the caravan much diminished."); return {h:one?'A DEATH IN THE COMPANY':'DEATHS IN THE COMPANY', t:body, ch:[{l:'Bow your head and go on',f(){ if((S.spoils||[]).length){ var _sp=spoilEvent(); if(_sp)S.pendingEvent=_sp; } }}]}; }
 function recoverGear(v){ if(!v||!v.gear||S._noRecover) return 0; var n=0; ['weapon','armor','bow','cloak'].forEach(function(sl){ if(v.gear[sl]){ S.spoils=S.spoils||[]; S.spoils.push({slot:sl,id:v.gear[sl],from:((v.name||'a fallen companion').split(',')[0])}); v.gear[sl]=null; n++; } }); return n; }
 function stripGear(){ var lost=[]; livingParty().forEach(function(p){ if(p.gear){ ['weapon','armor','bow','cloak'].forEach(function(sl){ if(p.gear[sl]){ lost.push(gLabel(sl,p.gear[sl])); p.gear[sl]=null; } }); } }); return lost; }
 function spoilEvent(){ S.spoils=S.spoils||[]; if(!S.spoils.length) return null; var sp=S.spoils[0]; var nm=gLabel(sp.slot,sp.id);
@@ -1317,11 +1341,10 @@ function casualty(kill, cold){ // wound (false) or kill (true) a living party me
   if(v.hp<=0){ v.alive=false; noteDeath(v); return v.name+' ('+v.role+')'; }  // already hurt: this one finishes them
   return v.name;
 }
-function partyFight(){ return skillSum('fight'); }
 function mountedGuards(){ if(!S||!S.herd)return 0; const horses=S.herd.horse||0; if(horses<=0||guardCount()<=0)return 0; const surplus=cargoCap()-cargoW(); const spare=Math.min(horses, Math.floor(Math.max(0,surplus)/((ANIMALS.horse&&ANIMALS.horse.carry)||9))); return Math.min(spare, guardCount()); } // spare horses mount your guards: +1 each
 function healMembers(amt){ if(!S)return; for(const p of livingParty()){ if(p.hp!=null && p.hp<100) p.hp=Math.min(100,p.hp+amt); } }
 function healSouls(amt){ if(!S||typeof souls!=='function')return; souls().forEach(function(z){ soulHp(z); if(z.hp<100){ z.hp=Math.min(100,z.hp+amt); if(z.hp>=80&&z.cond==='sick')z.cond='hale'; } }); }
-function combatStrength(){ return 1 + livingComps() + skillSum('fight') + mountedGuards(); } // each able body counts 1 (you + companions), plus blade-training // each member's combat skill, summed — guards carry most of it
+function combatStrength(){ return 1 + livingComps() + livingParty().reduce(function(a,p){return a+(combFS(p)>=12?2:combFS(p)>=8?1:0);},0) + mountedGuards(); } // each able body counts 1 (you + companions), plus blade-training // each member's combat skill, summed — guards carry most of it
 function sickTarget(){
   const lp=livingParty();
   return lp.length?pick(lp):null;
@@ -1336,6 +1359,19 @@ function evDromedaryCold(){
     {l:'Press on regardless',f(){ if((S.herd.dromedary>0) && rnd()<0.5){ S.herd.dromedary--; log("You push on hard, and a dromedary founders in the cold and does not rise again. The rest of the string eyes you balefully."); } else log("You drive on; the dromedaries suffer the cold but keep their feet \u2014 this time."); }}
   ]};
 }
+// wealth lures predators: 0% extra at <=5000s, ramping linearly to +100% (x2) at >=20000s
+function wealthLure(){ var cv=convoyValue(); return 1+Math.max(0,Math.min(1,(cv-5000)/15000)); }
+function burnGoods(frac){ var lost=[];
+  for(const g of GOODS){ if(!FLAMMABLE.has(g.id)) continue; var have=(S.goods[g.id]||0); if(have<=0) continue;
+    var n=(g.id==='naphtha')?have:Math.max(1,Math.round(have*frac)); if(n>have)n=have; S.goods[g.id]-=n; if(S.goods[g.id]<=0)S.basis[g.id]=0;
+    lost.push(n+' '+g.u+(n>1?'s':'')+' of '+g.n.toLowerCase()); }
+  return lost; }
+function evCampFire(){ var naph=(S.goods&&S.goods.naphtha)||0;
+  var lead=naph>0?"A knocked lamp, a stray spark \u2014 and a jar of naphtha goes up. Flame races through the packs faster than men can beat it back.":"A camp-fire spark leaps to the baggage in the night, and the dry packs take light.";
+  return {h:'<span class="red">FIRE IN THE CAMP</span>', t:lead+" The stone and metal will keep; the cloth, the paper, the oil will not.", ch:[
+   {l:'Beat it out \u2014 wade in and save the cargo', f(){ var lost=burnGoods(naph>0?0.35:0.22); var _hp=6+ri(8); S.hp=clamp(S.hp-_hp,0,100); var _who=(livingComps()>0 && rnd()<0.25)?casualty(false):null; log("You and your people flog the flames down with cloaks and sand"+(lost.length?", but not before the fire takes "+lost.join(', '):"")+". Singed and half-choked, you save the rest."+(_who?' '+_who+' is burned in the doing.':'')); if(S.hp<=0){S.cause='a fire in camp';die();} }},
+   {l:'Get the beasts clear and let it burn', f(){ var lost=burnGoods(naph>0?0.7:0.5); log("You cut the burning packs loose and haul the animals back from the heat. By dawn the fire is ash, and "+(lost.length?lost.join(', ')+' with it':'a good part of your cargo with it')+"."); }},
+  ]}; }
 function buildEvent(terr){
   const pool=[];
   const add=(w,f)=>{for(let i=0;i<w;i++)pool.push(f)};
@@ -1349,10 +1385,11 @@ function buildEvent(terr){
   if(terr==='settled'){add(3,evInspect); add(3,evSogdian); add(2,evRebellion); add(2+(tollActive()?1:0),evCaravanserai); add(2,evCamel); add(2,evCholera);}
   if(terr==='settled' && S.goods){ const _t=S.goods.tea||0; if(_t>=10)add(2,evInspect); else if(_t>=1)add(1,evInspect); }
   add(3,evSick); add(2,evRoadDeal); add(2,evMonk); add(1,evHideout);
+  { var _nph=(S.goods&&S.goods.naphtha)||0; if(_nph>0) add(Math.min(5,1+Math.round(_nph/8)), evCampFire); }
   if(S.goods && S.goods.slaves>0) add(2, evSouls);
   // bandits: base presence by terrain, scaled by your reputation (pay them and word spreads; beat them and they avoid you)
   let banditBase={steppe:3,desert:2,forest:2,mountain:2,rugged:2,settled:1,marsh:1,jungle:1,harsh:0.5}[terr]||1; // bandits favour ambush country (forest/hills/passes) and roads near towns; only the deep desert (harsh) is too inhospitable to lurk in. contested frontiers add x1.6 below.
-  if(banditBase){ let bw=banditBase*(S.banditFreq||1); if(inContestedZone())bw*=1.6; if(S.banditVengeance && S.day<=S.banditVengeance)bw*=1.2; if(convoyValue()>10000)bw*=2; { const _lk=legPairKey(city().name,(nextCity()||{}).name||''); const _tf=(S.legTraffic&&S.legTraffic[_lk])||0; bw*=(1+0.05*_tf); } add(Math.max(0,Math.round(bw)), evBandits); }
+  if(banditBase){ let bw=banditBase*(S.banditFreq||1); if(inContestedZone())bw*=1.6; if(S.banditVengeance && S.day<=S.banditVengeance)bw*=1.2; bw*=wealthLure(); { const _lk=legPairKey(city().name,(nextCity()||{}).name||''); const _tf=(S.legTraffic&&S.legTraffic[_lk])||0; bw*=(1+0.05*_tf); } add(Math.max(0,Math.round(bw)), evBandits); }
   for(let i=0;i<8;i++){
     const fn=pick(pool);
     if(seraiActive()){ // recently rested & gathered road-news: more cautious, better informed
@@ -1586,7 +1623,6 @@ function evRebellion(){
   return {h:'NEWS FROM THE EAST',t:"A courier rests his horse at your fire. The rebellion drags on; the Yangzhou looms are disrupted; silk will be scarce in the west this year. Your bolts feel suddenly heavier with value.",
   ch:[{l:'Note it in the ledger',f(){ const tr=bestAt('trade'); log((tr?tr.name+" underlines the silk entry twice":"You underline the silk entry twice, in your head")+". Western silk prices are rising.");}}]};
 }
-function inAnatolia(){const n=nextCity(); return n && (n.name==='Iconium'||n.name==='Constantinople'|| city().name==='Aleppo'||city().name==='Iconium');}
 function inTaurusLeg(){ const a=city()&&city().name, b=(nextCity()||{}).name; return (a==='Iconium'&&b==='Aleppo')||(a==='Aleppo'&&b==='Iconium'); }
 function evSnow(){
   const taurus=inTaurusLeg();
@@ -1828,11 +1864,6 @@ function sell(gid,n){
   if(gid!=='slaves') log("Sold "+q+" "+g.u+(q>1?'s':'')+" of "+g.n.toLowerCase()+" at "+p+" s"+(conutPen<1?" (they grow their own here)":(sat>=.08?" (the market here can only take so much)":(p>mp?" (talked up from "+mp+")":(base<mp?" (the price you settled here)":""))))+((hg&&base>mp&&conutPen===1)?" — "+hg.p.name+" knows this trade":"")+".");
   render();
 }
-function camelPrice(){ const c=city(); return CAMEL_PRICE[c.name] || ({settled:90,steppe:60,desert:62,harsh:60,mountain:74}[c.terr]) || 70; }
-function buyCamel(){ const p=camelPrice(); if(S.silver>=p){S.silver-=p;S.camels++;S.water=waterMax();log("A new camel joins the string at "+p+" silver, its skins filled at the city wells. The others bully it immediately.");}else log("Camels cost "+p+" silver here. The dealer is unmoved by your circumstances."); render(); }
-function sellCamel(){ if(S.camels<=1){log("Your last camel is not for sale, unless you intend to carry the silk yourself.");render();return;}
-  const p=Math.round(camelPrice()*.85); S.camels--; S.silver+=p; S.water=Math.min(S.water,waterMax());
-  log("You sell a camel for "+p+" silver. It leaves without looking back, which is more than you'd do."); render(); }
 function wageRate(){ return 1 + Math.floor(convoyValue()/10000); } // 1 s/day, +1 per 10,000 s of convoy value
 function accrueGuardWages(){ if(!S)return; const owe=guardWageTotal(); if(owe>0){ if(S.silver>=owe){S.silver-=owe;} else { S.wageDebt=(S.wageDebt||0)+(owe-S.silver); S.silver=0; } } }
 function guardCost(){ return Math.round(40*Math.pow(1.1, guardCount())*(S.hirePenalty||1)); } // +10% per guard already kept; more if you've stiffed guards
@@ -1983,12 +2014,12 @@ function evRecruit(){
   markEv('recruit');
   const fee=35+ri(25);
   const tmpl={...pick(GUARD_SKILLS)};
-  const _ex=pick(['cook','handle','hunt','trade']); tmpl[_ex]=(tmpl[_ex]||0)+2;
+  const _ex=pick(['cook','handle','hunt','trade']); if(_ex!=='hunt') tmpl[_ex]=(tmpl[_ex]||0)+2; // hunt is no longer a 0-3 skill; a marksman recruit carries explicit HS instead
   const _exd={cook:'a fair hand at the cook-fire',handle:'easy with the beasts',hunt:'a useful shot for the pot',trade:'shrewder at a bargain than he looks'}[_ex];
   const nm=pick(guardNamePool(city().name));
   return {h:'A HAND FOR HIRE',t:nm+", a caravan veteran between jobs, offers to sign on for "+fee+" silver up front — more than the going rate, but he is scarred, sober, handy in a fight, and "+_exd+" besides.",
   ch:[
-   {l:'Hire '+nm+' ('+fee+' s)',f(){ if(S.silver>=fee){S.silver-=fee;S.party.push({name:nm,role:'a hired guard',kind:'guard',wage:wageRate(),alive:true,region:(GUARD_CITY_REGION[city().name]||''),skills:{...tmpl}}); normalizeMember(S.party[S.party.length-1]); log(nm+" joins the caravan and immediately criticises your watch-rotation.");} else log("You can't meet his price. He shrugs and waits for a richer caravan.");}},
+   {l:'Hire '+nm+' ('+fee+' s)',f(){ if(S.silver>=fee){S.silver-=fee;S.party.push({name:nm,role:'a hired guard',kind:'guard',wage:wageRate(),alive:true,hs:(_ex==='hunt'?12:null),gear:(_ex==='hunt'?{armor:null,bow:'bow',weapon:null,cloak:null}:null),region:(GUARD_CITY_REGION[city().name]||''),skills:{...tmpl}}); normalizeMember(S.party[S.party.length-1]); log(nm+" joins the caravan and immediately criticises your watch-rotation.");} else log("You can't meet his price. He shrugs and waits for a richer caravan.");}},
    {l:'Travel light',f(){log("You decline. Fewer mouths, fewer swords — a gamble either way.");}},
   ]};
 }
@@ -2270,65 +2301,65 @@ function frontierEvent(spec){
 
 /* ---- local recruits, one per city ---- */
 const CITYFOLK={
- 'Beshbalik':{name:'Il-Tegin',role:'a Uyghur horse-archer of the Beiting garrison',skills:{fight:2,hunt:1},tav:'a frontier drinking-hall of Tang soldiers, Uyghur riders, and Sogdian factors',join:'He can put three arrows in the air before the first strikes \u2014 and he knows the Dzungarian passes cold.'},
- 'Talas':{name:'Fang Cheng',role:'a Tang papermaker, taken prisoner at the Talas fight',skills:{trade:2,cook:1},tav:'a Karluk town of felt tents and the new smell of drying paper',join:'Eleven years a captive of the Karluks; he taught them paper, and learned every price and road between here and Kashgar.'},
- 'Ispijab':{name:'Ohrmazd',role:'a broker of the Ispijab caravan-market',skills:{trade:2,handle:1},tav:'a vast walled market-town where a hundred tongues haggle at once',join:'He knows every toll, every honest weigh-house, and every crooked one, from Chach to the Chu.'},
- 'Chach':{name:'Tarkhan',role:'a horse-breaker of the Chach studs',skills:{handle:2,fight:1},tav:'loud with grooms and cavalry-men, the air of horses under the wine',join:'Chach breeds the finest cavalry mounts in the world, and he can gentle any of them \u2014 or ride it down.'},
- "Chang'an":{name:'Wen Shu',role:'a disgraced court clerk with a head for figures',skills:{trade:2},tav:'loud with off-duty soldiers and fresh rumour of the rebellion',join:'He can read three scripts and cheat in all of them.'},
- 'Lanzhou':{name:'Tieh',role:'a Yellow River ferryman tired of the crossing',skills:{handle:2,fight:1},salty:true,tav:'thick with boatmen and the smell of river mud',join:'He knows every ford and every liar between here and the sea.'},
- 'Wuwei':{name:'Ashina Bel',role:'a Turk horse-soldier between wars',skills:{fight:2,handle:1},tav:'a garrison drinking-hall, all dice and old grudges',join:'He carries the scars of a man who wins more fights than he starts.'},
- 'Dunhuang':{name:'Mingyue',role:'a cave-painter who can cook for forty',skills:{cook:2},tav:'quiet, full of monks and pilgrims bound for the painted caves',join:'She fed the painters of the Thousand Buddhas; your caravan will not go hungry.'},
- 'Hami':{name:'Qara',role:'a melon-farmer’s son hungry to see the world',skills:{hunt:1,cook:1},desertwise:true,tav:'sticky with melon-wine and homesick songs',join:'Young, green, and stubbornly cheerful — and oasis-bred, with a nose for water where the maps show none.'},
- 'Turfan':{name:'Nana-vandak',role:'a Sogdian vintner’s agent',skills:{trade:2},tav:'cool in an underground cellar, heavy with new wine and the steam of mutton dumplings',join:'He knows what every jar in the west is worth and pretends not to.'},
- 'Kucha':{name:'Suvarna',role:'a lute-player with a soldier’s past',skills:{fight:1,cook:1,hunt:1},bard:true,tav:'ringing with Kuchean lutes and unwise wagers',join:'He plays for the caravan by night and watches the dark while you sleep — and his cutting wit in a fight unsettles bandits as much as it heartens your own people.'},
- 'Aksu':{name:'Toq',role:'a hunter off the slopes of the Tianshan',skills:{hunt:2,fight:1},mountainwise:true,tav:'small and smoky, hung with the pelts of the Heavenly Mountains',join:'He brings back meat where other men bring back excuses.'},
- 'Kashgar':{name:'Yusuf the Wide',role:'a bazaar broker who knows every road',skills:{trade:2,handle:1},tav:'a crossroads inn where four tongues argue a single price',join:'He has friends, debts, and an opinion in every town to the horizon.'},
- 'Miran':{name:'Lop',role:'a salt-flat guide who has buried partners',skills:{handle:1,hunt:1},desertwise:true,tav:'a lonely well-house at the desert’s edge',join:'He has crossed the worst of it more often than is healthy, and finds water where others find only their own bones.'},
- 'Khotan':{name:'Ratnadevi',role:'a jade-trader’s sharp-eyed daughter',skills:{trade:2},tav:'low and rich, traders fingering green stones by lamplight',join:'She can tell river-jade from glass in the dark, by weight alone.'},
- 'Yarkand':{name:'Bahram',role:'an oasis camel-breeder',skills:{handle:2,hunt:1},desertwise:true,tav:'shaded and slow, all caravan-men and camel-talk',join:'Oasis-raised, he knows which desert wells still run and which are only bones and sand.'},
- 'Akhsikath':{name:'Manas-bek',role:'a Ferghana horseman of the high valleys',skills:{fight:2,handle:1},tav:'rough and warm in the shadow of Sulaiman’s rock, loud with mountain songs',join:'He rides the blood-sweating horses of Ferghana and fears no pass.'},
- 'Samarkand':{name:'Devashtich',role:'a Sogdian merchant-prince’s younger son',skills:{trade:3},tav:'a fine caravanserai of fountains and figs',join:'Born to the trade; the bazaars of Sogdiana run in his blood.'},
- 'Bukhara':{name:'Bibi Gul',role:'a money-changer of formidable arithmetic',skills:{trade:2,cook:1},tav:'scholarly and shrewd, silver clinking under the talk',join:'She weighs a coin by eye and a man by his ledger.'},
- 'Merv':{name:'Firuz the Leech',role:'a physician trained in the hospitals of Merv',skills:{cook:3},tav:'civilised and calm, full of poets and doctors and quiet argument',join:'Where there is a physician of Merv, fewer of your company die on the road.'},
- 'Nishapur':{name:'Omar',role:'a turquoise-miner with a poet’s tongue',skills:{handle:1,trade:1,cook:1},tav:'smoky with verse, wine, and questionable philosophy',join:'He digs blue stone by day and argues the stars by night.'},
- 'Rey':{name:'Shahrbanu',role:'a bazaar interpreter of four tongues',skills:{trade:2,fight:1},tav:'a babel of four languages haggling at once',join:'She bargains in four tongues and curses in a fifth.'},
- 'Baghdad':{name:'Ja’far',role:'a Round City clerk who smells opportunity',skills:{trade:2,cook:1},tav:'new-built and crowded, the whole world passing through',join:'He knows which of the Caliph’s officials can be reasoned with.'},
- 'Aleppo':{name:'Khalil',role:'a caravan-guard of the Syrian roads',skills:{fight:3},noSlaves:true,tav:'cumin-scented and citadel-shadowed, full of hard men',join:'He has guarded richer caravans than yours, and buried their masters.'},
- 'Iconium':{name:'Theodoros',role:'a Greek muleteer of the Anatolian passes',skills:{handle:2,hunt:1},tav:'cold and Christian, the wine as sharp as the plateau wind',join:'He knows the snows of the Taurus the way you know your own purse.'},
- 'Luoyang':{name:'Cui Mian',role:'a Grand Canal bargeman who lost his barge to the war',skills:{handle:2,fight:1},salty:true,tav:'a canalside wine-shop loud with bargemen and old debts',join:'He has poled the Canal from the Yellow River to the Yangtze, and reads moving water the way you read a ledger.'},
- 'Yangzhou':{name:'Masʻud',role:'a Persian sea-trader who lived through the sack of the foreign quarter',skills:{trade:2,fight:1},salty:true,tav:'a riverfront inn rebuilt over burned timbers',join:'When the soldiers turned on the foreign merchants he lost everything but his life; he means to win it back on the road.'},
- 'Guangzhou':{name:'Nakhuda Ishaq',role:'a Persian ship-master of the Canton trade',skills:{trade:2,handle:1},salty:true,tav:'a foreign-quarter tavern thick with pepper and pitch',join:'He has run dhows from Siraf to Canton and back, and reads a night sky the way a scholar reads a page.'},
- 'Kauthara':{name:'Po Klaung',role:'a Cham diver and coaster of the Champa shore',skills:{handle:1,hunt:1},salty:true,tav:'a stilt-house grog-shop over the lagoon',join:'He holds his breath longer than seems decent and swims where boats dare not go.'},
- 'Palembang':{name:'Dapunta',role:'a Malay pilot of the Srivijaya straits',skills:{handle:2},salty:true,tav:'a riverside shed under the dripping forest',join:'He knows every reef, pirate-cove and tide-race in the Strait — which is to say the most dangerous water on earth.'},
- 'Mantai':{name:'Ilango',role:'a Tamil pearl-trader of Sarandib',skills:{trade:2},tav:'a pearl-market tavern smelling of cinnamon',join:'He can value a pearl by candlelight, and has a low opinion of everyone who cannot.'},
- 'Kollam':{name:'Mar Thoma',role:'a St Thomas Christian spice-broker',skills:{trade:2,cook:1},tav:'a pepper-merchant’s cool stone house',join:'His people have traded this coast since the Apostle’s day; he knows the true price of pepper to the last grain.'},
- 'Basra':{name:'Sinbad',role:'a sailor with rather too many stories',skills:{trade:2,fight:1},salty:true,tav:'a Shatt-al-Arab dock-tavern where every man claims to have sailed furthest',join:'He has been shipwrecked, he swears, seven times, and come home richer each time. At least the first half is certainly true.'},
- 'Dhofar':{name:'Saʻid',role:'an Omani dhow-master of the incense coast',skills:{handle:1,trade:1},salty:true,tav:'a frankincense-scented harbour shack',join:'He carries frankincense to India and rice home again, and has never once lost a cargo he will admit to.'},
- 'Socotra':{name:'Diosqoros',role:'a Socotran aloe-gatherer of the old Christian isle',skills:{hunt:1,handle:1},salty:true,tav:'a cave-mouth tavern under the dragon-blood trees',join:'Island-bred and half a pirate, he knows the aloes, the reefs, and a charm or two he swears keep a ship afloat.'},
- 'Zanzibar':{name:'Kisima',role:'a Zanj ivory-trader of Unguja',skills:{trade:1,handle:1},salty:true,tav:'a coral-stone tavern open to the sea-wind',join:'He deals ivory and mangrove-poles up and down the Zanj coast and has the trade-tongue of every dhow that calls.'},
- 'Aden':{name:'Qahtan',role:'an Adeni transshipment broker',skills:{trade:2},salty:true,tav:'a harbour counting-house turned wine-shop',join:'Every cargo bound for Egypt passes through his hands at Aden; he takes his cut of the whole world and means to go on taking it.'},
- 'Qulzum':{name:'Buqtor',role:'a Coptic Red Sea sailor',skills:{handle:1,fight:1},salty:true,tav:'a sun-blasted quay-tavern on the Red Sea',join:'He runs the windless, reef-strewn Red Sea by oar and patience, and knows which water-stops still run sweet.'},
- 'Fustat':{name:'Yaqub',role:'a Jewish India-trader of the Fustat funduq',skills:{trade:3},tav:'a fondaco courtyard stacked to the beams with bales',join:'His letters of credit are honoured from Cairo to Malabar; he is worth more than your whole caravan, and better company.'},
- 'Alexandria':{name:'Theophanes',role:'a Greek captain of the Middle Sea',skills:{handle:1,fight:1},salty:true,tav:'a harbour taverna in the shadow of the old lighthouse’s stump',join:'He has run grain to the City and back through every weather the sea can raise, and lived to overcharge you for the tale.'},
- 'Ephesus':{name:'Stavros',role:'an Ephesian fisherman of the silting harbour',skills:{hunt:1,handle:1},salty:true,tav:'a quay-shack hung with drying nets',join:'His harbour is dying under the river’s silt, and he is ready to follow the trade wherever it has gone.'},
- 'Gortyn':{name:'Manolis',role:'a Cretan warehouse-broker',skills:{trade:2},salty:true,tav:'a vaulted Cretan wine-cellar',join:'He warehouses goods bound four ways across the Middle Sea and knows which captain to trust and which to watch like a gull.'},
- 'Trebizond':{name:'Vakhtang',role:'a Lazic captain of the Pontic coast',skills:{handle:1,fight:1},salty:true,tav:'a smoky harbour-tavern facing the Inhospitable Sea',join:'He runs the storm-wracked Black Sea coast west to the City, and has buried partners enough to be careful.'}
+ 'Beshbalik':{name:'Il-Tegin',role:'a Uyghur horse-archer of the Beiting garrison',skills:{},fs:12,hs:3,tav:'a frontier drinking-hall of Tang soldiers, Uyghur riders, and Sogdian factors',join:'He can put three arrows in the air before the first strikes \u2014 and he knows the Dzungarian passes cold.'},
+ 'Talas':{name:'Fang Cheng',role:'a Tang papermaker, taken prisoner at the Talas fight',skills:{trade:2,cook:1},fs:6,hs:3,tav:'a Karluk town of felt tents and the new smell of drying paper',join:'Eleven years a captive of the Karluks; he taught them paper, and learned every price and road between here and Kashgar.'},
+ 'Ispijab':{name:'Ohrmazd',role:'a broker of the Ispijab caravan-market',skills:{trade:2,handle:1},fs:6,hs:3,tav:'a vast walled market-town where a hundred tongues haggle at once',join:'He knows every toll, every honest weigh-house, and every crooked one, from Chach to the Chu.'},
+ 'Chach':{name:'Tarkhan',role:'a horse-breaker of the Chach studs',skills:{handle:2},fs:6,hs:3,tav:'loud with grooms and cavalry-men, the air of horses under the wine',join:'Chach breeds the finest cavalry mounts in the world, and he can gentle any of them \u2014 or ride it down.'},
+ "Chang'an":{name:'Wen Shu',role:'a disgraced court clerk with a head for figures',skills:{trade:2},fs:6,hs:3,tav:'loud with off-duty soldiers and fresh rumour of the rebellion',join:'He can read three scripts and cheat in all of them.'},
+ 'Lanzhou':{name:'Tieh',role:'a Yellow River ferryman tired of the crossing',skills:{handle:2},fs:6,hs:3,salty:true,tav:'thick with boatmen and the smell of river mud',join:'He knows every ford and every liar between here and the sea.'},
+ 'Wuwei':{name:'Ashina Bel',role:'a Turk horse-soldier between wars',skills:{handle:1},fs:12,hs:3,tav:'a garrison drinking-hall, all dice and old grudges',join:'He carries the scars of a man who wins more fights than he starts.'},
+ 'Dunhuang':{name:'Mingyue',role:'a cave-painter who can cook for forty',skills:{cook:2},fs:6,hs:3,tav:'quiet, full of monks and pilgrims bound for the painted caves',join:'She fed the painters of the Thousand Buddhas; your caravan will not go hungry.'},
+ 'Hami':{name:'Qara',role:'a melon-farmer’s son hungry to see the world',skills:{cook:1},fs:6,hs:3,desertwise:true,tav:'sticky with melon-wine and homesick songs',join:'Young, green, and stubbornly cheerful — and oasis-bred, with a nose for water where the maps show none.'},
+ 'Turfan':{name:'Nana-vandak',role:'a Sogdian vintner’s agent',skills:{trade:2},fs:6,hs:3,tav:'cool in an underground cellar, heavy with new wine and the steam of mutton dumplings',join:'He knows what every jar in the west is worth and pretends not to.'},
+ 'Kucha':{name:'Suvarna',role:'a lute-player with a soldier’s past',skills:{cook:1},fs:6,hs:3,bard:true,tav:'ringing with Kuchean lutes and unwise wagers',join:'He plays for the caravan by night and watches the dark while you sleep — and his cutting wit in a fight unsettles bandits as much as it heartens your own people.'},
+ 'Aksu':{name:'Toq',role:'a hunter off the slopes of the Tianshan',skills:{},fs:8,hs:12,mountainwise:true,tav:'small and smoky, hung with the pelts of the Heavenly Mountains',join:'He brings back meat where other men bring back excuses.'},
+ 'Kashgar':{name:'Yusuf the Wide',role:'a bazaar broker who knows every road',skills:{trade:2,handle:1},fs:6,hs:3,tav:'a crossroads inn where four tongues argue a single price',join:'He has friends, debts, and an opinion in every town to the horizon.'},
+ 'Miran':{name:'Lop',role:'a salt-flat guide who has buried partners',skills:{handle:1},fs:6,hs:3,desertwise:true,tav:'a lonely well-house at the desert’s edge',join:'He has crossed the worst of it more often than is healthy, and finds water where others find only their own bones.'},
+ 'Khotan':{name:'Ratnadevi',role:'a jade-trader’s sharp-eyed daughter',skills:{trade:2},fs:6,hs:3,tav:'low and rich, traders fingering green stones by lamplight',join:'She can tell river-jade from glass in the dark, by weight alone.'},
+ 'Yarkand':{name:'Bahram',role:'an oasis camel-breeder',skills:{handle:2},fs:6,hs:3,desertwise:true,tav:'shaded and slow, all caravan-men and camel-talk',join:'Oasis-raised, he knows which desert wells still run and which are only bones and sand.'},
+ 'Akhsikath':{name:'Manas-bek',role:'a Ferghana horseman of the high valleys',skills:{handle:1},fs:12,hs:3,tav:'rough and warm in the shadow of Sulaiman’s rock, loud with mountain songs',join:'He rides the blood-sweating horses of Ferghana and fears no pass.'},
+ 'Samarkand':{name:'Devashtich',role:'a Sogdian merchant-prince’s younger son',skills:{trade:3},fs:6,hs:3,tav:'a fine caravanserai of fountains and figs',join:'Born to the trade; the bazaars of Sogdiana run in his blood.'},
+ 'Bukhara':{name:'Bibi Gul',role:'a money-changer of formidable arithmetic',skills:{trade:2,cook:1},fs:6,hs:3,tav:'scholarly and shrewd, silver clinking under the talk',join:'She weighs a coin by eye and a man by his ledger.'},
+ 'Merv':{name:'Firuz the Leech',role:'a physician trained in the hospitals of Merv',skills:{cook:3},fs:6,hs:3,tav:'civilised and calm, full of poets and doctors and quiet argument',join:'Where there is a physician of Merv, fewer of your company die on the road.'},
+ 'Nishapur':{name:'Omar',role:'a turquoise-miner with a poet’s tongue',skills:{handle:1,trade:1,cook:1},fs:6,hs:3,tav:'smoky with verse, wine, and questionable philosophy',join:'He digs blue stone by day and argues the stars by night.'},
+ 'Rey':{name:'Shahrbanu',role:'a bazaar interpreter of four tongues',skills:{trade:2},fs:6,hs:3,tav:'a babel of four languages haggling at once',join:'She bargains in four tongues and curses in a fifth.'},
+ 'Baghdad':{name:'Ja’far',role:'a Round City clerk who smells opportunity',skills:{trade:2,cook:1},fs:6,hs:3,tav:'new-built and crowded, the whole world passing through',join:'He knows which of the Caliph’s officials can be reasoned with.'},
+ 'Aleppo':{name:'Khalil',role:'a caravan-guard of the Syrian roads',skills:{},fs:12,hs:3,noSlaves:true,tav:'cumin-scented and citadel-shadowed, full of hard men',join:'He has guarded richer caravans than yours, and buried their masters.'},
+ 'Iconium':{name:'Theodoros',role:'a Greek muleteer of the Anatolian passes',skills:{handle:2},fs:6,hs:3,tav:'cold and Christian, the wine as sharp as the plateau wind',join:'He knows the snows of the Taurus the way you know your own purse.'},
+ 'Luoyang':{name:'Cui Mian',role:'a Grand Canal bargeman who lost his barge to the war',skills:{},fs:12,hs:3,salty:true,tav:'a canalside wine-shop loud with bargemen and old debts',join:'He has poled the Canal from the Yellow River to the Yangtze, and reads moving water the way you read a ledger.'},
+ 'Yangzhou':{name:'Masʻud',role:'a Persian sea-trader who lived through the sack of the foreign quarter',skills:{trade:2},fs:6,hs:3,salty:true,tav:'a riverfront inn rebuilt over burned timbers',join:'When the soldiers turned on the foreign merchants he lost everything but his life; he means to win it back on the road.'},
+ 'Guangzhou':{name:'Nakhuda Ishaq',role:'a Persian ship-master of the Canton trade',skills:{trade:2},fs:6,hs:3,salty:true,tav:'a foreign-quarter tavern thick with pepper and pitch',join:'He has run dhows from Siraf to Canton and back, and reads a night sky the way a scholar reads a page.'},
+ 'Kauthara':{name:'Po Klaung',role:'a Cham diver and coaster of the Champa shore',skills:{},fs:8,hs:12,salty:true,tav:'a stilt-house grog-shop over the lagoon',join:'He holds his breath longer than seems decent and swims where boats dare not go.'},
+ 'Palembang':{name:'Dapunta',role:'a Malay pilot of the Srivijaya straits',skills:{trade:1},fs:6,hs:3,salty:true,tav:'a riverside shed under the dripping forest',join:'He knows every reef, pirate-cove and tide-race in the Strait — which is to say the most dangerous water on earth.'},
+ 'Mantai':{name:'Ilango',role:'a Tamil pearl-trader of Sarandib',skills:{trade:2},fs:6,hs:3,tav:'a pearl-market tavern smelling of cinnamon',join:'He can value a pearl by candlelight, and has a low opinion of everyone who cannot.'},
+ 'Kollam':{name:'Mar Thoma',role:'a St Thomas Christian spice-broker',skills:{trade:2,cook:1},fs:6,hs:3,tav:'a pepper-merchant’s cool stone house',join:'His people have traded this coast since the Apostle’s day; he knows the true price of pepper to the last grain.'},
+ 'Basra':{name:'Sinbad',role:'a sailor with rather too many stories',skills:{trade:2},fs:6,hs:3,salty:true,tav:'a Shatt-al-Arab dock-tavern where every man claims to have sailed furthest',join:'He has been shipwrecked, he swears, seven times, and come home richer each time. At least the first half is certainly true.'},
+ 'Dhofar':{name:'Saʻid',role:'an Omani dhow-master of the incense coast',skills:{trade:2},fs:6,hs:3,salty:true,tav:'a frankincense-scented harbour shack',join:'He carries frankincense to India and rice home again, and has never once lost a cargo he will admit to.'},
+ 'Socotra':{name:'Diosqoros',role:'a Socotran aloe-gatherer of the old Christian isle',skills:{},fs:8,hs:12,salty:true,tav:'a cave-mouth tavern under the dragon-blood trees',join:'Island-bred and half a pirate, he knows the aloes, the reefs, and a charm or two he swears keep a ship afloat.'},
+ 'Zanzibar':{name:'Kisima',role:'a Zanj ivory-trader of Unguja',skills:{trade:2},fs:6,hs:3,salty:true,tav:'a coral-stone tavern open to the sea-wind',join:'He deals ivory and mangrove-poles up and down the Zanj coast and has the trade-tongue of every dhow that calls.'},
+ 'Aden':{name:'Qahtan',role:'an Adeni transshipment broker',skills:{trade:2},fs:6,hs:3,salty:true,tav:'a harbour counting-house turned wine-shop',join:'Every cargo bound for Egypt passes through his hands at Aden; he takes his cut of the whole world and means to go on taking it.'},
+ 'Qulzum':{name:'Buqtor',role:'a Coptic Red Sea sailor',skills:{},fs:12,hs:3,salty:true,tav:'a sun-blasted quay-tavern on the Red Sea',join:'He runs the windless, reef-strewn Red Sea by oar and patience, and knows which water-stops still run sweet.'},
+ 'Fustat':{name:'Yaqub',role:'a Jewish India-trader of the Fustat funduq',skills:{trade:3},fs:6,hs:3,tav:'a fondaco courtyard stacked to the beams with bales',join:'His letters of credit are honoured from Cairo to Malabar; he is worth more than your whole caravan, and better company.'},
+ 'Alexandria':{name:'Theophanes',role:'a Greek captain of the Middle Sea',skills:{},fs:12,hs:3,salty:true,tav:'a harbour taverna in the shadow of the old lighthouse’s stump',join:'He has run grain to the City and back through every weather the sea can raise, and lived to overcharge you for the tale.'},
+ 'Ephesus':{name:'Stavros',role:'an Ephesian fisherman of the silting harbour',skills:{},fs:8,hs:12,salty:true,tav:'a quay-shack hung with drying nets',join:'His harbour is dying under the river’s silt, and he is ready to follow the trade wherever it has gone.'},
+ 'Gortyn':{name:'Manolis',role:'a Cretan warehouse-broker',skills:{trade:2},fs:6,hs:3,salty:true,tav:'a vaulted Cretan wine-cellar',join:'He warehouses goods bound four ways across the Middle Sea and knows which captain to trust and which to watch like a gull.'},
+ 'Trebizond':{name:'Vakhtang',role:'a Lazic captain of the Pontic coast',skills:{},fs:12,hs:3,salty:true,tav:'a smoky harbour-tavern facing the Inhospitable Sea',join:'He runs the storm-wracked Black Sea coast west to the City, and has buried partners enough to be careful.'}
 };
 const CPL_ROSTER=[
- {id:'niketas',name:'Niketas',role:'a Byzantine customs-clerk turned freelance',skills:{trade:3}},
- {id:'bardas',name:'Halfdan',role:'a red-bearded axeman who has already crossed half the world from the cold North',skills:{fight:3}},
- {id:'bardas',name:'Bardas',role:'a huntsman of the Thracian forests',skills:{hunt:2,fight:1}},
- {id:'leo',name:'Leo the Pilot',role:'a Bosphorus boatman and ship-handler',skills:{fight:2},salty:true},
- {id:'hasan',name:'Hasan',role:'an Arab merchant long settled in the City',skills:{trade:2,handle:1}},
- {id:'irene',name:'Irene',role:'a silk-factor’s clever widow',skills:{trade:2,cook:1}},
- {id:'tervel',name:'Tervel',role:'a Bulgar horseman from beyond the walls',skills:{fight:2,handle:1}},
- {id:'photios',name:'Photios',role:'a scholar who cooks to fund his books',skills:{cook:2,trade:1}},
- {id:'vahan',name:'Vahan',role:'an Armenian drover who knows every mule-track east of the City',skills:{handle:2},join:'He can keep forty beasts on their feet and moving where other men would lose half the train.'},
- {id:'cplbard',name:'Alexios',role:'a kithara-player who introduces himself as a hero of song',skills:{trade:1,fight:1,handle:1},bard:true,join:'He can sing a hall to tears, charm a toll-keeper into a discount, pick a tune or a lock, and is sincerely convinced he is the hero of this story \u2014 yet useful far more often than that should allow, and the men step livelier for his songs.'}
+ {id:'niketas',name:'Niketas',role:'a Byzantine customs-clerk turned freelance',skills:{trade:3},fs:6,hs:3},
+ {id:'halfdan',name:'Halfdan',role:'a red-bearded axeman who has already crossed half the world from the cold North',skills:{},fs:12,hs:3},
+ {id:'bardas',name:'Bardas',role:'a huntsman of the Thracian forests',skills:{},fs:8,hs:12},
+ {id:'leo',name:'Leo the Pilot',role:'a Bosphorus boatman and ship-handler',skills:{},fs:12,hs:3,salty:true},
+ {id:'hasan',name:'Hasan',role:'an Arab merchant long settled in the City',skills:{trade:2,handle:1},fs:6,hs:3},
+ {id:'irene',name:'Irene',role:'a silk-factor’s clever widow',skills:{trade:2,cook:1},fs:6,hs:3},
+ {id:'tervel',name:'Tervel',role:'a Bulgar horseman from beyond the walls',skills:{handle:1},fs:12,hs:3},
+ {id:'photios',name:'Photios',role:'a scholar who cooks to fund his books',skills:{cook:2,trade:1},fs:6,hs:3},
+ {id:'vahan',name:'Vahan',role:'an Armenian drover who knows every mule-track east of the City',skills:{handle:2},fs:6,hs:3,join:'He can keep forty beasts on their feet and moving where other men would lose half the train.'},
+ {id:'cplbard',name:'Alexios',role:'a kithara-player who introduces himself as a hero of song',skills:{trade:1,handle:1},fs:6,hs:3,bard:true,join:'He can sing a hall to tears, charm a toll-keeper into a discount, pick a tune or a lock, and is sincerely convinced he is the hero of this story \u2014 yet useful far more often than that should allow, and the men step livelier for his songs.'}
 ];
-function topSkill(sk){ const names={trade:'a sharp trader',cook:'a fine cook and healer',handle:'a gifted camel-hand',hunt:'a hunter of note',fight:'a fighter'}; let best='a steady pair of hands',bv=0; for(const k in sk){ if(sk[k]>bv){bv=sk[k];best=names[k]||best;} } return best; }
+function topSkill(sk,p){ const names={trade:'a sharp trader',cook:'a fine cook and healer',handle:'a gifted camel-hand',hunt:'a hunter of note',fight:'a fighter'}; let best='a steady pair of hands',bv=0; for(const k in sk){ if(sk[k]>bv){bv=sk[k];best=names[k]||best;} } if(p){ const fv=((p.fs||0)-6)/3, hv=((p.hs||0)-6)/3; if(hv>bv&&hv>=fv){ best='a hunter of note'; bv=hv; } if(fv>bv) best='a seasoned fighter'; } /* fs/hs graded on the old 0-3 scale (12 ~ 2); highest tier names the talent */ return best; }
 const CHANGAN_ROSTER=[
- {id:'changbard',name:'Pei Lang',role:"a pipa-player of the Emperor's scattered Pear Garden troupe",skills:{cook:1,trade:1,handle:1},bard:true,join:"Trained in the Pear Garden before the rebellion broke it up, Pei Lang plays the pipa, mimics any official to the life, swallows fire for coin, and swears blind he once drank Li Bai under the table (the dates do not quite agree). The camp is merrier for him \u2014 and the bandits, somehow, the warier."}
+ {id:'changbard',name:'Pei Lang',role:"a pipa-player of the Emperor's scattered Pear Garden troupe",skills:{cook:1,trade:1,handle:1},fs:6,hs:3,bard:true,join:"Trained in the Pear Garden before the rebellion broke it up, Pei Lang plays the pipa, mimics any official to the life, swallows fire for coin, and swears blind he once drank Li Bai under the table (the dates do not quite agree). The camp is merrier for him \u2014 and the bandits, somehow, the warier."}
 ];
 function rollRecruit(name){
   let pool = name==='Constantinople' ? CPL_ROSTER : name==="Chang'an" ? (CITYFOLK["Chang'an"]?[CITYFOLK["Chang'an"]]:[]).concat(CHANGAN_ROSTER) : (CITYFOLK[name]?[CITYFOLK[name]]:[]);
@@ -2344,7 +2375,7 @@ function rollRecruit(name){
 function kentoshiTavern(scene){
   const t = scene + " Apart from the noise, straight-backed on a bench, sits a man in travel-worn robes of a cut no one here can place, a single slender straight-bladed sword laid with great care across his knees and a long lacquered bow leaning at his side. He is \u014ctomo no Yakatari, of a clan that has guarded the sovereigns of the Land of the Rising Sun, he says, since the age of the gods \u2014 a swordsman who came to Chang\u2019an three years past with the last embassy his country sent across the eastern ocean to the Tang court. He has been stranded ever since: the An Lushan rebellion shut the roads home, and the ships sent to carry the envoys back have been turned away, or wrecked, or becalmed, one after another \u2014 the year before last, last year, and again this very spring. \u201cThe sea to the east is closed to me,\u201d he says, with the stillness of a man who has made his peace with it, \u201cand the court I served is scattered to the winds. If I cannot go home, then I will go the other way, and see the far edge of the world I have only heard named. They tell me your road runs west without end.\u201d";
   return {h:'THE STRANDED SWORDSMAN', t:t, ch:[
-    {l:'Take \u014ctomo no Yakatari on for the road west',f(){ S.party.push({name:'\u014ctomo no Yakatari',role:'a stranded swordsman of the Yamato embassy',skills:{fight:3,hunt:1},alive:true,kind:'companion',recruited:true,hp:100,fromCity:"Chang'an",gear:{weapon:'chokuto',bow:'bow'},cbStats:{hp:12,fs:7,die:8}}); log("\u014ctomo no Yakatari rises, bows once to the whole room, and takes his place at your side. He will see the far edge of the world, he says \u2014 or fall honourably on the way to it, which he seems to count much the same thing."); }},
+    {l:'Take \u014ctomo no Yakatari on for the road west',f(){ S.party.push({name:'\u014ctomo no Yakatari',role:'a stranded swordsman of the Yamato embassy',skills:{},fs:12,hs:3,alive:true,kind:'companion',recruited:true,hp:100,fromCity:"Chang'an",gear:{weapon:'chokuto',bow:'bow'},cbStats:{hp:12,fs:7,die:8}}); log("\u014ctomo no Yakatari rises, bows once to the whole room, and takes his place at your side. He will see the far edge of the world, he says \u2014 or fall honourably on the way to it, which he seems to count much the same thing."); }},
     {l:'Salute his resolve, and leave him his cup',f(){ log("You leave the swordsman to his straight blade and his silence. He bows, gravely, and you feel \u2014 absurdly \u2014 that you have just failed some small and wordless test."); }},
   ]};
 }
@@ -2354,7 +2385,7 @@ function halfdanTavern(scene){
     ? "You, who have crossed the whole width of Asia, find you have met your match in restlessness; you trade road-tales late into the night, mostly by gesture and grin, and when he learns the road runs east as far again as he has already come, he is delighted. 'Then I am only half done,' he says."
     : "Even to you, a Roman, he is a marvel — they say his people row out of the northern mists to raid the monasteries at the edge of the world. He has little love for the drill-yard of the Emperor's guard, and when he hears you mean to cross to far Cathay his eyes light like a boy's. 'That,' he says, 'I will see.'");
   return {h:'A FAR-TRAVELLED STRANGER', t:t, ch:[
-    {l:'Take Halfdan on for the road east',f(){ S.party.push({name:'Halfdan',role:'a red-bearded axeman from the cold edge of the world',skills:{fight:3},alive:true,kind:'companion',recruited:true,hp:100,fromCity:'Constantinople',gear:{weapon:'battleaxe'},die:10}); log("Halfdan shoulders his axe and his sea-chest and joins the caravan. He will, he says, follow this road to wherever it finally ends."); }},
+    {l:'Take Halfdan on for the road east',f(){ S.party.push({name:'Halfdan',role:'a red-bearded axeman from the cold edge of the world',skills:{},fs:12,hs:3,alive:true,kind:'companion',recruited:true,hp:100,fromCity:'Constantinople',gear:{weapon:'battleaxe'},die:10}); log("Halfdan shoulders his axe and his sea-chest and joins the caravan. He will, he says, follow this road to wherever it finally ends."); }},
     {l:'Wish him well, and the guard joy of him',f(){ log("You leave the Northman to his cup and his axe. He raises the one to you and does not set down the other."); }},
   ]};
 }
@@ -2372,7 +2403,7 @@ function conanTavern(scene){
     return {h:'THE TAVERN', t: scene+" A big northerner with a sword across his knees has been watching your camp — Conan, he gives as his name, from somewhere beyond the steppes, where the snow comes early and the forests have no end. He speaks of his road without boast or shame: a raid that burned his village and killed his kin, the years he was carried off and sold and worked in chains, and the day he broke them. Then his eye falls on what your people keep roped in the dark, and the warmth goes out of him. 'I have worn that rope,' he says, rising. 'I'll not sit at the fire of the man who buys it.' He is gone into the night.", ch:[{l:'Let him go',f(){ log("Conan would not take a slaver’s coin."); }}]};
   }
   return {h:'THE TAVERN', t: scene+" A big northerner with a sword across his knees falls into talk with you — Conan, he says, from beyond the steppes, where the snow comes early. He tells his road plainly, with neither boast nor shame: his village burned in a raid when he was a boy, his kin killed, and he himself carried off and sold. He wore the chain some years, and then one day he did not — and here he is, west of all that, looking for a road and a fight. He will not wear armour ('a man should trust his arm, not a smith'), but there are few arms in the world like his.", ch:[
-    {l:'Welcome Conan to the company',f(){ S.party.push({name:'Conan',role:'a northern wanderer, once a slave',skills:{fight:3},fs:36,hs:6,noArmor:true,noSlaves:true,slaveWrath:true,alive:true,kind:'companion',recruited:true,fromCity:'Suyab'}); log("Conan the northerner joins the caravan — worth three sword-hands, and he asks for no armour, only his share and the open road."); }},
+    {l:'Welcome Conan to the company',f(){ S.party.push({name:'Conan',role:'a northern wanderer, once a slave',skills:{},fs:36,hs:6,noArmor:true,noSlaves:true,slaveWrath:true,alive:true,kind:'companion',recruited:true,fromCity:'Suyab'}); log("Conan the northerner joins the caravan — worth three sword-hands, and he asks for no armour, only his share and the open road."); }},
     {l:'Drink with him, but travel on as you are',f(){ log("You drink with Conan and leave him to find his own road west."); }}
   ]};
 }
@@ -2407,7 +2438,7 @@ function tavernEvent(){
   if(recruit && recruit.noSlaves && (S.goods.slaves||0)>0){ var _rn=recruit.name, _rr=recruit.role; return {h:'THE TAVERN', t: scene+" Across the fire "+_rn+", "+_rr+", talks easily with you \u2014 until the matter of your cargo comes up. At the word for what is chained in your camp he sets down his cup. 'I have hired my sword to many a caravan,' he says, rising, 'but never to a slaver\u2019s, and I will not start now.' He is gone into the night before the drink is cold.", ch:[{l:'Let him go',f(){ log(_rn+" would not take a slaver\u2019s coin."); }}]}; }
   if(recruit && recruit.nephew){ return nephewOffer(scene); }
   if(recruit){
-    return {h:'THE TAVERN', t: scene+" Across the fire, "+recruit.name+" — "+recruit.role+", "+topSkill(recruit.skills)+" — falls into talk with you, and before the night is out asks, half in jest and half not, whether your caravan might have room for one more.",
+    return {h:'THE TAVERN', t: scene+" Across the fire, "+recruit.name+" — "+recruit.role+", "+topSkill(recruit.skills,recruit)+" — falls into talk with you, and before the night is out asks, half in jest and half not, whether your caravan might have room for one more.",
       ch:[
        {l:'Welcome '+recruit.name+' to the company',f(){ S.party.push({...recruit,skills:{...recruit.skills},alive:true,kind:'companion',recruited:true,fromCity:c.name}); log(recruit.name+", "+recruit.role+", joins the caravan. "+(recruit.join||"")); }},
        {l:'Enjoy the night, but keep your company as it is',f(){ log('You drink with '+recruit.name+' and part as friends. Tavern talk: “'+rumor+'”'); }},
@@ -2463,11 +2494,6 @@ const CITY_ADMIRE={
 /* ---- sea passage Aleppo <-> Constantinople ---- */
 function seaOffer(){ S.pendingEvent=seaEvent(); render(); }
 function convoyValue(){ if(!S)return 0; let v=S.silver||0; for(const g of GOODS) v+=(S.goods[g.id]||0)*((g.e+g.w)/2); if(typeof herdValue==='function' && S.itin && S.itin[S.idx]) v+=herdValue(S.itin[S.idx]); return Math.round(v); }
-function piratesResolve(str,pirates){
-  const margin=str-pirates;
-  if(margin>=0){ banditRep(0.90,1); let s="Bows, boarding-pikes, and chaos on the wet decks. The pirates break off and pull for the shore."; if(rnd()<Math.max(.08,.40-.07*margin)){ const who=casualty(rnd()<.4); if(who) s+=" "+who+(/\(/.test(who)?" is killed in the boarding":" takes a wound but will mend"); } S.silver+=20+ri(40); s+=" You take what coin the dead were carrying."; if(S.hp<=0){S.cause='pirates';die();log(s);return;} log(s); S.pendingEvent={h:'PIRATES DRIVEN OFF',t:s,ch:[{l:'Sail on',f(){}}]}; }
-  else { S.cause='pirates'; for(const p of (S.party||[])) p.alive=false; S.hp=0; die(); log("They are too many. The fight is short and one-sided; the pirates take the ship, the cargo, and every soul aboard. Your venture ends on a red deck in a foreign sea."); }
-}
 function pirateVessel(){
   const nm = (S.voy? S.voy.to : S.portName); const o = (typeof SEA_ORDER!=='undefined') ? SEA_ORDER[nm] : null;
   if(o!=null){
@@ -2515,7 +2541,11 @@ function checkHistory(c){
   if(c.name==='Iconium'){ S.iconiumVisits=(S.iconiumVisits||0)+1; if(S.iconiumVisits>=2 && !S.onceFlags.iconoPun && livingParty().some(p=>p.fromCity==='Constantinople'||p.fromCity==='Iconium'||CPL_ROSTER.some(r=>r.name===p.name))){ S.onceFlags.iconoPun=true; const who=livingParty().find(p=>p.fromCity==='Constantinople'||p.fromCity==='Iconium'||CPL_ROSTER.some(r=>r.name===p.name)); log("As the gates of Iconium rise again, "+(who?who.name:'one of your Romans')+" grins sidelong at you: 'Iconium — again? You must be a true iconophile.' Half the company groans; the pun, like the icons themselves, refuses to stay down."); } }
 }
 function seaTerms(){ const m=monthNum(); const stormy=(m>=11||m<=2); return {stormy, wreck: stormy?0.30:0.08}; }
-function hasPilot(){ return !!(S && livingParty().some(p=>p.salty)); } // Leo the Pilot etc. — steadier at sea
+function hasPilot(){ return !!(S && livingParty().some(p=>p.salty)); }
+function seaSalts(){ return (S&&S.party)?livingParty().filter(function(p){return p.salty;}).length:0; }
+// sailor 'units' = living ship's crew (of 5) + each salty companion + 1 for all the non-sailors aboard.
+// baseline 6 (5 crew, none salty) => x1; fewer sailors multiplies wreck odds up to x6, more salty divides them down.
+function crewWreckMult(){ var crew=(S&&S.seaCrew!=null)?S.seaCrew:5; var units=crew+seaSalts()+1; return 6/Math.max(1,units); } // Leo the Pilot etc. — steadier at sea
 function hasBard(){ return !!(S && livingParty().some(p=>p.bard)); } // a bard cheers recruits and unnerves bandits
 function seaEvent(){
   const c=city();
@@ -2618,15 +2648,15 @@ function normalizeMember(p){
   if(!p) return p;
   if(p.hp==null) p.hp=100;
   if(!p.skills) p.skills={};
-  var base={trade:0,cook:0,handle:0,hunt:0,fight:0,track:0,stalk:0,archery:0};
+  var base={trade:0,cook:0,handle:0};
   for(var k in base){ if(p.skills[k]==null) p.skills[k]=base[k]; }
-  if(p.__subInit!==true){ var h=p.skills.hunt||0; if(h>0){ if(!p.skills.track)p.skills.track=h; if(!p.skills.stalk)p.skills.stalk=h; if(!p.skills.archery)p.skills.archery=h; } p.__subInit=true; }
+  if(p.fs==null) p.fs=baseFS(p); if(p.hs==null) p.hs=baseHS(cbRole(p));  // every member carries explicit FS/HS (guards & old saves derived here)
   if(p.riverwise && p.salty==null) p.salty=true;            // old saves: riverwise -> salty
   if(p.mount==null) p.mount=false;                          // assigned a riding horse?
   if(!p.gear) p.gear={armor:null,bow:null,weapon:null};     // extensible: lamellar armour, recurve bow, (1271) crossbow...
-  if(p.__gearInit!==true){ var _ft=p.skills.fight||0, _ht=p.skills.hunt||0;
-    if(p.kind==='guard' || (_ft>=2 && _ft>=_ht)){ if(!p.gear.weapon) p.gear.weapon=originWeapon(p); }   // a fighter carries a blade fitting their homeland
-    else if(_ht>=2 && _ht>=_ft){ if(!p.gear.bow) p.gear.bow='bow'; }                              // a hunter carries a bow
+  if(p.__gearInit!==true){ var _ft=combFS(p), _ht=combHS(p);
+    if(p.kind==='guard' || (_ft>=12 && _ft>=_ht)){ if(!p.gear.weapon) p.gear.weapon=originWeapon(p); }   // a fighter (FS>=12) carries a blade fitting their homeland
+    else if(_ht>=12){ if(!p.gear.bow) p.gear.bow='bow'; }                              // a hunter carries a bow
     p.__gearInit=true; }
   if(p.__wpnFix!==true){ if(p.gear.weapon==='sword'){ var _ow=originWeapon(p); if(_ow!=='sword') p.gear.weapon=_ow; } p.__wpnFix=true; }
   return p;
@@ -2877,22 +2907,8 @@ function perilLog(id, terr, n){
   log(subj+" on the road — "+ANIMALS[id].pl+" were never bred for "+why+". You divide the loads among the rest, who are not consulted.");
 }
 
-function startHumble(){
-  const nm=$('pname')?$('pname').value.trim():'';
-  if(!nm){ const w=$('nameWarn'); if(w)w.textContent='A name is required before you set out.'; return; }
-  newGame(nm, [], '', 'humble');
-}
 
 /* ============ v0.9.2 — title gate, travel buttons, regional pilgrims ============ */
-function nameGate(){
-  const ok = $('pname') && $('pname').value.trim().length>0;
-  const w=$('nameWarn'); if(w) w.textContent = ok ? '' : 'A name is required before you set out.';
-  const bh=$('btnHumble'); if(bh) bh.disabled = !ok;
-  const n=ROSTER.filter(r=>{const e=$('rc_'+r.id);return e&&e.checked}).length;
-  const bs=$('btnStart'); if(bs) bs.disabled = !(ok && n===3);
-  const bc=$('btnCpl'); if(bc) bc.disabled = !ok;
-  const bch=$('btnCplHumble'); if(bch) bch.disabled = !ok;
-}
 
 // hunt straight from the road without a separate "make camp" click
 function huntRoad(){ if(!S)return; S.journeying=false; clearJourney(); huntFood(); }
@@ -3026,7 +3042,7 @@ function evMarmots(){
   return {h:'MARMOTS ON THE SLOPES',t:"The high meadows of the Onion Mountains are riddled with the burrows of fat marmots, whistling and ducking as you pass. Easy meat — but the felt-tent herders will not touch a sluggish one, and mutter darkly about the fever their fleas can carry.",
   ch:[
    {l:'Hunt a few for the pot',f(){ const got=4+ri(5); S.food+=got; if(rnd()<0.20){ passDays(2+ri(3)); if(S.dead)return; let dead=0; for(const p of livingParty()){ if(rnd()<Math.max(.05,.20-.06*cook)){p.alive=false;dead++;} } S.hp=clamp(S.hp-16,0,100); if(S.hp<=0){S.cause='the marmot-fever';die();return;} log(got+" days of marmot meat — then, a few days on, a black fever no physician can name. "+(dead?dead+" of the company never recover; ":"")+"You remember the herders' warning about the fleas far too late."); } else log(got+" days of fat marmot turn on the spit, and no one the worse for it. The herders watch you eat with frank disapproval."); }},
-   {l:'Leave the burrows alone',f(){ const grumbler=bestAt('hunt')||bestAt('handle'); log("You recall the tales of the fever in the marmots' fleas and leave the burrows be."+(grumbler?' '+grumbler.name+' grumbles about the wasted meat.':'')); }},
+   {l:'Leave the burrows alone',f(){ const grumbler=bestHunter()||bestAt('handle'); log("You recall the tales of the fever in the marmots' fleas and leave the burrows be."+(grumbler?' '+grumbler.name+' grumbles about the wasted meat.':'')); }},
   ]};
 }
 
@@ -3114,6 +3130,12 @@ function sanitizeS(){
 const HAGGLE={
   'Ratnadevi':{ jade:0.08 },   // the jade-trader's daughter knows the stone
   'Irene':{ silk:0.08 },       // the silk-factor's widow knows the bolt
+  'Kisima':{ ivory:0.08 },     // the Zanj ivory-trader of Unguja
+  'Ilango':{ pearls:0.08 },    // the Tamil pearl-trader of Sarandib
+  'Mar Thoma':{ pepper:0.08 }, // the Malabar spice-broker
+  'Diosqoros':{ aloe:0.08 },   // the Socotran aloe-gatherer
+  'Saʻid':{ frank:0.08 }, // the Omani dhow-master of the incense coast
+  'Nana-vandak':{ wine:0.08 }, // the Sogdian vintner's agent of Turfan
 };
 function haggler(gid){
   let best=null, bv=0;
@@ -3192,17 +3214,13 @@ function renderNotes(m){
 }
 
 /* ============ v0.9.12 — the humble nephew, the lucky traveller, the nephew's arc ============ */
-const NEPHEW_RECRUIT={ name:'your nephew', role:"your sister's boy, all enthusiasm and no sense", skills:{trade:0,cook:0,handle:0,hunt:1,fight:1}, nephew:true, dowry:10, join:"Your sister will be furious, or delighted; with her you can never tell which." };
+const NEPHEW_RECRUIT={ name:'your nephew', role:"your sister's boy, all enthusiasm and no sense", skills:{trade:0,cook:0,handle:0}, hs:3, fs:5, nephew:true, dowry:10, join:"Your sister will be furious, or delighted; with her you can never tell which." };
 
-// the self-made traveller is a touch luckier — mishaps strike them ~1/3 less often
-let MISHAPS=null;
-function isMishap(fn){ if(!MISHAPS) MISHAPS=new Set([evSick,evSnakebite,evFall,evCutpurse]); return MISHAPS.has(fn); } // only things that befall a person, not whole-party hazards (fords, snow, bandits, weather)
-function luckyDodge(fn){ return !!(S && S.lucky && isMishap(fn) && rnd()<0.3333); }
 
 /* ============ v0.9.13 — two-stage nephew offer ============ */
 function joinNephew(dowry){
   const c=city();
-  S.party.push({name:NEPHEW_RECRUIT.name, role:NEPHEW_RECRUIT.role, skills:{...NEPHEW_RECRUIT.skills}, alive:true, kind:'companion', recruited:true, nephew:true, fromCity:c.name});
+  S.party.push({name:NEPHEW_RECRUIT.name, role:NEPHEW_RECRUIT.role, skills:{...NEPHEW_RECRUIT.skills}, hs:3, fs:5, alive:true, kind:'companion', recruited:true, nephew:true, fromCity:c.name});
   if(dowry) S.silver+=dowry;
   log("your nephew, "+NEPHEW_RECRUIT.role+", joins the caravan."+(dowry?" He makes good on his ten silver, beaming.":" 'You won't regret it,' he says. You already do, a little."));
 }
@@ -3248,7 +3266,7 @@ function herdingNote(){
 function huntressOffer(){
   return {h:'A HUNTER ON THE STEPPE', t:"A rider crests the grass at a gallop and looses an arrow on the run; a stag drops clean at fifty paces. She swings down — a Karluk woman, bow still in hand, as at home on the open steppe as the wind itself — and shares out the meat without being asked. She is bound nowhere in particular, she allows, and your road looks more interesting than the empty horizon. She would ride her own horse and pull her own weight, and a good deal more besides.",
    ch:[
-    {l:'Welcome Ay-Yaruq to the company',f(){ S.party.push({name:'Ay-Yaruq', role:'a Karluk huntress of the open steppe', skills:{trade:0,cook:0,handle:2,hunt:8,fight:2,archery:16}, alive:true, kind:'companion', recruited:true, huntress:true, g:'f'}); S.food+=8; log("Ay-Yaruq joins the caravan on her own grey mare, a fresh stag across its withers. She fits in at once, and the camp eats well that night."); }},
+    {l:'Welcome Ay-Yaruq to the company',f(){ S.party.push({name:'Ay-Yaruq', role:'a Karluk huntress of the open steppe', skills:{trade:0,cook:0,handle:2},fs:8,hs:16, alive:true, kind:'companion', recruited:true, huntress:true, g:'f'}); S.food+=8; log("Ay-Yaruq joins the caravan on her own grey mare, a fresh stag across its withers. She fits in at once, and the camp eats well that night."); }},
     {l:'Thank her, but ride on alone',f(){ S.huntressDeclined=true; S.food+=4; log("You share the stag and part ways; she wheels her horse and is gone over the grass. Word travels among the Karluk camps — they will be a shade less forthcoming now."); }},
    ]};
 }
@@ -3342,11 +3360,9 @@ function preForkItin(west){ const full=fullRoute('n', west); return west ? full.
 function fmtDist(li){ if(isWest()){ const mi=Math.max(1,Math.round(li/3)); return mi+' mile'+(mi!==1?'s':''); } return li+' li'; }
 function growNephew(){
   const neph=livingParty().find(p=>p.nephew);
-  if(neph && !neph.grown){ neph.grown=true; neph.skills.trade=Math.max(neph.skills.trade||0,2); neph.skills.handle=Math.max(neph.skills.handle||0,2); neph.skills.fight=Math.max(neph.skills.fight||0,2);
-    log(neph.name+" has come of age on the long road — the boy who set out from "+homeName()+" now haggles like a Sogdian, handles the beasts like a drover, and holds a blade like he means it. The family will not believe their eyes."); }
+  if(neph && !neph.grown){ neph.grown=true; neph.skills.trade=Math.max(neph.skills.trade||0,1); neph.skills.handle=Math.max(neph.skills.handle||0,1);
+    log(neph.name+" has come of age on the long road — the boy who set out from "+homeName()+" now haggles a fair price and handles the beasts like a drover. The family will not believe their eyes."); }
 }
-function startCpl(){ const nm=$('pname')?$('pname').value.trim():''; if(!nm){const w=$('nameWarn');if(w)w.textContent='A name is required before you set out.';return;} const np=$('nname')?$('nname').value:''; newGame(nm,[],np,'cpl'); }
-function startCplHumble(){ const nm=$('pname')?$('pname').value.trim():''; if(!nm){const w=$('nameWarn');if(w)w.textContent='A name is required before you set out.';return;} newGame(nm,[],'','cpl-humble'); }
 
 /* ============ v0.9.19 — two-step setup flow ============ */
 let SETUP={name:'', origin:'east', style:'caravan', companyMode:'pick', nephewName:'', custom:[{t:'Mr',n:''},{t:'Mr',n:''},{t:'Mr',n:''}]};
@@ -3412,13 +3428,13 @@ function renderSetupPage(m){
     ? '<p class="sub" style="margin:0 0 8px">Name your own three. The Mr / Ms / Mx sets how the road speaks of them; the skills they bring are pot-luck.</p>'+
       [0,1,2].map(i=>'<div style="margin:5px 0"><select id="ct_'+i+'" onchange="setupCustomInput()">'+['Mr','Ms','Mx'].map(t=>'<option'+(SETUP.custom[i].t===t?' selected':'')+'>'+t+'</option>').join('')+'</select> <input type="text" id="cn_'+i+'" value="'+escAttr(SETUP.custom[i].n)+'" maxlength="18" placeholder="companion name" oninput="setupCustomInput()"></div>').join('')
     : '<p class="sub" style="margin:0 0 8px">Pick three companions; each brings talents, and losing them in the wastes loses those talents too.</p>'+
-      ros.map(r=>'<label style="display:block;margin:3px 0;cursor:pointer"><input type="checkbox" id="rc_'+r.id+'" onchange="setupTick()"> <b>'+r.name+'</b> <span class="sub">— '+r.role+' · '+skillBlurb(r.skills)+'</span></label>').join('')+
+      ros.map(r=>'<label style="display:block;margin:3px 0;cursor:pointer"><input type="checkbox" id="rc_'+r.id+'" onchange="setupTick()"> <b>'+r.name+'</b> <span class="sub">— '+r.role+' · '+skillBlurb(r.skills,r)+'</span></label>').join('')+
       '<p id="rosterWarn" class="sub" style="margin:6px 0">0 of 3 chosen.</p>';
   m.innerHTML=
    '<h2>Choose your company</h2>'+
    '<p class="sub">'+(west?'Constantinople':'Chang’an')+' · a caravan venture · '+SETUP.name+'</p>'+
    '<div class="panel"><p class="sub" style="margin:0 0 6px">Your sister’s boy comes whether you like it or not. His name: <input type="text" id="nname" value="'+escAttr(SETUP.nephewName||'')+'" placeholder="nephew" maxlength="18" style="width:120px" oninput="saveCustom()"></p>'+
-   '<div style="margin-bottom:8px;opacity:.85"><b>'+(west?'Bart':'Little Tang')+'</b> <span class="sub">— '+(west?'your nephew Bartholomew, more enthusiasm than sense':NEPHEW.role)+' · '+skillBlurb(NEPHEW.skills)+' <span class="gold">(always with you)</span></span></div>'+
+   '<div style="margin-bottom:8px;opacity:.85"><b>'+(west?'Bart':'Little Tang')+'</b> <span class="sub">— '+(west?'your nephew Bartholomew, more enthusiasm than sense':NEPHEW.role)+' · '+skillBlurb(NEPHEW.skills,NEPHEW)+' <span class="gold">(always with you)</span></span></div>'+
    '<div class="speedrow" style="margin-bottom:8px">'+modeBtn('pick','Choose from the roster')+modeBtn('custom','Name your own three')+'</div>'+
    body+'</div>'+
    '<button class="seal" id="btnVenture" onclick="startVenture()" disabled>Set out with a caravan</button> '+
@@ -3433,7 +3449,7 @@ function startSailTimer(){ clearSail(); S.sailing=true; render(); sailTimer=setI
 function stepSail(){
   if(!S || !S.sailing || S.pendingEvent || S.eventOutcome || S.screen!=='sailing' || !S.sail){ clearSail(); return; }
   if(S.food < foodNeed()){ S.sailing=false; clearSail(); S.pendingEvent=evSeaFood(); render(); return; }
-  S.day++; S.food=Math.max(0,S.food-foodNeed()); S.hp=clamp(S.hp+0.3,0,100);
+  S.day++; S.food=Math.max(0,S.food-foodNeed()); S.hp=clamp(S.hp+0.3,0,100); accrueGuardWages();
   if(!S.sail.sickRolled && (S.sail.total-S.sail.daysLeft)<=7){ S.sail.sickRolled=true; if(rnd()<0.5){ S.seasick=true; log("You are violently, comprehensively seasick — green at the rail, certain you will die and then afraid you won’t. It does no lasting harm; the sea does this to nearly everyone once."); } }
   S.sail.daysLeft--;
   if(S.sail.daysLeft<=0){ S.sailing=false; clearSail(); sailArrive(); render(); return; }
@@ -3441,10 +3457,10 @@ function stepSail(){
   if(!S.sail.ephesusDone && _p>=0.5){ S.sail.ephesusDone=true; S.sailing=false; clearSail(); S.pendingEvent=evEphesus(); render(); return; }
   const _cp=(S.sail.target==='Aleppo')?0.75:0.25;
   if(!S.sail.chimeraDone && _p>=_cp){ S.sail.chimeraDone=true; log(CHIMERA_LINE); }
-  const wreckP=(S.sail.winter?0.035:0.009)*(hasPilot()?0.9:1);
+  const wreckP=(S.sail.winter?0.035:0.009)*crewWreckMult();
   if(rnd()<wreckP){ S.sailing=false; clearSail(); S.pendingEvent=evShipwreck(); render(); return; }
   if(rnd()<(hasPilot()?0.054:0.06)){ S.sailing=false; clearSail(); S.pendingEvent=evSeaWinds(); render(); return; }
-  { const _r=seaLeg(_p,S.sail.target); let _pp=(/Eastern Med/.test(_r)?0.045:/Aegean/.test(_r)?0.022:0.006)*(S.banditFreq||1); if(convoyValue()>10000)_pp*=2; if(rnd()<_pp){ S.sailing=false; clearSail(); S.pendingEvent=evPirates(); render(); return; } }
+  { const _r=seaLeg(_p,S.sail.target); let _pp=(/Eastern Med/.test(_r)?0.045:/Aegean/.test(_r)?0.022:0.006)*(S.banditFreq||1); _pp*=wealthLure(); if(rnd()<_pp){ S.sailing=false; clearSail(); S.pendingEvent=evPirates(); render(); return; } }
   updateSail();
 }
 function updateSail(){ if(!S||!S.sail)return; renderStats(); renderLog();
@@ -3470,16 +3486,16 @@ function skipSail(){
   S.sailing=false; clearSail();
   for(let i=0;i<80 && S.sail;i++){
     if(S.food<foodNeed()){ S.pendingEvent=evSeaFood(); render(); return; }
-    S.day++; S.food=Math.max(0,S.food-foodNeed()); S.sail.daysLeft--;
+    S.day++; S.food=Math.max(0,S.food-foodNeed()); accrueGuardWages(); S.sail.daysLeft--;
     if(S.sail.daysLeft<=0){ sailArrive(); render(); return; }
     const _p=(S.sail.total-S.sail.daysLeft)/S.sail.total;
     if(!S.sail.ephesusDone && _p>=0.5){ S.sail.ephesusDone=true; S.pendingEvent=evEphesus(); render(); return; }
     const _cp=(S.sail.target==='Aleppo')?0.75:0.25;
     if(!S.sail.chimeraDone && _p>=_cp){ S.sail.chimeraDone=true; log(CHIMERA_LINE); }
-    const wreckP=(S.sail.winter?0.035:0.009)*(hasPilot()?0.9:1);
+    const wreckP=(S.sail.winter?0.035:0.009)*crewWreckMult();
     if(rnd()<wreckP){ S.pendingEvent=evShipwreck(); render(); return; }
     if(rnd()<(hasPilot()?0.054:0.06)){ S.pendingEvent=evSeaWinds(); render(); return; }
-    { const _r=seaLeg(_p,S.sail.target); let _pp=(/Eastern Med/.test(_r)?0.045:/Aegean/.test(_r)?0.022:0.006)*(S.banditFreq||1); if(convoyValue()>10000)_pp*=2; if(rnd()<_pp){ S.pendingEvent=evPirates(); render(); return; } }
+    { const _r=seaLeg(_p,S.sail.target); let _pp=(/Eastern Med/.test(_r)?0.045:/Aegean/.test(_r)?0.022:0.006)*(S.banditFreq||1); _pp*=wealthLure(); if(rnd()<_pp){ S.pendingEvent=evPirates(); render(); return; } }
   }
   render();
 }
@@ -3545,7 +3561,7 @@ function seaLeg(p, target){
   return 'the Eastern Mediterranean';
 }
 function leoOffer(){ return {h:'A FRIEND FROM THE CROSSING', t:"As the ship works into harbour, Leo — a Bosphorus boatman you fell in with over the long crossing, forever splicing rope and spinning tales of the Golden Horn — clears his throat. He has, he admits, no great wish to go home just yet. 'I have spent my whole life on the Bosphorus and never once thought to go past its mouth — and now look at me, halfway to Syria. Why stop? You're bound for the Orient, they say. Take me with you.'", ch:[
-  {l:'Welcome Leo aboard the caravan',f(){ S.party.push({name:'Leo the Pilot',role:'a Bosphorus boatman and ship-handler',skills:{fight:2},salty:true,alive:true,kind:'companion',recruited:true,hp:100,fromCity:'Constantinople'}); log("Leo the Pilot joins the caravan — a sailor a thousand miles from any sea, and cheerful about it. He still knows a river when he sees one."); }},
+  {l:'Welcome Leo aboard the caravan',f(){ S.party.push({name:'Leo the Pilot',role:'a Bosphorus boatman and ship-handler',skills:{},fs:12,hs:3,salty:true,alive:true,kind:'companion',recruited:true,hp:100,fromCity:'Constantinople'}); log("Leo the Pilot joins the caravan — a sailor a thousand miles from any sea, and cheerful about it. He still knows a river when he sees one."); }},
   {l:'Clasp his hand and part at the quay',f(){ log("You wish Leo fair winds on the wharf. He waves until the harbour crowd swallows him up."); }},
 ]}; }
 function evEphesus(){
@@ -3591,7 +3607,7 @@ function evHideout(){
    ]};
 }
 /* T5.1: a hunter forages during a forced halt for injury/illness, so the lost days aren't wholly wasted */
-function autoForage(days){ const h=bestAt('hunt'); if(!h||days<=0||S.dead)return; const got=Math.round(days*(1+skillMax('hunt'))*(0.5+rnd()*0.6)); if(got>0){ S.food+=got; log(h.name+", idle while the camp tends its hurt, slips off to hunt and brings back about "+got+" days of meat — the halt is not wholly wasted."); } }
+function autoForage(days){ const h=bestHunter(); if(!h||days<=0||S.dead)return; const got=Math.round(days*(1+maxHuntComp())*(0.5+rnd()*0.6)); if(got>0){ S.food+=got; log(h.name+", idle while the camp tends its hurt, slips off to hunt and brings back about "+got+" days of meat — the halt is not wholly wasted."); } }
 
 /* ====== MARITIME MODULE ====== */
 /* ============ MARITIME ROUTE — the Indian Ocean / maritime Silk Road ============ */
@@ -3829,10 +3845,10 @@ function stepVoy(){
   if(S.voy.sight && !S.voy.sightDone && p>=0.5){ S.voy.sightDone=true; log(S.voy.sight); }
   if(S.voy.terr==='deep' || S.voy.terr==='coast' || S.voy.terr==='med'){
     if(!S.voy.sickRolled && p>=0.3){ S.voy.sickRolled=true; if(rnd()<0.4){ S.seasick=true; log("You are wretchedly seasick — green at the rail and certain you will die. It passes; the sea does this to nearly everyone once."); } }
-    const wreckP=(S.voy.terr==='deep'?0.006:0.009)*(hasPilot()?0.9:1)*winterStormMult(S.voy.terr)*(S.voy.storm||1);
+    const wreckP=(S.voy.terr==='deep'?0.006:0.009)*crewWreckMult()*winterStormMult(S.voy.terr)*(S.voy.storm||1);
     if(rnd()<wreckP){ S.voyaging=false; clearVoy(); S.pendingEvent=voyStorm(); render(); return; }
     if(rnd()<0.05){ S.voyaging=false; clearVoy(); S.pendingEvent=evSeaWinds(); render(); return; }
-    let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); if(S.voy.strait)pp*=2.8; if(convoyValue()>10000)pp*=2;
+    let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); if(S.voy.strait)pp*=2.8; pp*=wealthLure();
     if(rnd()<pp){ S.voyaging=false; clearVoy(); S.pendingEvent=evPirates(); render(); return; }
   }
   updateVoy();
@@ -3909,14 +3925,6 @@ function voyLon(nm){ return ({"Chang'an":108.9,'Luoyang':112.4,'Yangzhou':119.4,
 function voyChinaCanal(){ var c=["Chang'an",'Luoyang','Yangzhou']; var f=(S.voy&&S.voy.from), t=(S.voy&&S.voy.to); return c.indexOf(f)>=0||c.indexOf(t)>=0; }
 function voyChinaSea(){ var c=['Yangzhou','Guangzhou']; var f=(S.voy&&S.voy.from), t=(S.voy&&S.voy.to); return c.indexOf(f)>=0||c.indexOf(t)>=0; }
 function voyFaceEast(){ var f=(S.voy&&S.voy.from)||'', t=(S.voy&&S.voy.to)||''; var lf=voyLon(f), lt=voyLon(t); if(lf!=null&&lt!=null) return lt>lf; return (S.voy&&S.voy.east)||(S.sail&&S.sail.target==='Aleppo'); }
-function bargeArt(ty){ ty=ty||120; return '<g transform="translate(330,'+ty+') scale(-1,1)"><g class="plod" style="animation-delay:.2s">'+
-  '<path d="M54 0 L-48 0 L-42 12 L46 12 Q60 8 54 0 Z" fill="#5a3f24" stroke="#3a2616" stroke-width="1"/>'+
-  '<path d="M-20 -15 L20 -15 L16 -22 L-16 -22 Z" fill="#9c8447"/>'+
-  '<rect x="-19" y="-15" width="38" height="15" rx="2" fill="#7a5a30"/>'+
-  '<rect x="-34" y="-9" width="13" height="9" fill="#6b4a28"/>'+
-  '<circle cx="-40" cy="-9" r="3" fill="#241a12"/><rect x="-42" y="-6" width="4" height="7" fill="#3a2a18"/><line x1="-46" y1="-1" x2="-58" y2="11" stroke="#3a2616" stroke-width="2"/>'+
-  '<circle cx="40" cy="-13" r="3" fill="#241a12"/><rect x="38" y="-10" width="4" height="9" fill="#3a2a18"/><line x1="40" y1="-13" x2="52" y2="13" stroke="#5a4326" stroke-width="1.6"/>'+
-  '</g></g>'; }
 function dhowArt(ty,sc){ ty=(ty==null?104:ty); sc=sc||1; return '<g transform="translate(330,'+ty+') scale('+(-sc)+','+sc+')"><g class="plod" style="animation-delay:.2s">'+
   '<path d="M-42 16 L42 16 L30 25 L-30 25 Z" fill="#3a2a1a"/>'+
   '<rect x="0.5" y="-8" width="3" height="24" fill="#2b1f14"/>'+
@@ -4033,10 +4041,10 @@ function skipVoy(){
     const p=(S.voy.total-S.voy.daysLeft)/S.voy.total;
     if(S.voy.sight && !S.voy.sightDone && p>=0.5){ S.voy.sightDone=true; log(S.voy.sight); }
     if(S.voy.terr==='deep'||S.voy.terr==='coast'||S.voy.terr==='med'){
-      const wreckP=(S.voy.terr==='deep'?0.006:0.009)*(hasPilot()?0.9:1)*winterStormMult(S.voy.terr)*(S.voy.storm||1);
+      const wreckP=(S.voy.terr==='deep'?0.006:0.009)*crewWreckMult()*winterStormMult(S.voy.terr)*(S.voy.storm||1);
       if(rnd()<wreckP){ S.pendingEvent=voyStorm(); render(); return; }
       if(rnd()<0.05){ S.pendingEvent=evSeaWinds(); render(); return; }
-      let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); if(S.voy.strait)pp*=2.8; if(convoyValue()>10000)pp*=2;
+      let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); if(S.voy.strait)pp*=2.8; pp*=wealthLure();
       if(rnd()<pp){ S.pendingEvent=evPirates(); render(); return; }
     }
   }
@@ -4139,7 +4147,7 @@ function fishingEvent(c,fisher){ var hunter=fisher; var riv=!!fisher.salty;
 function exploreWilds(){
   const c=city(); const b=PORT_BIOME[c.name]||"the country round about";
   const fa=PORT_FAUNA[c.name]||{pred:'',small:'small game',big:'a deer'};
-  const hs=skillMax('hunt'); const hunter=bestAt('hunt'); const who=hunter?hunter.name:'You';
+  const hs=maxHuntComp(); const hunter=bestHunter(); const who=hunter?hunter.name:'You';
   const fisher=livingParty().find(p=>p.salty)||hunter; if(fisher && S.seaMode && (S.day-(S.hereSince!=null?S.hereSince:S.day))>=3 && cooledFish() && rnd()<0.33){ return fishingEvent(c,fisher); }
   passDays(1); if(S.dead) return null;
   let out;
@@ -4420,6 +4428,7 @@ const $=id=>document.getElementById(id);
 function esc(s){return s}
 function render(){
   if(S)sanitizeS();
+  if(S)normalizeParty();   // recruits pushed anywhere get fs/hs + homeland kit at once, not only on save-resume
   if(S)syncSouls();
   if(S)reconcileMounts();
   const ve=$('ver'); if(ve)ve.textContent='v'+VERSION;
@@ -4495,54 +4504,10 @@ function renderRibbon(){
 function renderLog(){
   $('log').innerHTML=S?S.log.slice(0,7).map(e=>'<div><span class="d">d'+e.d+'</span> '+e.t+'</div>').join(''):'';
 }
-function startFromTitle(){
-  const nm=$('pname')?$('pname').value.trim():'';
-  if(!nm){ const w=$('nameWarn'); if(w)w.textContent='A name is required before you set out.'; return; }
-  const np=$('nname')?$('nname').value:'';
-  const chosen=ROSTER.filter(r=>{const e=$('rc_'+r.id);return e&&e.checked}).map(r=>r.id);
-  if(chosen.length!==3){ const w=$('rosterWarn'); if(w)w.textContent='Pick exactly three — you have '+chosen.length+' selected.'; return; }
-  newGame(nm, chosen, np);
-}
-function rosterTick(){
-  const n=ROSTER.filter(r=>{const e=$('rc_'+r.id);return e&&e.checked}).length;
-  const w=$('rosterWarn'); if(w)w.textContent=n===3?'A fine company.':(n+' of 3 chosen.');
-  ROSTER.forEach(r=>{const e=$('rc_'+r.id);if(e&&!e.checked)e.disabled=(n>=3);});
-  nameGate();
-}
-function renderTitle_unused(m){
-  m.innerHTML=
-  '<h2>THE SILK ROAD <span class="zh">絲綢之路</span></h2>'+
-  '<p class="sub">Chang\'an to Constantinople and home again, in the second year of Baoying — 762 AD <span style="opacity:.6">· v'+VERSION+'</span></p>'+
-  '<div id="resumeslot"></div>'+
-  '<p>Buy low in the east, sell high in the west — then load up on western glass, coral, and wine and run it back. The rebellion smoulders behind you, the Caliph is raising a round city on the Tigris, and the whole world is in front. The road kills the careless; many do not come home.</p>'+
-  '<div class="panel"><p style="margin-bottom:6px">Your name, for the ledger <span class="red">*</span></p>'+
-  '<input type="text" id="pname" value="" maxlength="24" placeholder="enter your name" oninput="nameGate()"> '+
-  '<span id="nameWarn" class="sub">A name is required before you set out.</span></div>'+
-  '<div class="routes">'+
-    '<div class="panel routeopt"><h3 class="gold" style="margin-bottom:4px">A merchant\'s venture</h3>'+
-    '<p class="sub" style="margin:0 0 8px">You set out with 900 silver, three Bactrian camels, and your sister\'s boy — whom you promised to keep alive. Choose three companions besides; each brings talents, and losing them in the wastes loses those talents too.</p>'+
-    '<p class="sub" style="margin:0 0 6px">Your nephew\'s name: <input type="text" id="nname" placeholder="nephew" maxlength="18" style="width:120px"></p>'+
-    '<div style="margin-bottom:4px;opacity:.85"><b>'+NEPHEW.name+'</b> <span class="sub">— '+NEPHEW.role+' · '+skillBlurb(NEPHEW.skills)+' <span class="gold">(always with you)</span></span></div>'+
-    ROSTER.map(r=>'<label style="display:block;margin:3px 0;cursor:pointer"><input type="checkbox" id="rc_'+r.id+'" onchange="rosterTick()"> <b>'+r.name+'</b> <span class="sub">— '+r.role+' · '+skillBlurb(r.skills)+'</span></label>').join('')+
-    '<p id="rosterWarn" class="sub" style="margin:6px 0">0 of 3 chosen.</p>'+
-    '<button class="seal" id="btnStart" onclick="startFromTitle()" disabled>Set out with a caravan</button></div>'+
-    '<div class="panel routeopt"><h3 class="gold" style="margin-bottom:4px">Humble beginnings</h3>'+
-    '<p class="sub" style="margin:0 0 8px">No nephew, no hired hands, no caravan — just you, one donkey, a little food, and the coin you have scraped together over years of dreaming. You have saved for this all your life. Buy a load of paper in Chang\'an, and pray.</p>'+
-    '<button class="seal" id="btnHumble" onclick="startHumble()" disabled>Set out alone — a donkey and a dream</button></div>'+
-  '</div>'+
-  '<div class="panel"><h3 class="gold" style="margin-bottom:4px">Or — set out from the West</h3>'+
-  '<p class="sub" style="margin:0 0 8px">Begin instead as a Roman of Constantinople, bound east for far Cathay — distances in miles, the months by their Latin names, three mules and your sister\'s boy (no nephew in Chang\'an this run). Or go humble, alone with a donkey.</p>'+
-  '<button class="seal" id="btnCpl" onclick="startCpl()" disabled>A Byzantine venture (a caravan)</button> '+
-  '<button class="seal" id="btnCplHumble" onclick="startCplHumble()" disabled>From Constantinople, alone</button></div>'+
-  '<div class="panel"><h3 class="gold" style="margin-bottom:6px">The Ledger of Ventures</h3><div id="board"><p class="sub">Loading…</p></div></div>'+
-  '<p class="sub">A good cook stretches the food and nurses the sick; a sharp trader haggles every bazaar; a camel-hand keeps the beasts sound; a hunter and a fighter keep you fed and alive. Choose for the road you expect.</p>';
-  loadBoard().then(()=>{ if($('board'))renderBoardInto($('board')); });
-  fillResumeSlot();
-  nameGate();
-}
-function skillBlurb(sk){
+function skillBlurb(sk,p){
   const names={trade:'trader',cook:'cook/healer',handle:'camel-hand',hunt:'hunter',fight:'fighter'};
   const best=Object.entries(sk).filter(([k,v])=>v>=2).sort((a,b)=>b[1]-a[1]).map(([k])=>names[k]);
+  if(p){ if((p.fs||0)>=12 && best.indexOf('fighter')<0) best.push('fighter'); if((p.hs||0)>=12 && best.indexOf('hunter')<0) best.push('hunter'); }
   return best.length?'gifted '+best.join(' & '):'a steady pair of hands';
 }
 function cityDesc(c){ if(c && c.name==='Baghdad') return baghdadDesc(c); if(c && c.name==='Kashgar') return kashgarDesc(c); if(c.descW && isWest() && eastbound()) return c.descW; return (eastbound() && c.descE) ? c.descE : c.desc; }
@@ -4575,7 +4540,6 @@ function renderCity(m){
   const fwdLabel = fork ? (isWest()?'the Taklamakan road':'the Jade Gate') : (fwd? fwd.name+' ('+fmtDist(fwd.dist)+')' : '');
   const canFwd = fwd || fork;
   const backLeg = S.itin[S.idx] ? S.itin[S.idx].dist : 0;
-  const cp=camelPrice();
   const mtn = upcomingMountain();
   const passLine = mtn ? '<p class="sub">Ahead, on the road to '+(nextCity()?nextCity().name:'the next town')+', lies '+rangeName()+'. Travellers coming down say the passes are <b class="'+(passDanger()>=.5?'red':'gold')+'">'+passWord()+'</b>'+(passDanger()>=.5?' — wait for the season, or gamble with the snow.':'.')+'</p>' : '';
   m.innerHTML='<h2>'+cityLabel(c)+zhSpan(c)+(S.returning?' <span class="sub">· homeward</span>':'')+'</h2><p class="sub">'+cityDesc(c)+'</p>'+passWarnHtml()+slaveWarnHtml()+
@@ -4777,7 +4741,7 @@ function chooseSteppe(takeIt){
     var ni=S.itin.findIndex(function(x){return x.name===here;}); if(ni>=0)S.idx=ni;
     log(isWest()
       ? "You turn north off the settled road at Samarkand, up onto the open grass \u2014 the steppe road to Cathay, by Chach and Suyab, that shuns the Tarim and its thirst."
-      : "You leave the Tarim rim at Turfan and climb north over the Heavenly Mountains onto the steppe \u2014 the long grass road by Suyab and the Stone City, rejoining the road at far Samarkand.");
+      : "You leave the Tarim rim at Hami and climb north over the Heavenly Mountains onto the steppe \u2014 the long grass road by Suyab and the Stone City, rejoining the road at far Samarkand.");
   } else {
     log(isWest() ? "You keep to the settled road, down toward Akhsikath and the Pamir passes."
                  : "You keep to the oasis road, down the rim of the Tarim toward Kashgar.");
@@ -5143,49 +5107,51 @@ function gHasBow(g){ return !!(g&&g.bow); }
 function gItemRank(slot,id){ if(!id)return 0; if(slot==='armor')return (ARMOR[id]&&ARMOR[id].hp)||0; if(slot==='weapon')return ((WEAPONS[id]&&WEAPONS[id].die)||0)+((WEAPONS[id]&&WEAPONS[id].fs)||0); if(slot==='bow')return (BOWS[id]&&BOWS[id].hs)||0; if(slot==='cloak')return 1; return 0; }
 function gLabel(slot,id){ var T={weapon:WEAPONS,armor:ARMOR,bow:BOWS,cloak:CLOAKS}[slot]; return (T&&T[id]&&T[id].n)||id; }
 function youGear(){ if(!S.youGear) S.youGear={armor:null,bow:null,weapon:null,cloak:null}; return S.youGear; }
-function youSkill(k){ return (S.youSkills&&S.youSkills[k])||0; }
-function bumpYouSkill(k){ S.youSkills=S.youSkills||{}; S.youSkills[k]=(S.youSkills[k]||0)+1; }
 
 /* ---- combat stat derivation (transient fighters; never mutate party mid-fight) ---- */
 function defaultSimpleWeapon(p){
   if(!p) return {label:'staff', die:6};
   if(p.bard) return {label:'sharp words', die:6};
   var t=(p.role||'').toLowerCase(), sk=p.skills||{};
+  if(/fisher|diver/.test(t)) return {label:'fishing trident', die:6};
   if(/malay|srivijaya|pilot of the|java|\\bcham\\b/.test(t)) return {label:'parang', die:6};
   if(/sailor|boatman|reef|strait|\\bpilot\\b|swahili|zanj|salt/.test(t)) return {label:'long knife', die:6};
   if(/physician|leech|doctor|healer|medic|surgeon/.test(t)) return {label:'staff', die:6};
   if(/cook|kitchen/.test(t)) return {label:'kitchen knife', die:6};
-  if((sk.hunt||0)>=2 && (sk.hunt||0)>=(sk.fight||0)) return {label:'hunting spear', die:6};
+  if(combHS(p)>=12) return {label:'hunting spear', die:6};
   if(/scout|hunter|archer|tracker/.test(t)) return {label:'hunting spear', die:6};
   if((sk.cook||0)>=2 && (sk.cook||0)>(sk.trade||0)) return {label:'kitchen knife', die:6};
   return {label:'staff', die:6};
 }
 function kitTargetMember(){ return (S.kitTarget==='you')? null : (livingParty()[S.kitTarget]||null); }
-function cbRole(p){ if(!p) return 'you'; if(p.kind==='guard') return 'guard'; var h=memSkill(p,'hunt'); if(h>=2 && h>=memSkill(p,'fight')) return 'hunter'; return 'other'; }
+function cbRole(p){ if(!p) return 'you'; if(p.kind==='guard') return 'guard'; if(p.hs!=null) return p.hs>=12?'hunter':'other'; var h=memSkill(p,'hunt'); return (h>=2 && h>=memSkill(p,'fight'))?'hunter':'other'; }
 const CB_BASE={ you:{hp:10,fs:8,die:7}, guard:{hp:12,fs:10,die:8}, hunter:{hp:8,fs:6,die:6}, other:{hp:6,fs:3,die:6} };
 function baseFS(p){ if(!p) return 6; if(p.kind==='guard'||p.role==='guard') return 12; var ft=memSkill(p,'fight'), hu=memSkill(p,'hunt'); if(ft>=2 && ft>=hu) return 12; if(hu>=2) return 8; return 6; }
 function combFS(p){ return (p&&p.fs!=null)?p.fs:baseFS(p); }
 function baseHS(role){ return role==='hunter'?12:(role==='guard'||role==='you')?6:3; }
 function combHS(p){ return (p&&p.hs!=null)?p.hs:baseHS(cbRole(p)); }
+function huntComp(h){ var hs=(h&&h.you)?youCombHS():combHS(h); return Math.max(0,(hs-6)/3); } // HS -> the old 0-3 hunt-bonus scale (HS12 -> 2)
+function bestHunter(){ var lp=livingParty(); if(!lp.length)return null; return lp.reduce(function(b,p){ return combHS(p)>combHS(b)?p:b; }); }
+function maxHuntComp(){ var lp=livingParty(); return lp.length?Math.max.apply(null,lp.map(huntComp)):0; }
 function youCombFS(){ return (S.youFs!=null)?S.youFs:6; }
 function youCombHS(){ return (S.youHs!=null)?S.youHs:6; }
 function combHP(p){ if(p&&p.hpBase!=null)return p.hpBase; if(p&&p.cbStats&&p.cbStats.hp!=null)return p.cbStats.hp; return CB_BASE[cbRole(p)].hp; }
 function youCombHP(){ return (S.youHpBase!=null)?S.youHpBase:CB_BASE.you.hp; }
 function cbImprove(skill){ return skill<=11 ? (12-skill)/16 : 1/(skill+5); }
 function buildYouFighter(){
-  var g=youGear(), b=CB_BASE.you, cMax=youCombHP()+gArmorHP(g);
+  var g=youGear(), cMax=youCombHP()+gArmorHP(g);
   return {ref:null,you:true,name:(S.name||'You'),role:'you',cMax:cMax,
     cHP:Math.max(1,Math.round(cMax*clamp(S.hp,0,100)/100)),
     fs:youCombFS()+gWeaponFS(g)+gArmorFS(g),
-    hs:youSkill('archery')+gBowHS(g), die:(gWeaponDie(g)||defaultSimpleWeapon(null).die),
+    hs:youCombHS()+gBowHS(g), die:(gWeaponDie(g)||defaultSimpleWeapon(null).die),
     bow:gHasBow(g), mount:false, alive:true, _withdraw:false};
 }
 function buildCompFighter(p){
-  var g=p.gear, role=cbRole(p), b=p.cbStats||CB_BASE[role], cMax=combHP(p)+gArmorHP(g);
+  var g=p.gear, role=cbRole(p), cMax=combHP(p)+gArmorHP(g);
   return {ref:p,you:false,name:p.name,role:role,cMax:cMax,
     cHP:Math.max(1,Math.round(cMax*clamp(memHp(p),0,100)/100)),
     fs:combFS(p)+gWeaponFS(g)+gArmorFS(g),
-    hs:(memSkill(p,'archery')||memSkill(p,'hunt'))+gBowHS(g),
+    hs:combHS(p)+gBowHS(g),
     die:(gWeaponDie(g)||defaultSimpleWeapon(p).die), bow:gHasBow(g), mount:false, alive:true,
     _withdraw:false};
 }
@@ -5474,8 +5440,8 @@ function huntSuit(p,terr){
 function pickHunter(terr){
   var lp=livingParty(); if(!lp.length) return null;
   return lp.reduce(function(best,p){
-    var s=(p.skills&&p.skills.hunt||0)+huntSuit(p,terr).rank;
-    var bs=(best.skills&&best.skills.hunt||0)+huntSuit(best,terr).rank;
+    var s=combHS(p)+huntSuit(p,terr).rank;
+    var bs=combHS(best)+huntSuit(best,terr).rank;
     return s>bs?p:best;
   });
 }
