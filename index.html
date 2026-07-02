@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.05.06';
+const VERSION='2.07.01';
 const RESUME_B64="";
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
@@ -166,8 +166,9 @@ const GOODS=[
  {id:'felt',  n:'Felt',      u:'roll',  wt:3, e:12,  w:32},
  {id:'naphtha', n:'Naphtha',  u:'jar',   wt:3, e:52,  w:74},
  {id:'asbestos',n:'Asbestos', u:'bolt',  wt:1, e:210, w:232},
+ {id:'dates', n:'Dates',     u:'basket',wt:2, e:40,  w:26},
 ];
-const STOCKBASE={silk:55,tea:80,paper:65,musk:9,jade:22,pepper:45,lapis:16,glass:38,coral:11,amber:10,wine:30,pearls:7,ivory:9,frank:30,indigo:24,cinn:20,wax:24,nutmeg:16,pelts:8,conut:35,linen:22,furs:24,slaves:6,aloe:14,felt:30,turq:16,naphtha:26,asbestos:2};
+const STOCKBASE={silk:55,tea:80,paper:65,musk:9,jade:22,pepper:45,lapis:16,glass:38,coral:11,amber:10,wine:30,pearls:7,ivory:9,frank:30,indigo:24,cinn:20,wax:24,nutmeg:16,pelts:8,conut:35,linen:22,furs:24,slaves:6,aloe:14,felt:30,turq:16,naphtha:26,asbestos:2,dates:40};
 const CONUT_TROPICAL=new Set(['Guangzhou','Kauthara','Palembang','Mantai','Kollam','Zanzibar']);
 let SLAVERY=true;   /* <- the slave trade. flip to false to key it off entirely */
 function slaveryOn(){ return SLAVERY; }
@@ -177,6 +178,9 @@ function aloeHere(nm){ return ALOE_RANGE.has(nm); }
 const NAPHTHA_RANGE=new Set(['Baghdad','Rey']);
 function naphthaHere(nm){ return NAPHTHA_RANGE.has(nm); }
 const ASBESTOS_RANGE=new Set(['Khotan','Hami']);
+const DATES_RANGE=new Set(['Medina','Mecca','Yamama','Shibam','Basra','Baghdad','Merv','Fustat','Qulzum']);
+function datesHere(nm){ return DATES_RANGE.has(nm); }
+const NO_BUYERS={Mecca:'wine'};   /* cheap for want of buyers, and none sold — Turfan by contrast PRODUCES its wine (a true source town: stocked and cheap) */
 function asbestosHere(nm){ return ASBESTOS_RANGE.has(nm); }
 const FLAMMABLE=new Set(['silk','tea','paper','wine','frank','wax','cinn','pepper','nutmeg','indigo','linen','furs','pelts','felt','aloe','musk','ivory','amber','conut','naphtha']);
 function baghdadVillage(){ return gameDate().t < Date.UTC(762,6,30); }
@@ -352,7 +356,7 @@ const GUARD_REGIONS={
  africa:['Juma','Bakari','Kitwana','Simba','Faraji','Hamisi','Tendaji','Rashidi'],
  egypt:['Besa','Pamin','Girgis','Mina','Yanni','Bishoy','Qustantin','Surur']
 };
-const GUARD_CITY_REGION={Yangzhou:'china',Guangzhou:'china',Luoyang:'china',"Chang'an":'china',Lanzhou:'china',Wuwei:'china',Dunhuang:'china',Hami:'steppe',Turfan:'steppe',Kucha:'steppe',Aksu:'steppe',Kashgar:'steppe',Miran:'steppe',Khotan:'steppe',Yarkand:'steppe',Akhsikath:'steppe',Samarkand:'steppe',Bukhara:'steppe',Merv:'steppe',Nishapur:'arab',Rey:'arab',Kauthara:'seasia',Palembang:'seasia',Mantai:'india',Kollam:'india',Basra:'arab',Dhofar:'arab',Aden:'arab',Socotra:'arab',Qulzum:'arab',Baghdad:'arab',Aleppo:'arab',Zanzibar:'africa',Fustat:'egypt',Alexandria:'egypt'};
+const GUARD_CITY_REGION={Yangzhou:'china',Guangzhou:'china',Luoyang:'china',"Chang'an":'china',Lanzhou:'china',Wuwei:'china',Dunhuang:'china',Hami:'steppe',Turfan:'steppe',Kucha:'steppe',Aksu:'steppe',Kashgar:'steppe',Miran:'steppe',Khotan:'steppe',Yarkand:'steppe',Akhsikath:'steppe',Samarkand:'steppe',Bukhara:'steppe',Merv:'steppe',Nishapur:'arab',Rey:'arab',Kauthara:'seasia',Palembang:'seasia',Mantai:'india',Kollam:'india',Basra:'arab',Dhofar:'arab',Aden:'arab',Socotra:'arab',Qulzum:'arab',Baghdad:'arab',Aleppo:'arab',Zanzibar:'africa',Fustat:'egypt',Alexandria:'egypt',Medina:'arab',Mecca:'arab',Sanaa:'arab',Yamama:'arab',Shibam:'arab'};
 function guardNamePool(cn){ const r=GUARD_CITY_REGION[cn]; return (r&&GUARD_REGIONS[r])||GUARD_NAMES; }
 const GUARD_SKILLS=[{trade:0,cook:0,handle:0},{trade:0,cook:0,handle:1},{trade:0,cook:1,handle:0}];
 const RUMORS=[
@@ -511,7 +515,7 @@ var HM_CONF={ round_min:30, round_ms:2000, horse_walk:1.6, foot_walk:0.9, track_
   pred_base:0.0013, pred_terr:{steppe:1.0,settled:0.8,mountain:1.6,desert:0.7,harsh:1.2,marsh:1.3,jungle:1.9,forest:1.4,rugged:1.1},
   night_pred:0.065, tire_round:24, collapse_round:36, forage_div:38, herb_frac:0.12,
   forage_terr:{steppe:1.0,settled:1.1,mountain:0.9,desert:0.4,harsh:0.4,marsh:1.1,jungle:1.3,forest:1.1,rugged:0.8} };
-var HUNT_LL={Suyab:42.8,Talas:42.5,Ispijab:42.3,Chach:41.3,Akhsikath:41.0,Kashgar:39.5,Aksu:41.2,Kucha:41.7,Beshbalik:44.1,Hami:42.8,Almaliq:44.0,Bole:44.9,Almatu:43.25,'a Karluk camp':43.8};
+var HUNT_LL={Suyab:42.8,Talas:42.5,Ispijab:42.3,Chach:41.3,Akhsikath:41.0,Kashgar:39.5,Aksu:41.2,Kucha:41.7,Beshbalik:44.1,Hami:42.8,Almaliq:44.0,Bole:44.9,Almatu:43.25,'a Karluk camp':43.8,Medina:24.5,Mecca:21.4,Yamama:24.6,Sanaa:15.4,Shibam:15.9,Aden:12.8};
 function huntLatitude(){ try{ var nm=(city()||{}).name; if(HUNT_LL[nm]!=null) return HUNT_LL[nm]; var t=(typeof CITY_LL!=='undefined'&&CITY_LL[nm])||(typeof DESERT_LL!=='undefined'&&DESERT_LL[nm]); if(t&&t.length>1&&isFinite(t[1])) return t[1]; }catch(e){} return 40; } // latitude of the current position; the Amber Road need only add its cities to HUNT_LL/CITY_LL
 function daylightHours(month, lat){ if(lat==null)lat=huntLatitude(); var N=Math.round((month-0.5)*30.4); var decl=0.40928*Math.sin(2*Math.PI*(284+N)/365); var L=lat*Math.PI/180; var x=Math.max(-1,Math.min(1,-Math.tan(L)*Math.tan(decl))); return 24/Math.PI*Math.acos(x); }
 var HM_SUBTERR={
@@ -568,6 +572,7 @@ var HM_SYM='<svg class="spin" style="animation-duration:'+(HM_CONF.round_ms/1000
 function hmCap(s){ return s?s.charAt(0).toUpperCase()+s.slice(1):s; }
 function hmD(n){ return 1+Math.floor(rnd()*n); }
 function hmSeason(){ var m=monthNum(); return (m<=2||m===12)?'winter':(m<=5)?'spring':(m<=8)?'summer':'autumn'; }
+function hmDusk(){ var H=S.hm; return !!(H && H.terr==='desert' && (hmSeason()==='summer' || huntLatitude()<27)); } // avoid the day's heat: summer, or the hot low-latitude deserts (Arabia) year-round
 function hmDayRounds(){ return Math.round(daylightHours(monthNum())*60/HM_CONF.round_min); }
 function hmSub(terr){ var a=HM_SUBTERR[terr]||HM_SUBTERR.steppe; return pick(a); }
 function hmIsForest(sub){ return /forest|wood|brake|thicket|orchard|bamboo|fig|carr/.test(sub||''); }
@@ -610,7 +615,7 @@ function hmBegin(){ var H=S.hm; if(!H||H.phase!=='setup')return;
 function hmGo(picks){ var H=S.hm; var nH=picks.length;
  var horses=(S.herd&&S.herd.horse)||0;
  var bows=(gHasBow(youGear())?1:0)+livingParty().filter(function(p){return gHasBow(p.gear);}).length;
- var twilight=(H.terr==='desert' && typeof hmSeason==='function' && hmSeason()==='summer');
+ var twilight=hmDusk();
  S.hm={phase:'run', hunters:picks, n:nH, horsed:horses>=nH, bowed:bows>=nH, terr:H.terr, inTown:H.inTown, sub:hmSub(H.terr), round:0, dist:0, _maxdist:0, meat:0, kills:0, returning:false, track:null, dark:false, over:hmDayRounds(), L:[], _trail:[], timer:null, twilight:twilight };
  var R=S.hm;
  R.L.push((nH>1?'The party sets out into ':'You set out alone into ')+R.sub+' — '+nH+' hunter'+(nH>1?'s':'')+', '+(R.horsed?'all mounted':'on foot')+', '+(R.bowed?'with the bow':'short of bows')+'.');
@@ -632,8 +637,8 @@ function hmStep(){ var H=S.hm; if(!H||H.phase!=='run')return; if(H.timer){clearT
  if(!H.twilight && H.round>H.over && !H.dark){ H.dark=true; H.L.push('<span class="red">'+((typeof hmSeason==='function'&&hmSeason()==='summer')?'The light fails and dusk comes on — you are still afield, far from camp.':'The light fails and the cold comes down — you are still afield, far from camp.')+'</span>'); }
  if(H.dark){
    var _sn=(typeof hmSeason==='function')?hmSeason():'spring', _dr=H.round-H.over;
-   if(_sn==='summer'){ if(_dr>=3){ H.L.push('<span class="gold">Too far to reach camp by dark — you make a fireless camp under the stars and turn for home at first light.</span>'); if(typeof passDays==='function')passDays(1); return hmFinish('benighted'); } }
-   else { var _sev=(_sn==='winter')?1.0:0.4; var _ex=Math.round(_sev*(3+ri(4))*(1+0.18*_dr)); var _dd=[]; H.hunters.forEach(function(p){ if(p.hp>0){ p.hp=Math.max(0,p.hp-_ex); if(p.hp<=0)_dd.push(p.name.split(',')[0]); } }); H.L.push('<span class="red">'+(_sn==='winter'?'The night cold is murderous':'The night cold bites deep')+' — '+_ex+' HP lost'+(_dd.length?'; '+_dd.join(', ')+' will not rise again':'')+'.</span>'); var _you=H.hunters.find(function(p){return p.you;}); if((_you&&_you.hp<=0)||H.hunters.every(function(p){return p.hp<=0;})){ return hmFinish(_sn==='winter'?'frozen':'home'); } }
+   if(_sn!=='winter'){ if((H.round*HM_CONF.round_min/60>=18) || H.hunters.some(function(p){return p.hp>0 && p.hp<=2;})){ H.hunters.forEach(function(p){ if(p.hp>0)p.hp=Math.min(p.hp,1+ri(2)); }); H.L.push('<span class="gold">You have been afield too long and can go no further tonight — you make a rough camp where you stand'+(_sn==='summer'?'':', shivering without a fire worth the name,')+' and drag yourselves home at first light, the whole party wrung out and fit for nothing but a long rest.</span>'); if(typeof passDays==='function')passDays(1); return hmFinish('benighted'); } }
+   else { var _ex=Math.round((3+ri(4))*(1+0.18*_dr)); var _dd=[]; H.hunters.forEach(function(p){ if(p.hp>0){ p.hp=Math.max(0,p.hp-_ex); if(p.hp<=0)_dd.push(p.name.split(',')[0]); } }); H.L.push('<span class="red">The night cold is murderous — '+_ex+' HP lost'+(_dd.length?'; '+_dd.join(', ')+' will not rise again':'')+'.</span>'); var _you=H.hunters.find(function(p){return p.you;}); if((_you&&_you.hp<=0)||H.hunters.every(function(p){return p.hp<=0;})){ return hmFinish('frozen'); } }
    if(rnd()<HM_CONF.night_pred*(HM_CONF.pred_terr[H.terr]||1)){ return hmPredator(hmPickPred(H.terr,true)); }
    var risk=((H.terr==='jungle')?0.45:(H.terr==='mountain'||hmIsForest(H.sub))?0.26:0.15)*(1+0.12*(H.round-H.over))*(tired?1.6:1);
    if(rnd()<risk){ return hmMishap(); }
@@ -715,7 +720,7 @@ function hmFinish(how){ var H=S.hm; if(!H)return; if(H.timer){clearTimeout(H.tim
  H.hunters.forEach(function(p){ if(p.hp<=0){ if(p.you){ pdead=true; } else if(p.ref){ p.ref.alive=false; if(typeof noteDeath==='function')noteDeath(p.ref,'a hunting accident'); } } });
  S.party=S.party.filter(function(p){return p.alive;});
  var head=(how==='lost')?'<span class="red">The hunt ends badly</span>':(how==='exhausted')?'<span class="red">Staggered home, exhausted</span>':(how==='frozen')?'<span class="red">Lost to the night cold</span>':(how==='benighted')?'A night under the stars':'Home from the hunt';
- H._summary='<h2>'+head+'</h2><p class="sub">'+H.round+' rounds · ~'+hours.toFixed(1)+'h afield · ranged ~'+H._maxdist.toFixed(1)+' mi · '+H.kills+' kill'+(H.kills===1?'':'s')+' · <span class="gold">+'+H.meat+' food</span></p>'+'<div class="log" style="max-height:320px;overflow:auto">'+L.slice().reverse().map(function(x){return '<div>'+x+'</div>';}).join('')+'</div>';
+ H._summary='<h2>'+head+'</h2><p class="sub">'+H.round+' rounds · ~'+(hours%1===0?hours:hours.toFixed(1))+' h afield · back by '+hmClock(H.round,H.twilight)+' · ranged ~'+H._maxdist.toFixed(1)+' mi · '+H.kills+' kill'+(H.kills===1?'':'s')+' · <span class="gold">+'+H.meat+' food</span></p>'+'<div class="log" style="max-height:320px;overflow:auto">'+L.slice().reverse().map(function(x){return '<div>'+x+'</div>';}).join('')+'</div>';
  if(typeof log==='function')log('Hunt: '+H.kills+' kill'+(H.kills===1?'':'s')+', +'+H.meat+' food, ~'+hours.toFixed(1)+'h.');
  S.hm.phase='done';
  if(pdead){ S.hp=0; S.cause='a hunting accident'; S.hm=null; if(typeof die==='function')die(); S.screen='dead'; render(); return; }
@@ -728,7 +733,7 @@ function renderHunt(m){ var H=S.hm; if(!H){ S.screen=(S.seaMode?'port':'city'); 
    var horses=(S.herd&&S.herd.horse)||0;
    m.innerHTML='<h2>Make a hunt of it</h2><p class="sub">Tick who goes out into '+(TERR_DESC[H.terr]||H.terr)+'. You play it out round by round — longer afield means more game, but exhaustion, the dark, and worse. Horses ('+horses+') and bows are shared across the party.</p>'+
      '<table><tr><th>go</th><th>who</th><th>skill</th></tr>'+rows+'</table>'+
-     '<div style="margin-top:8px"><button class="seal" onclick="hmBegin()">Set out at '+((H.terr==='desert'&&typeof hmSeason==='function'&&hmSeason()==='summer')?'dusk':'daybreak')+'</button> <button onclick="hmExit()">Never mind</button></div>';
+     '<div style="margin-top:8px"><button class="seal" onclick="hmBegin()">Set out at '+(hmDusk()?'dusk':'daybreak')+'</button> <button onclick="hmExit()">Never mind</button></div>';
    return; }
  if(H.phase==='done'){ m.innerHTML=H._summary+'<div style="margin-top:8px"><button class="seal" onclick="hmExit()">Back to camp</button></div>'; return; }
  var alive=H.hunters.filter(function(p){return p.hp>0;});
@@ -755,6 +760,8 @@ function makeStock(allCities){
     if(g.id==='aloe' && !aloeHere(c.name)){ stock[c.name][g.id]=0; continue; }
     if(g.id==='naphtha' && !naphthaHere(c.name)){ stock[c.name][g.id]=0; continue; }
     if(g.id==='asbestos' && !asbestosHere(c.name)){ stock[c.name][g.id]=0; continue; }
+    if(g.id==='dates' && !datesHere(c.name)){ stock[c.name][g.id]=0; continue; }
+    if(NO_BUYERS[c.name]===g.id){ stock[c.name][g.id]=0; continue; }
     if(isBaghdadVillage(c.name)){ const ok=(g.id==='linen'||g.id==='wax'||g.id==='wine'); stock[c.name][g.id]= ok?Math.max(1,Math.round(2+rnd()*4)):0; continue; }
     const base=(OVR[c.name]&&OVR[c.name][g.id]!=null)?OVR[c.name][g.id]:g.e+(g.w-g.e)*c.frac;
     const cheap=goodMin(g);
@@ -764,7 +771,7 @@ function makeStock(allCities){
   }}}
   return stock;
 }
-function ensureStock(c){ if(!c)return; if(!S.stock)S.stock={}; if(!S.stock[c.name]){ var one=makeStock([c]); for(var k in one) S.stock[k]=one[k]; } }
+function ensureStock(c){ if(!c)return; if(!S.stock)S.stock={}; if(!S.stock[c.name]){ var one=makeStock([c]); for(var k in one) S.stock[k]=one[k]; return; } var cur=S.stock[c.name]; if(GOODS.some(function(g){return cur[g.id]==null;})){ var fresh=makeStock([c])[c.name]||{}; for(var i=0;i<GOODS.length;i++){ var id=GOODS[i].id; if(cur[id]==null) cur[id]=fresh[id]; } } }
 // ---- party & skills ----
 function livingParty(){return S.party.filter(p=>p.alive)}
 function livingComps(){return livingParty().length}
@@ -818,6 +825,8 @@ function restock(cityName,days){
     if(g.id==='aloe' && !aloeHere(cityName)){ S.stock[cityName][g.id]=0; continue; }
     if(g.id==='naphtha' && !naphthaHere(cityName)){ S.stock[cityName][g.id]=0; continue; }
     if(g.id==='asbestos' && !asbestosHere(cityName)){ S.stock[cityName][g.id]=0; continue; }
+    if(g.id==='dates' && !datesHere(cityName)){ S.stock[cityName][g.id]=0; continue; }
+    if(NO_BUYERS[cityName]===g.id){ S.stock[cityName][g.id]=0; continue; }
     if(isBaghdadVillage(cityName)){ const ok=(g.id==='linen'||g.id==='wax'||g.id==='wine'); S.stock[cityName][g.id]= ok?Math.min(8,(S.stock[cityName][g.id]||0)+days):0; continue; }
     const base=(OVR[cityName]&&OVR[cityName][g.id]!=null)?OVR[cityName][g.id]:g.e+(g.w-g.e)*(c.frac||.5);
     const cheap=goodMin(g);
@@ -833,7 +842,7 @@ function slaveCap(){ if(!S)return 0; var c=2; // you, the master, keep two in ha
   (typeof livingParty==='function'?livingParty():[]).forEach(function(p){ if(p.bard){bard=true;return;} c += (p.kind==='guard')?3 : (combFS(p)>=12)?2 : 1; });
   if(bard) c=Math.round(c*1.2); // the bard watches no one, but keeps the rest in better order: +20%
   return c; }
-function slaveWarnHtml(){ var n=slaveCount(); if(n<=0)return ''; var cap=slaveCap(); if(n<=cap)return ''; return '<p style="color:#8a2f12;font-weight:bold;margin:4px 0 8px">\u26A0 You hold '+n+' slaves but your party can keep only '+cap+' in hand \u2014 expect some to slip away on the road, or worse.</p>'; }
+function slaveWarnHtml(){ var n=slaveCount(); if(n<=0)return ''; var cap=slaveCap(); if(n<cap)return ''; if(n===cap)return '<p style="color:#9a7b1e;font-weight:bold;margin:4px 0 8px">\u26A0 Your party can keep no more than '+cap+' slaves in hand, and you have as many as you can manage \u2014 buy no more, or some will begin to slip away.</p>'; return '<p style="color:#8a2f12;font-weight:bold;margin:4px 0 8px">\u26A0 You hold '+n+' slaves but your party can keep only '+cap+' in hand \u2014 expect some to slip away on the road, or worse.</p>'; }
 function maybeSlaveTrouble(c){ if(!S||S.seaMode||S.pendingEvent)return; var n=slaveCount(); if(n<=0)return; var cap=slaveCap(); if(n<=cap)return; var over=n-cap; var p=Math.min(0.85, 0.30*over/Math.max(1,cap)+0.10); if(rnd()<p){ S.pendingEvent=slaveTroubleEvent(n,cap); } }
 function slaveTroubleEvent(n,cap){ var over=n-cap;
   if(n <= cap*1.5){ var lost=Math.max(1, Math.round(over/2)); if(lost>n)lost=n;
@@ -854,9 +863,9 @@ function slaveRevoltResolve(){ var n=slaveCount();
 }
 function waterMax(){return 25+herdCarry()+5*slaveCount()}
 const FOOD_WT=0.25; // each day of provisions weighs on the camels too
-function cargoW(){return GOODS.reduce((a,g)=>a+S.goods[g.id]*g.wt,0)+Math.round(S.food*FOOD_WT)}
+function cargoW(){return GOODS.reduce((a,g)=>a+(g.id==='slaves'?0:S.goods[g.id]*g.wt),0)+Math.round(S.food*FOOD_WT)}
 function footCap(){ return 5*(1+livingComps()); }
-function cargoCap(){ if(S&&S.seaMode) return 999999; return (totalAnimals()>0 ? herdCap() : footCap())+5*slaveCount(); }
+function cargoCap(){ if(S&&S.seaMode && totalAnimals()===0) return 999999; return (totalAnimals()>0 ? herdCap() : footCap())+5*slaveCount(); }
 function city(){ if(S&&S.seaMode){ return SEA_BYNAME[S.portName] || cityByName(S.portName) || S.itin[S.idx]; } return S.itin[S.idx]; }
 function nextCity(){return S.itin[S.idx+(S.dir||1)]} // the city we're heading toward (dir +1 onward, -1 back)
 function fwdCity(){return S.itin[S.idx+1]}
@@ -892,7 +901,7 @@ function cityShownGoods(c){
   const set={}; for(const g of ranked) set[g.id]=1;
   if(S) for(const g of GOODS) if((S.goods[g.id]||0)>0) set[g.id]=1; // anything you carry, so you can always SELL it
   if(SLAVERY && OVR[c.name] && OVR[c.name].slaves!=null) set.slaves=1; // designated slave markets always list slaves, even minor-hub ports
-  if(aloeHere(c.name)) set.aloe=1; if(conutHere(c.name)) set.conut=1; if(naphthaHere(c.name)) set.naphtha=1; if(asbestosHere(c.name)) set.asbestos=1; // range-gated specialties always show in their home range
+  if(aloeHere(c.name)) set.aloe=1; if(conutHere(c.name)) set.conut=1; if(naphthaHere(c.name)) set.naphtha=1; if(asbestosHere(c.name)) set.asbestos=1; if(datesHere(c.name)) set.dates=1; // range-gated specialties always show in their home range
   return GOODS.filter(g=>set[g.id]);
 }
 function dealsIn(g,c){ return cityShownGoods(c).some(x=>x.id===g.id); }
@@ -909,6 +918,7 @@ function dateStr(){
   return 'Day '+S.day+' · '+MONTHS[i]+' month';
 }
 function log(t){S.log.unshift({d:S.day,t}); if(S.log.length>40)S.log.pop(); if(!S.fullLog)S.fullLog=[]; S.fullLog.push({d:S.day,t:t}); if(S.fullLog.length>800)S.fullLog.shift();}
+function outcomeBox(h,msg){ log(msg); if(S&&!S.dead) S.pendingEvent={h:h,t:msg,ch:[{l:'Go on',f:function(){}}]}; }
 
 /* ============ TIME & TRAVEL ============ */
 function applyDeprivation(cause,penalty){
@@ -925,7 +935,7 @@ function applyDeprivation(cause,penalty){
 function foodNeed(){
   const mouths=1+livingComps();
   const cookMult=clamp(1-.06*skillMax('cook'),.72,1);
-  return mouths*.5*cookMult;
+  return Math.max(1, Math.round(mouths*.5*cookMult));
 }
 function forceShedCargo(){ if(!S||S.seaMode) return; var cap=cargoCap(); if(cap<=0) return; var limit=Math.round(cap*1.3); if(cargoW()<=limit) return; var dest=(typeof nextCity==='function'&&nextCity())||city(); var shed={}, guard=0;
   while(cargoW()>limit && guard++<800){ var held=GOODS.filter(function(g){return S.goods[g.id]>0 && g.id!=='slaves';}); if(!held.length) break; held.sort(function(a,b){return (price(a,dest)/a.wt)-(price(b,dest)/b.wt);}); var g=held[0]; S.goods[g.id]--; if(S.goods[g.id]<=0)S.basis[g.id]=0; shed[g.id]=(shed[g.id]||0)+1; }
@@ -935,6 +945,7 @@ function consumeDay(travelling, terrOverride){
   S.day++;
   S.food-=foodNeed();
   if(S.food<0){S.food=0; applyDeprivation('hunger',6);}
+  S.food=Math.max(0,Math.round(S.food));
   const terr=terrOverride||(travelling?legTerr():'settled');
   if(travelling) applyAnimalPeril(terr);
   if(travelling && S.marmotPet && (terr==='desert'||terr==='harsh') && rnd()<(terr==='harsh'?0.14:0.08)){ S.marmotPet=false; log("The young marmot, a creature of cold mountain meadows, cannot bear the "+(terr==='harsh'?'deep desert':'desert')+" \u2014 it sickens in the heat and is dead by evening."+(livingParty().some(function(p){return p.nephew&&!p.grown;})?" Your nephew buries it in the sand, red-eyed and silent.":"")); }
@@ -989,6 +1000,10 @@ function evVarakhsha(){ return {h:'THE OLD ROAD TO VARAKHSHA', t:"Where the firs
  ]}; }
 function checkOxusLeg(){ if(!S||S.seaMode||S.pendingEvent||S._oxusCrossed)return false; var a=city()&&city().name,b=nextCity()&&nextCity().name; if(!((a==='Merv'&&b==='Bukhara')||(a==='Bukhara'&&b==='Merv')))return false; var p=S.legKm/(legDist()||1); var pf=(a==='Merv')?p:(1-p); if(pf<0.36||pf>0.46)return false; S._oxusCrossed=true; S.journeying=false; clearJourney(); S.pendingEvent=crossingEvent(RIVERS['Bukhara|Merv']); render(); return true; }
 function checkVarakhshaLeg(){ if(!S||S.seaMode||S.pendingEvent)return false; var a=city()&&city().name,b=nextCity()&&nextCity().name; if(b!=='Bukhara'||!(a==='Merv'||a==='Samarkand'))return false; if(S.onceFlags&&S.onceFlags['vara_'+a])return false; var p=S.legKm/(legDist()||1); var w=(a==='Merv')?(p>=0.5&&p<=0.58):(p>=0.6&&p<=0.72); if(!w)return false; S.onceFlags['vara_'+a]=true; S._varaFrom=a; S._varaDest='Bukhara'; S._varaWest=false; S.journeying=false; clearJourney(); S.pendingEvent=evVarakhshaFork(); render(); return true; }
+function checkHajjStops(){ if(!S||!S.dash||S.dash.kind!=='hajj'||S.pendingEvent)return false; var p=S.legKm/(legDist()||1);
+  if(S.dash.sight && !S.dash.sightDone && p>=0.5){ S.dash.sightDone=true; log(S.dash.sight); }
+  if(S.dash.halt && !S.dash.haltDone && p>=(S.dash.haltAt||0.5)){ S.dash.haltDone=true; S.journeying=false; clearJourney(); S.pendingEvent=evDesertHalt(S.dash.halt); render(); return true; }
+  return false; }
 function checkSteppeStops(){ if(!S||S.seaMode||S.pendingEvent)return false;
   var c=city(),n=nextCity(); if(!c||!n)return false;
   var east=(c.name==='Suyab'&&n.name==='Beshbalik'), west=(c.name==='Beshbalik'&&n.name==='Suyab');
@@ -1057,6 +1072,7 @@ function stepDay(){
   if(checkAkChachCross()) return;
   if(checkNephewMarmot()) return;
   if(checkSteppeStops()) return;
+  if(checkHajjStops()) return;
   const terr=legTerr();
   // winter passes: extra danger on mountain legs out of season
   if(terr==='mountain' && passDanger()>0 && rnd()<passDanger()*.09){
@@ -1126,7 +1142,7 @@ function doHunt(terr, inTown, hunter){
   S.huntRisk=0; S.huntLuck=Math.min(.5,(S.huntLuck||0)+.10); // a kill thins the ground for next time
   const _learn=grantHuntXP(hunter,skill); const _ln=_learn?(' '+(hunter.you?'You come back having learned':(hunter.name.split(',')[0]+' comes back having learned'))+' a little more of the country.'):'';
   if(got<=2) return "Slim pickings — the land here is all but hunted out. Just "+got+" day"+(got===1?'':'s')+" of meat."+_ln;
-  return "The hunt yields "+got+" days of meat — "+
+  return "The hunt yields "+got+" measures of meat — "+
    (terr==='steppe'?pick(['gazelle on the open grass.','a wild ass run down on the flats.','red deer broken from the thickets.','bustard flushed from the long grass.']):terr==='mountain'?'an ibex off the high rocks.':terr==='desert'||terr==='harsh'?'a few hares and a lean fox.':'duck and small deer near the fields.')+
    (skill>=2?' '+(hunter.you?'You make':(hunter.name.split(',')[0]+' makes'))+' it look easy.':'')+_ln;
 }
@@ -1143,14 +1159,14 @@ function huntFood(){ if(!S||S.dead)return;
 function huntWith(hunter,terr,inTown){
   const msg=doHunt(terr, inTown, hunter);
   consumeDay(false, inTown?'settled':terr);
-  if(inTown && !S.dead && !(city()&&city().camp)){ S.dealDays+=1; restock(city().name,1); S.cityDay[city().name]=S.day; }
+  if(inTown && !S.dead && !(city()&&city().camp)){ S.dealDays+=2; restock(city().name,1); S.cityDay[city().name]=S.day; }
   if(!S.dead) log(msg);
   if(!S.dead) maybeHuntress(terr);
 }
 function buyFromLocals(per){
   let bought=0;
   while(S.silver>=per && cargoW()<cargoCap() && bought<45){ S.silver-=per; S.food+=1; bought++; }
-  if(bought>0) log("You take on "+bought+" days of food at "+per+" s a day."+(per>=5?" Robbery, but you'll eat.":"")); 
+  if(bought>0) log("You take on "+bought+" measures of food at "+per+" s each."+(per>=5?" Robbery, but you'll eat.":"")); 
   else log("You haven't the silver or the cargo-room for more food.");
 }
 function evStarving(){
@@ -1366,7 +1382,7 @@ function burnGoods(frac){ var lost=[];
     var n=(g.id==='naphtha')?have:Math.max(1,Math.round(have*frac)); if(n>have)n=have; S.goods[g.id]-=n; if(S.goods[g.id]<=0)S.basis[g.id]=0;
     lost.push(n+' '+g.u+(n>1?'s':'')+' of '+g.n.toLowerCase()); }
   return lost; }
-function evCampFire(){ var naph=(S.goods&&S.goods.naphtha)||0;
+function evCampFire(){ if(!cooled('campfire',14))return null; markEv('campfire'); var naph=(S.goods&&S.goods.naphtha)||0;
   var lead=naph>0?"A knocked lamp, a stray spark \u2014 and a jar of naphtha goes up. Flame races through the packs faster than men can beat it back.":"A camp-fire spark leaps to the baggage in the night, and the dry packs take light.";
   return {h:'<span class="red">FIRE IN THE CAMP</span>', t:lead+" The stone and metal will keep; the cloth, the paper, the oil will not.", ch:[
    {l:'Beat it out \u2014 wade in and save the cargo', f(){ var lost=burnGoods(naph>0?0.35:0.22); var _hp=6+ri(8); S.hp=clamp(S.hp-_hp,0,100); var _who=(livingComps()>0 && rnd()<0.25)?casualty(false):null; log("You and your people flog the flames down with cloaks and sand"+(lost.length?", but not before the fire takes "+lost.join(', '):"")+". Singed and half-choked, you save the rest."+(_who?' '+_who+' is burned in the doing.':'')); if(S.hp<=0){S.cause='a fire in camp';die();} }},
@@ -1385,7 +1401,7 @@ function buildEvent(terr){
   if(terr==='settled'){add(3,evInspect); add(3,evSogdian); add(2,evRebellion); add(2+(tollActive()?1:0),evCaravanserai); add(2,evCamel); add(2,evCholera);}
   if(terr==='settled' && S.goods){ const _t=S.goods.tea||0; if(_t>=10)add(2,evInspect); else if(_t>=1)add(1,evInspect); }
   add(3,evSick); add(2,evRoadDeal); add(2,evMonk); add(1,evHideout);
-  { var _nph=(S.goods&&S.goods.naphtha)||0; if(_nph>0) add(Math.min(5,1+Math.round(_nph/8)), evCampFire); }
+  { var _nph=(S.goods&&S.goods.naphtha)||0; if(_nph>0) add(Math.min(3,1+Math.floor(_nph/20)), evCampFire); }
   if(S.goods && S.goods.slaves>0) add(2, evSouls);
   // bandits: base presence by terrain, scaled by your reputation (pay them and word spreads; beat them and they avoid you)
   let banditBase={steppe:3,desert:2,forest:2,mountain:2,rugged:2,settled:1,marsh:1,jungle:1,harsh:0.5}[terr]||1; // bandits favour ambush country (forest/hills/passes) and roads near towns; only the deep desert (harsh) is too inhospitable to lurk in. contested frontiers add x1.6 below.
@@ -1448,7 +1464,7 @@ function evSandstorm(){
   return {h:'KARABURAN',t:"The sky turns the colour of a bruise. Someone says the words — the black wind — and the camels are already kneeling.",
   ch:[
    {l:'Shelter behind the camels (lose 2 days)',f(){passDays(2);S.hp-=3;log("The storm scours past for two days. Everything you own now contains sand.");}},
-   {l:'Press through it',f(){S.hp-=12;let extra='';if(rnd()<.35){extra=' The wind takes '+loseRandomGoods(.2)+'.';}log("You walk blind through the karaburan, roped together, breathing through cloth."+extra);}},
+   {l:'Press through it',f(){S.hp-=12;let extra='';if(rnd()<.35){extra=' The wind takes '+loseRandomGoods(.2)+'.';}outcomeBox('KARABURAN',"You walk blind through the karaburan, roped together, breathing through cloth."+extra);}},
   ]};
 }
 function banditRep(freqMult,sizeDelta){
@@ -1473,7 +1489,7 @@ function evBandits(){
    }},
    {l:'Stand and fight',f(){ const _cacheS=Math.round(S.silver), _cacheG=Object.assign({},S.goods); enterBattle({n:bandits, sea:false, cache:{silver:_cacheS,goods:_cacheG}}); }},
    {l:'Throw down your arms and yield',f(){ banditRep(1.10,-1); var keep=0.15; for(const g of GOODS){ S.goods[g.id]=Math.round((S.goods[g.id]||0)*keep); if(S.goods[g.id]<=0)S.basis[g.id]=0; } S.silver=Math.round(S.silver*keep); var lost=stripGear(); log("You order the caravan to yield. The riders take their pick of the cargo, your purse, and the very blades from your people\u2019s belts"+(lost.length?" \u2014 "+lost.join(', ')+" gone with them":"")+", then leave you your lives and a tenth of your goods. It is a long, quiet road on from here."); }},
-   {l:'Run for it',f(){ if((S.goods.slaves||0)>0){ const _ns=S.goods.slaves; S.goods.slaves=0; S.basis.slaves=0; banditRep(1.10,-1); log("The riders barely glance at your goods \u2014 they make straight for the slave-coffle, cut the ropes, and scatter your captives into the broken country. In the confusion you and the caravan slip clean away. You have lost "+_ns+" "+(_ns>1?'souls':'soul')+" and the silver they cost, and you ride off with a strange splinter under the ribs: were the bandits, today, the better men?"); render(); return; } banditRep(1.10,-1); const horsed=(S.herd&&S.herd.horse>0); const esc=Math.min(.85, .42 + .055*((S.herd&&S.herd.horse)||0)); const tossed=GOODS.some(g=>S.goods[g.id]>0)?loseRandomGoods(.12):null; if(rnd()<esc){log((horsed?"Your horses show their worth — you outrun the riders across the broken ground.":"You drive the caravan hard and lose them in the broken ground.")+(tossed?" You scatter "+tossed+" in your wake to slow them, and it serves.":""));S.hp-=5;} else {const lost1=(totalAnimals()>1)?loseAnimal():null;S.hp-=10; let s="They harry your flanks."+(tossed?" You throw down "+tossed+" to buy distance":"")+(lost1?(tossed?", and ":" ")+cap1(lost1)+" is cut loose in the scramble":""); if(rnd()<.2){S._noRecover=true;const who=casualty(rnd()<.4);S._noRecover=false;if(who)s+=((tossed||lost1)?" and ":" ")+who+(/\(/.test(who)?" is ridden down":" is hurt");} log(s+".");} }},
+   {l:'Run for it',f(){ if((S.goods.slaves||0)>0){ const _ns=S.goods.slaves; S.goods.slaves=0; S.basis.slaves=0; banditRep(1.10,-1); outcomeBox('THE COFFLE CUT LOOSE',"The riders barely glance at your goods \u2014 they make straight for the slave-coffle, cut the ropes, and scatter your captives into the broken country. In the confusion you and the caravan slip clean away. You have lost "+_ns+" "+(_ns>1?'souls':'soul')+" and the silver they cost, and you ride off with a strange splinter under the ribs: were the bandits, today, the better men?"); render(); return; } banditRep(1.10,-1); const horsed=(S.herd&&S.herd.horse>0); const esc=Math.min(.85, .42 + .055*((S.herd&&S.herd.horse)||0)); const tossed=GOODS.some(g=>S.goods[g.id]>0)?loseRandomGoods(.12):null; if(rnd()<esc){outcomeBox('YOU BREAK AWAY',(horsed?"Your horses show their worth — you outrun the riders across the broken ground.":"You drive the caravan hard and lose them in the broken ground.")+(tossed?" You scatter "+tossed+" in your wake to slow them, and it serves.":""));S.hp-=5;} else {const lost1=(totalAnimals()>1)?loseAnimal():null;S.hp-=10; let s="They harry your flanks."+(tossed?" You throw down "+tossed+" to buy distance":"")+(lost1?(tossed?", and ":" ")+cap1(lost1)+" is cut loose in the scramble":""); if(rnd()<.2){S._noRecover=true;const who=casualty(rnd()<.4);S._noRecover=false;if(who)s+=((tossed||lost1)?" and ":" ")+who+(/\(/.test(who)?" is ridden down":" is hurt");} outcomeBox('THEY HARRY YOU',s+".");} }},
   ]};
 }
 function evDryWell(){
@@ -1584,14 +1600,14 @@ function evSogdian(){
   ];
   if(sellsFood){
     const fAmt=20;
-    ch.push({l:'Buy food, '+fAmt+' days ('+foodUnit+' s/day)',f(){const c=fAmt*foodUnit; if(S.silver<c){log("Not enough silver for their grain.");return;} S.silver-=c;S.food+=fAmt;log("You buy "+fAmt+" days of food at "+foodUnit+" s each"+(foodUnit>=4?". Robbery, but you'll eat.":". A fair hand, for once."));}});
+    ch.push({l:'Buy food, '+fAmt+' measures ('+foodUnit+' s each)',f(){const c=fAmt*foodUnit; if(S.silver<c){log("Not enough silver for their grain.");return;} S.silver-=c;S.food+=fAmt;log("You buy "+fAmt+" measures of food at "+foodUnit+" s each"+(foodUnit>=4?". Robbery, but you'll eat.":". A fair hand, for once."));}});
     if(arid){ const wAmt=Math.round(waterMax()*.4);
       ch.push({l:'Buy water, '+wAmt+' ('+waterUnit+' s each)',f(){const c=wAmt*waterUnit; if(S.silver<c){log("Not enough silver for their water.");return;} S.silver-=c;S.water=Math.min(waterMax(),S.water+wAmt);log("You top up the skins at "+waterUnit+" s a measure"+(waterUnit>=3?". They saw you coming.":"."));}}); }
   } else {
     const buyFoodPay=4+ri(3);
-    ch.push({l:'Sell them 15 days of food (+'+(15*buyFoodPay)+' s)',f(){ if(S.food<25){log("You daren't part with food this thin yourself.");return;} S.food-=15;S.silver+=15*buyFoodPay;log("You sell 15 days of food at "+buyFoodPay+" s each. Their gratitude is loud and probably sincere.");}});
-    const buyWaterPay=3+ri(3);
-    ch.push({l:'Sell them water (+'+(10*buyWaterPay)+' s)',f(){ if(S.water<waterMax()*.5){log("Your own skins are too low to spare any.");return;} S.water-=10;S.silver+=10*buyWaterPay;log("You sell 10 measures of water at a desperate man's price.");}});
+    ch.push({l:'Sell them 15 measures of food (+'+(15*buyFoodPay)+' s)',f(){ if(S.food<25){log("You daren't part with food this thin yourself.");return;} S.food-=15;S.silver+=15*buyFoodPay;log("You sell 15 measures of food at "+buyFoodPay+" s each. Their gratitude is loud and probably sincere.");}});
+    if((WATER_USE[terr]||0)>0){ const buyWaterPay=3+ri(3);
+    ch.push({l:'Sell them water (+'+(10*buyWaterPay)+' s)',f(){ if(S.water<waterMax()*.5){log("Your own skins are too low to spare any.");return;} S.water-=10;S.silver+=10*buyWaterPay;log("You sell 10 measures of water at a desperate man's price.");}}); }
   }
   ch.push({l:'Decline politely',f(){log("You part with compliments, each privately convinced the other is a fool.");}});
   const title = eastbound()?'A CARAVAN FROM THE EAST':'A CARAVAN FROM THE WEST';
@@ -1606,7 +1622,7 @@ function evSnowedIn(){
   return {h:'SNOWBOUND', t:"The pass is worse than the season promised — drifts to the chest, the cairn-line gone, the wind a living thing. This is no afternoon squall.",
   ch:[
    {l:'Dig in and wait it out',f(){ const days=4+ri(6); passDays(days); S.hp-=Math.round(8*(1-0.6*coldShield())); if(!S.dead){S.water=waterMax(); let m="You wait "+days+" frozen days for a break in the weather, melting snow for water and stamping the feeling back into your feet. Everyone is cold and short of temper."; if(S.food < foodNeed()*days){ m+=" Food runs low, and tempers lower with it."; } else if(livingComps()>0){ const who=someoneName(); m += (rnd()<.5)?(" "+who+" builds a frankly excellent snowman to pass the time."):(" A snowball fight breaks out and briefly thaws the mood; "+who+" wins, and is insufferable about it."); } log(m);} }},
-   {l:'Force the pass now',f(){ var cs=coldShield(); var deadly=(d>=.85&&passSeverity()>=.9); S.hp-=Math.round((deadly?34:22)*(1-0.6*cs)); let s=(cs>=0.75?"The fur coats earn their price on the high traverse. ":(deadly?"Without furs, the cold is a blade. ":"")); var killP=(deadly?.8:.5)*d*(1-0.7*cs); if(rnd()<killP){ const who=casualty(true,true); if(who){s+=who+" is lost to the cold on the high traverse. ";} } if(deadly&&rnd()<killP*.7){ const who2=casualty(true,true); if(who2){s+=who2+" does not come down off the mountain either. ";} } if(rnd()<(deadly?.7:.4)&&totalAnimals()>1){ s+=cap1(loseAnimal())+" and its load vanish into a drift. "; if(deadly&&totalAnimals()>1&&rnd()<.5){ s+=cap1(loseAnimal())+" follows it under the snow. "; } } if(S.hp<=0){S.cause='the cold';die();s+="And then the cold takes you, too.";} else { s+="You come down the far side fewer than you went up, and changed."; } if(!S.dead)S.water=waterMax(); log(s); }},
+   {l:'Force the pass now',f(){ var cs=coldShield(); var deadly=(d>=.85&&passSeverity()>=.9); S.hp-=Math.round((deadly?34:22)*(1-0.6*cs)); let s=(cs>=0.75?"The fur coats earn their price on the high traverse. ":(deadly?"Without furs, the cold is a blade. ":"")); var killP=(deadly?.8:.5)*d*(1-0.7*cs); if(rnd()<killP){ const who=casualty(true,true); if(who){s+=who+" is lost to the cold on the high traverse. ";} } if(deadly&&rnd()<killP*.7){ const who2=casualty(true,true); if(who2){s+=who2+" does not come down off the mountain either. ";} } if(rnd()<(deadly?.7:.4)&&totalAnimals()>1){ s+=cap1(loseAnimal())+" and its load vanish into a drift. "; if(deadly&&totalAnimals()>1&&rnd()<.5){ s+=cap1(loseAnimal())+" follows it under the snow. "; } } if(S.hp<=0){S.cause='the cold';die();s+="And then the cold takes you, too.";} else { s+="You come down the far side fewer than you went up, and changed."; } if(!S.dead)S.water=waterMax(); outcomeBox('THE HIGH PASS',s); }},
   ].concat((S.dir||1)>0?[{l:'Turn back, and wait out the season below',f(){ const dd=S.dir||1, x=S.legKm; S.idx+=dd; S.dir=-dd; S.legKm=Math.max(0,legDist()-x); const back=nextCity(); log("You will not die in this drift. You turn the caravan and retrace your steps toward "+(back?back.name:'the last town')+", to wait out the worst of the winter under a roof."); }}]:[])};
 }
 function evInspect(){
@@ -1745,7 +1761,7 @@ function crossingEvent(riv){
     {l:'Wait a week for surer ice',f:function(){ passDays(7); if(!S.dead) log("You camp a week beside "+riv.name+"; the ice only hardens, and you cross dry."); }} ]}; }
   if(fr>0.12){ var pb=Math.min(.55,.12+(0.7-fr));
     var fz=(monthNum()>=10||monthNum()<=1); return {h:'THE THIN ICE',t:cap+" is frozen over, but the ice is young and uncertain \u2014 "+(fz?"only half-taken, ticking and groaning underfoot, though as winter deepens it will surely bear a loaded camel":"going soft and rotten with the coming thaw, and it will not hold much longer")+". No ferry runs. You may chance the ice now, or wait "+(fz?"for the cold to harden it":"for the thaw to free the ferryman")+".",ch:[
-     {l:'Chance the thin ice',f:function(){ if(rnd()<pb){ if(totalAnimals()>0 && rnd()<.7){ log("The ice splits with a crack like a whip. "+cap1(loseAnimal())+" plunges through and is gone, load and all, beneath the floes."); } else { S.hp-=14; var who=casualty(false); log("The ice gives way. "+(who?who+" goes through and is hauled out blue and shaking.":"You go through to the chest and are dragged out half-frozen.")); if(S.hp<=0){S.cause='the ice';die();return;} } } else { log("Hearts in mouths, you cross "+riv.name+" on the singing ice — dry, and unpaid."); } }},
+     {l:'Chance the thin ice',f:function(){ var msg; if(rnd()<pb){ if(totalAnimals()>0 && rnd()<.7){ msg="The ice splits with a crack like a whip. "+cap1(loseAnimal())+" plunges through and is gone, load and all, beneath the floes."; } else { S.hp-=14; var who=casualty(false); msg="The ice gives way. "+(who?who+" goes through and is hauled out blue and shaking.":"You go through to the chest and are dragged out half-frozen."); if(S.hp<=0){S.cause='the ice';log(msg);die();return;} } } else { msg="Hearts in mouths, you cross "+riv.name+" on the singing ice — dry, and unpaid."; } log(msg); S.pendingEvent={h:'THE THIN ICE',t:msg,ch:[{l:'Go on',f:function(){}}]}; }},
      {l:(fz?'Wait a week for the ice to firm':'Wait a week for the ferry to return'),f:function(){ passDays(7); if(!S.dead){ log(fz?"You wait a week by "+riv.name+"; the cold sets deeper and the ice firms underfoot.":"You wait a week by "+riv.name+"; the thaw quickens and the ferryman soon slides his boat back into open water."); S.pendingEvent=crossingEvent(riv); } }} ]}; }
   var ch=[];
   if(S.silver>=10){ ch.push({l:'Pay the ferryman (10 s)',f:function(){ S.silver-=10; log("Ten silver to the boatmen — the river-warden takes his cut — and the ferry carries the caravan over "+riv.name+"."); }}); }
@@ -1770,7 +1786,8 @@ function desertDashEvent(from,to){ var mi=Math.round(gcMiles(DESERT_LL[from],DES
 function resolveDesertDash(from,to){ var bed=((from==='Yarkand'&&to==='Aksu')||(from==='Aksu'&&to==='Yarkand')); dashBegin(from,to,{bed:bed,lostChance:(bed?0.30:0.55)}); }
 function cityClone(nm,terr,dist,fracFallback){ var src=(typeof cityByName==='function')?cityByName(nm):null; var o=src?Object.assign({},src):{name:nm}; o.name=nm; if(terr)o.terr=terr; if(dist!=null)o.dist=dist; if(o.frac==null)o.frac=(fracFallback!=null?fracFallback:0.3); o.silent=false; o.hub=null; return o; }
 function dashBegin(fromLabel,to,opts){ opts=opts||{}; S.pendingEvent=null; var miles=(opts.miles!=null)?opts.miles:gcMiles(DESERT_LL[fromLabel],DESERT_LL[to]); var fromObj=cityClone(fromLabel,'desert',0,(opts.fromFrac!=null?opts.fromFrac:0.3)); var toObj=cityClone(to,'desert',1,opts.toFrac); var lc=(opts.lostChance!=null?opts.lostChance:0); S.dash={from:fromLabel,to:to,bed:!!opts.bed,hidden:!!opts.hidden,lostChance:lc,lostRolled:(lc>0?false:true),lostKm:0}; S.itin=[fromObj,toObj]; S.idx=0; S.dir=1; S.legKm=0; S.pace='s'; var days=Math.max(3,Math.round(miles/15)); var D=Math.max(1,daySpeed()); toObj.dist=Math.round(days*D); S.dash.lostKm=Math.round(toObj.dist*(0.35+rnd()*0.30)); S.screen='travel'; startJourney(); }
-function dashArrive(){ if(S.dash&&S.dash.kind==='vara'){ varaDashArrive(); return; } if(S.dash&&S.dash.kind==='turfan'){ var _t=S.dash.to; S.dash=null; S.water=waterMax(); landAtCity(_t); log("The valley opens at last on the green hollow of Turfan, vine-shaded and furnace-hot, and you rejoin the road to Cathay among the northern oases."); if(S._dzTook){ S.pendingEvent=evDzReveal(S._dzTook); S._dzTook=null; } S.screen='city'; return; } if(S.dash&&S.dash.kind==='akchach'){ var _t=S.dash.to; S.dash=null; S.water=waterMax(); var _rt=(_t==='Chach')?'k':'n'; S.route=_rt; S.routeChosen=(_rt==='k'); S.steppeDecided=true; S.itin=fullRoute(_rt,isWest()); var _ni=S.itin.findIndex(function(x){return x.name===_t;}); if(_ni>=0){ S.idx=_ni; S.dir=1; S.legKm=0; } if(typeof restockToNow==='function')restockToNow(_t); log("You come down at last to "+_t+(_t==='Chach'?', the Stone City among its canals':', in the green of the Ferghana valley')+"."); S.screen='city'; return; } if(S.dash&&S.dash.kind==='gap'){ var _g=S.dash.to,_sy=S.dash.toSuyab; S.dash=null; S.water=waterMax(); if(_g==='Beshbalik'){ var _st=fullRoute('k',isWest()); var _ni=_st.findIndex(function(x){return x.name==='Beshbalik';}); if(_ni>=0){ S.route='k'; S.routeChosen=true; S.steppeDecided=true; S.itin=_st; S.idx=_ni; S.dir=1; S.legKm=0; } } else { var _st2=fullRoute('n',isWest()); var _n2=_st2.findIndex(function(x){return x.name==='Turfan';}); if(_n2>=0){ S.route='n'; S.routeChosen=true; S.steppeDecided=true; S.itin=_st2; S.idx=_n2; S.dir=1; S.legKm=0; } } if(typeof restockToNow==='function')restockToNow(_g); log("The gap road brings you down to "+_g+", back on the steppe road between the ranges."); if(_sy && _g==='Beshbalik' && typeof mapSetOutTo==='function'){ if(mapSetOutTo('Suyab')) return; } S.screen='city'; return; } var to=S.dash.to, bed=S.dash.bed, wasLost=S.dash.hidden; S.dash=null; S.lost=null; S.water=waterMax(); landAtCity(to); if(wasLost){ log("At the last a smudge of green hardens out of the glare — the wells and walls of "+to+". You have walked out of the Taklamakan alive, which is more than most who lose the way in it."); } else if(bed){ log("You held to the dead river's bed where you could and your nerve where you could not, and the green of "+to+" hardens out of the haze at last. You have crossed the Taklamakan — and lived to be insufferable about it."); } else { log("Against every odds the desert offers, you held a true line by the sun and the lie of the dunes, and the towers of "+to+" lift from the glare. You have crossed the Taklamakan whole — a thing few live to boast of."); } S.screen='city'; }
+function dashArrive(){ if(S.dash&&S.dash.kind==='hajj'){ var _t=((S.dir||1)>0?S.dash.to:S.dash.from); S.dash=null; S.water=waterMax(); S.seaMode=true; if(typeof addSeaMarkets==='function')addSeaMarkets(); S.portName=_t; S.hereSince=S.day; S.dir=1; S.dealDays=0; S.priceLock={}; if(S.townCash)delete S.townCash[_t]; restockToNow(_t); log((SEA_BYNAME[_t]&&SEA_BYNAME[_t].arr)||('You come to '+_t+'.')); if(typeof checkSeaHistory==='function')checkSeaHistory(_t); if(!S.pendingEvent){ if(guardOweTotal(_t)>0){ S.pendingEvent=exGuardConfront(_t); } else if((S.wageDebt||0)>0){ S.pendingEvent=guardDebtReminder(); } } S.screen='port'; return; }
+ if(S.dash&&S.dash.kind==='vara'){ varaDashArrive(); return; } if(S.dash&&S.dash.kind==='turfan'){ var _t=S.dash.to; S.dash=null; S.water=waterMax(); landAtCity(_t); log("The valley opens at last on the green hollow of Turfan, vine-shaded and furnace-hot, and you rejoin the road to Cathay among the northern oases."); if(S._dzTook){ S.pendingEvent=evDzReveal(S._dzTook); S._dzTook=null; } S.screen='city'; return; } if(S.dash&&S.dash.kind==='akchach'){ var _t=S.dash.to; S.dash=null; S.water=waterMax(); var _rt=(_t==='Chach')?'k':'n'; S.route=_rt; S.routeChosen=(_rt==='k'); S.steppeDecided=true; S.itin=fullRoute(_rt,isWest()); var _ni=S.itin.findIndex(function(x){return x.name===_t;}); if(_ni>=0){ S.idx=_ni; S.dir=1; S.legKm=0; } if(typeof restockToNow==='function')restockToNow(_t); log("You come down at last to "+_t+(_t==='Chach'?', the Stone City among its canals':', in the green of the Ferghana valley')+"."); S.screen='city'; return; } if(S.dash&&S.dash.kind==='gap'){ var _g=S.dash.to,_sy=S.dash.toSuyab; S.dash=null; S.water=waterMax(); if(_g==='Beshbalik'){ var _st=fullRoute('k',isWest()); var _ni=_st.findIndex(function(x){return x.name==='Beshbalik';}); if(_ni>=0){ S.route='k'; S.routeChosen=true; S.steppeDecided=true; S.itin=_st; S.idx=_ni; S.dir=1; S.legKm=0; } } else { var _st2=fullRoute('n',isWest()); var _n2=_st2.findIndex(function(x){return x.name==='Turfan';}); if(_n2>=0){ S.route='n'; S.routeChosen=true; S.steppeDecided=true; S.itin=_st2; S.idx=_n2; S.dir=1; S.legKm=0; } } if(typeof restockToNow==='function')restockToNow(_g); log("The gap road brings you down to "+_g+", back on the steppe road between the ranges."); if(_sy && _g==='Beshbalik' && typeof mapSetOutTo==='function'){ if(mapSetOutTo('Suyab')) return; } S.screen='city'; return; } var to=S.dash.to, bed=S.dash.bed, wasLost=S.dash.hidden; S.dash=null; S.lost=null; S.water=waterMax(); landAtCity(to); if(wasLost){ log("At the last a smudge of green hardens out of the glare — the wells and walls of "+to+". You have walked out of the Taklamakan alive, which is more than most who lose the way in it."); } else if(bed){ log("You held to the dead river's bed where you could and your nerve where you could not, and the green of "+to+" hardens out of the haze at last. You have crossed the Taklamakan — and lived to be insufferable about it."); } else { log("Against every odds the desert offers, you held a true line by the sun and the lie of the dunes, and the towers of "+to+" lift from the glare. You have crossed the Taklamakan whole — a thing few live to boast of."); } S.screen='city'; }
 function enterLost(from,to){ var a=DESERT_LL[from],b=DESERT_LL[to],latm=(a[1]+b[1])/2*Math.PI/180; var base=Math.atan2((b[1]-a[1]),(b[0]-a[0])*Math.cos(latm)); var theta=base+(rnd()*2-1)*0.5236; var dMi=gcMiles(a,b)*(0.3+rnd()*0.4); var lon=a[0]+(dMi*Math.cos(theta))/(69*Math.cos(latm)), lat=a[1]+(dMi*Math.sin(theta))/69; lon=Math.max(71.3,Math.min(94.7,lon)); lat=Math.max(35.3,Math.min(44.4,lat)); setLost([lon,lat]); S.hp=clamp(S.hp-6,0,100); if(S.hp<=0){S.cause='the desert';die();return;} log("The wind rises, the dunes shift, and somewhere out here the track simply ceases to be — you are no longer sure where you stand."); S.screen='lost'; }
 function lostEvent(){ var p=S.lost||[88,39]; var cands=Object.keys(DESERT_LL).map(function(n){return {n:n,d:gcMiles(p,DESERT_LL[n])};}).filter(function(x){return x.d<330;}).sort(function(x,y){return x.d-y.d;}).slice(0,5); var ch=cands.map(function(x){ return {l:'Make for '+x.n+' ('+roughDir(p,x.n)+')', f:function(){ headFromLost(x.n); }}; }); return {h:'LOST IN THE TAKLAMAKAN', t:"The dunes roll away the same in every quarter and the track is long gone. You no longer truly know where you stand — somewhere out past "+(S.lostHint||'the sands')+", you reckon, but the certainty drained off with the water. You must choose a direction and hold to it; out here, dithering kills as surely as a wrong guess.", ch:ch}; }
 function headFromLost(name){ dashBegin('the deep desert',name,{miles:gcMiles(S.lost,DESERT_LL[name]),hidden:true,lostChance:0.30}); }
@@ -1782,14 +1799,14 @@ function evFord(){
   if(_ice>=0.7){ return {h:'THE FROZEN RIVER',t:"The stream here lies locked under hard winter ice, snow drifted across the channel \u2014 no need to ford. The ice will bear a loaded camel.",ch:[
     {l:'Cross on the ice',f:function(){ S.water=waterMax(); log("You lead the string straight over the frozen water, hooves cracking the crust, and come off the far bank dry."); }} ]}; }
   if(_ice>0.12){ var _pb=Math.min(.5,.12+(0.7-_ice)); return {h:'THE THIN ICE',t:"The stream is frozen, but the ice is young and uncertain, ticking and groaning underfoot. You can chance it where you stand, or cast about upstream for a sounder crossing.",ch:[
-    {l:'Chance the ice',f:function(){ S.water=waterMax(); if(rnd()<_pb){ S.hp-=10; var who=casualty(false); var extra=(totalAnimals()>1&&rnd()<.6)?" "+cap1(loseAnimal())+" plunges through and is lost beneath the floes.":""; log("The ice gives way. "+(who?who+" goes through and is hauled out blue and shaking.":"You break through to the waist and are dragged out half-frozen.")+extra); if(S.hp<=0){S.cause='the ice';die();} } else { log("Hearts in mouths, you cross on the singing ice \u2014 dry, and across."); } }},
+    {l:'Chance the ice',f:function(){ S.water=waterMax(); var msg; if(rnd()<_pb){ S.hp-=10; var who=casualty(false); var extra=(totalAnimals()>1&&rnd()<.6)?" "+cap1(loseAnimal())+" plunges through and is lost beneath the floes.":""; msg="The ice gives way. "+(who?who+" goes through and is hauled out blue and shaking.":"You break through to the waist and are dragged out half-frozen.")+extra; if(S.hp<=0){S.cause='the ice';log(msg);die();return;} } else { msg="Hearts in mouths, you cross on the singing ice \u2014 dry, and across."; } log(msg); S.pendingEvent={h:'THE ICE',t:msg,ch:[{l:'Go on',f:function(){}}]}; }},
     {l:'Cast about for firmer ice',f:function(){ var days=1+ri(2); passDays(days); if(!S.dead){ S.water=waterMax(); log("You spend "+days+" day"+(days>1?'s':'')+" working upstream to a narrows where the ice lies thick, and cross there."); } }} ]}; }
   // snowmelt makes rivers worst in late spring / early summer (months 4-6)
   const m=monthNum(), melt = (m>=4&&m<=6);
   const fordFail = melt? .45 : .25;
   return {h:'SWOLLEN RIVER',t:"The ford is running fast and brown"+(melt?" with snowmelt off the mountains":"")+". The far bank looks exactly as far away as it is.",
   ch:[
-   {l:'Ford it now',f(){ S.water=waterMax(); const horsed=(S.herd&&S.herd.horse>0); const boat=livingParty().some(p=>p.salty); const ff=fordFail*(horsed?.7:1)*(boat?.55:1); if(rnd()>ff){log("Wet to the waist, swearing in three languages, but across."+(boat?" Your old boatman reads the current like a familiar face and picks the line.":(horsed?" The horses swim it strongly.":"")));} else { S.hp-=8; let s="A pack-rope snaps midstream. The river takes "+loseRandomGoods(.15)+"."; if(rnd()<(melt?.18:.08)){ const who=casualty(rnd()<.4); if(who) s+=" "+who+(/\(/.test(who)?" is swept away and drowned.":" is dragged under but hauled out, half-drowned."); } if(rnd()<.15&&totalAnimals()>1){ s+=" "+cap1(loseAnimal())+" is lost to the current.";} log(s); if(S.hp<=0){S.cause='drowning';die();} } }},
+   {l:'Ford it now',f(){ S.water=waterMax(); const horsed=(S.herd&&S.herd.horse>0); const boat=livingParty().some(p=>p.salty); const ff=fordFail*(horsed?.7:1)*(boat?.55:1); var s; if(rnd()>ff){ s="Wet to the waist, swearing in three languages, but across."+(boat?" Your old boatman reads the current like a familiar face and picks the line.":(horsed?" The horses swim it strongly.":"")); } else { S.hp-=8; s="A pack-rope snaps midstream. The river takes "+loseRandomGoods(.15)+"."; if(rnd()<(melt?.18:.08)){ const who=casualty(rnd()<.4); if(who) s+=" "+who+(/\(/.test(who)?" is swept away and drowned.":" is dragged under but hauled out, half-drowned."); } if(rnd()<.15&&totalAnimals()>1){ s+=" "+cap1(loseAnimal())+" is lost to the current.";} if(S.hp<=0){S.cause='drowning';log(s);die();return;} } log(s); S.pendingEvent={h:'THE FORD',t:s,ch:[{l:'Go on',f:function(){}}]}; }},
    {l:'Wait for it to drop',f(){ const days=melt? 2+ri(5) : 1+ri(3); passDays(days); if(!S.dead){ S.water=waterMax(); const terr=(nextCity()?nextCity().terr:'steppe'); const hmsg=doHunt(terr,false); log("You wait it out — "+days+" day"+(days>1?'s':'')+" — and cross when the water falls. You pass the time by hunting: "+hmsg); } }},
   ]};
 }
@@ -1888,7 +1905,7 @@ function foodShort(name){ name=name||((city()||{}).name); if(!S||!S.shortage)ret
 function foodShortPrice(){ var el=foodShort(); if(el==null)return null; return el<60?2:(el<90?1:0.5); }
 function foodShortRow(c){ var el=foodShort(c&&c.name); if(el==null)return ''; var p=foodShortPrice();
   return '<tr><td>Food <span style="color:var(--dim)">(grain \u2014 '+(el<60?'dear in the dearth':'the worst is easing')+')</span><span class="red"> \u00b7 scarce</span></td>'+
-   '<td class="num '+(p>=2?'blue':'gold')+'">'+p+' s</td><td class="num"><span style="color:var(--dim)">\u2014</span></td><td class="num">'+S.food+'</td>'+
+   '<td class="num '+(p>=2?'blue':'gold')+'">'+p+' s</td><td class="num"><span style="color:var(--dim)">\u2014</span></td><td class="num">'+Math.round(S.food)+'</td>'+
    '<td><button class="tiny" onclick="buyShortFood(10)">+10</button><button class="tiny" onclick="buyShortFood(30)">+30</button>'+
    '<button class="tiny" onclick="sellShortFood(10)">\u221210</button><button class="tiny" onclick="sellShortFood(30)">\u221230</button></td></tr>'; }
 function buyShortFood(n){ var p=foodShortPrice(); if(p==null)return; if(!maritimeTown() && cargoW()+Math.round(n*FOOD_WT)>cargoCap()){ log("No room on the animals for that much grain \u2014 buy a beast or sell goods first."); render(); return; } var q=Math.min(n, Math.floor(S.silver/p)); if(q<=0){ log("You cannot afford even that at famine prices."); render(); return; } S.silver-=q*p; S.food+=q; townCredit(city(),q*p); log("You buy "+q+" units of food at "+p+" s each \u2014 famine prices \u2014 "+(Math.round(q*p))+" s in all."); render(); }
@@ -1916,13 +1933,13 @@ function waitDays(n){ // pass days in a city; stop early if provisions run out s
 }
 function restCity(){
   const d=waitDays(3);
-  if(!S.dead && d>0){S.hp=clamp(S.hp+6*d,0,100);S.water=waterMax();healMembers(9*d);healSouls(8*d);S.dealDays+=d;restock(city().name,d);S.cityDay[city().name]=S.day;log("Rest, repairs, and proper cooking."+(skillMax('trade')>0?" Your trader works the bazaar for better prices.":""));}
+  if(!S.dead && d>0){S.hp=clamp(S.hp+6*d,0,100);S.water=waterMax();healMembers(9*d);healSouls(8*d);restock(city().name,d);S.cityDay[city().name]=S.day;log("Rest, repairs, and proper cooking."+(skillMax('trade')>0?" Your trader works the bazaar for better prices.":""));}
   if(!S.dead && d>=3 && rnd()<.5) maybeCityEvent();
   render();
 }
 function waitMonth(){
   const d=waitDays(30);
-  if(!S.dead && d>0){S.hp=clamp(S.hp+Math.min(22,d),0,100);S.water=waterMax();healMembers(Math.min(45,2*d));healSouls(Math.min(40,2.6*d));S.dealDays+=d;restock(city().name,d);S.cityDay[city().name]=S.day; if(d>=30)S.priceLock={};
+  if(!S.dead && d>0){S.hp=clamp(S.hp+Math.min(22,d),0,100);S.water=waterMax();healMembers(Math.min(45,2*d));healSouls(Math.min(40,2.6*d));restock(city().name,d);S.cityDay[city().name]=S.day; if(d>=30)S.priceLock={};
     log(monthPassLog(d));}
   if(!S.dead && d>=6 && rnd()<.55) maybeCityEvent();
   render();
@@ -2419,7 +2436,7 @@ function tavernEvent(){
   if(S.silver>=3){ S.silver-=3; cup="You buy a round and settle in by the fire. "; }
   else { cup="You cannot afford even a cup, so you nurse the tavern-keeper's pity and listen. "; }
   const tav=(CITYFOLK[c.name]&&CITYFOLK[c.name].tav)?CITYFOLK[c.name].tav:'low-roofed and smoky, full of caravan-men and their lies';
-  const flavour=(c.name==='Akhsikath')?"A communal cauldron of osh — rice, mutton, carrots, and onions — goes round, and is not refused.":(c.name==='Rey')?"A farmer in from the nearby village of Tehran nurses one cup all evening, grumbling that the city's prices are robbery and its people worse.":(c.name==='Constantinople'||c.name==='Iconium')?"In a corner two men argue in low voices over whether the holy images are idols to be smashed or windows onto heaven — the Emperor's quarrel, and not a safe one to be overheard taking a side in.":pick(["Dice rattle in the corner.","Someone is singing, badly, in a language no one admits to knowing.","A communal pot of something goes round, and is not refused.","Two traders argue over a price that concerns neither of them."]);
+  const flavour=(c.name==='Akhsikath')?"A communal cauldron of osh — rice, mutton, carrots, and onions — goes round, and is not refused.":(c.name==='Dhofar')?"An old camel-master, asked why no caravan strikes north across the sands for the Yamama, laughs without mirth: 'That is the Rub' al-Khali, boy \u2014 the Empty Quarter. No man crosses it and returns; the sands there drink whole tribes. We go around \u2014 west by the incense road, or by sea \u2014 as God intended.'":(c.name==='Rey')?"A farmer in from the nearby village of Tehran nurses one cup all evening, grumbling that the city's prices are robbery and its people worse.":(c.name==='Constantinople'||c.name==='Iconium')?"In a corner two men argue in low voices over whether the holy images are idols to be smashed or windows onto heaven — the Emperor's quarrel, and not a safe one to be overheard taking a side in.":pick(["Dice rattle in the corner.","Someone is singing, badly, in a language no one admits to knowing.","A communal pot of something goes round, and is not refused.","Two traders argue over a price that concerns neither of them."]);
   const scene=cup+"The tavern in "+cityLabel(c)+" is "+tav+". "+flavour+monsoonTavernGossip();
   const rumor=pickRumor();
   if(c.name==='Akhsikath' && !S.onceFlags.osh_egg && rnd()<0.5){ S.onceFlags.osh_egg=true; return oshBeekeeperEvent(scene); }
@@ -2519,7 +2536,7 @@ function evPirates(){
     {l:'Pay them off ('+demand+' s)',f(){ if(S.silver>=demand){ S.silver-=demand; banditRep(1.10,-1); log("You hand over the silver. The pirate captain salutes you with mock courtesy and sheers off to look for easier prey."); } else { const noGoods=GOODS.every(g=>!S.goods[g.id]); if(S.silver<1 && noGoods){ S.pendingEvent=piratesJoinOffer(); return; } S.silver=0; banditRep(1.10,-1); const lost=loseRandomGoods(.4); S.hp=clamp(S.hp-10,0,100); log("You haven't the coin. They take "+lost+" instead, and leave you bruised but breathing."); if(S.hp<=0){S.cause='pirates';die();} } }},
     {l:'Surrender the cargo',f(){ const mine=S.silver>0||GOODS.some(g=>S.goods[g.id]>0); if(!mine){ banditRep(1.05,-1); log("You have nothing of your own to give. The hold they strip belongs to the ship and its captain, not to you — they take it, curse you for a pauper, and pull away."); return; } for(const g of GOODS){ S.goods[g.id]=Math.round((S.goods[g.id]||0)*0.10); if(S.goods[g.id]<=0)S.basis[g.id]=0; } S.silver=Math.round(S.silver*0.10); var _lost=stripGear(); banditRep(1.05,-1); log("You give up the hold without a fight. The pirates strip the ship and take the arms from your people\u2019s hands"+(_lost.length?" ("+_lost.join(', ')+" gone)":"")+", leaving only the tenth you hid in the bilges. Poorer, lighter, and alive."); }},
     {l:'Fight them off',f(){ const _cacheS=Math.round(S.silver), _cacheG=Object.assign({},S.goods); enterBattle({n:pirates, sea:true, cache:{silver:_cacheS,goods:_cacheG}}); }},
-    {l:'Try to run',f(){ if(marmara && rnd()<0.25){ banditRep(1.0,0); log("You crowd on sail — and out of the haze comes a Roman dromon, oars beating like a heart, bearing down on the pirates, who scatter for the shore. The Empire's navy has its uses."); return; } if(rnd()<0.50){ const tossed=GOODS.some(g=>S.goods[g.id]>0)?loseRandomGoods(.5):null; banditRep(1.0,0); log("You run before the wind and lose them among the islands"+(tossed?", though you cut "+tossed+" over the side to lighten the ship":"")+"."); } else { log("They are faster than they looked; grapnels bite, and there is no running now."); var _cS=Math.round(S.silver),_cG=Object.assign({},S.goods); enterBattle({n:pirates, sea:true, cache:{silver:_cS,goods:_cG}}); } }},
+    {l:'Try to run',f(){ if(marmara && rnd()<0.25){ banditRep(1.0,0); outcomeBox('THE ROMAN NAVY',"You crowd on sail — and out of the haze comes a Roman dromon, oars beating like a heart, bearing down on the pirates, who scatter for the shore. The Empire's navy has its uses."); return; } if(rnd()<0.50){ const tossed=GOODS.some(g=>S.goods[g.id]>0)?loseRandomGoods(.5):null; banditRep(1.0,0); outcomeBox('LOST AMONG THE ISLANDS',"You run before the wind and lose them among the islands"+(tossed?", though you cut "+tossed+" over the side to lighten the ship":"")+"."); } else { log("They are faster than they looked; grapnels bite, and there is no running now."); var _cS=Math.round(S.silver),_cG=Object.assign({},S.goods); enterBattle({n:pirates, sea:true, cache:{silver:_cS,goods:_cG}}); } }},
    ]};
 }
 function evChanganPanic(){ return {h:"PANIC IN CHANG'AN", t:"You arrive to a city holding its breath. A Tibetan army has come down the Wei valley; couriers gallop, the court is said to be packing, and every rumour is worse than the last. Wise merchants are turning goods into anything portable — or simply fleeing.", ch:[{l:'Note it, and keep the beasts close',f(){ log("You take the warning to heart, keep your packs loaded and your animals saddled, and watch the gates."); }}]}; }
@@ -2582,7 +2599,7 @@ function showCargo(){
   let rows = held.length
     ? held.map(g=>'<p style="margin:4px 0"><b>'+S.goods[g.id]+'</b> '+g.n+' <span class="sub">('+g.u+(S.goods[g.id]>1?'s':'')+') — wt '+(S.goods[g.id]*g.wt)+(S.basis[g.id]>0?', avg paid '+Math.round(S.basis[g.id])+' s':'')+'</span></p>').join('')
     : '<p class="sub">Your packs hold no trade-goods just now.</p>';
-  rows += '<p class="sub" style="margin-top:10px">'+(S.seaMode?'Cargo aboard <b>'+cargoW()+'</b>':'Cargo weight <b>'+cargoW()+'</b> / capacity <b>'+cargoCap()+'</b>')+' · provisions: <b>'+Math.round(S.food)+'</b> days.</p>';
+  rows += '<p class="sub" style="margin-top:10px">'+(cargoCap()>=999999?'Cargo aboard <b>'+cargoW()+'</b>':'Cargo weight <b>'+cargoW()+'</b> / capacity <b>'+cargoCap()+'</b>')+' · provisions: <b>'+Math.round(S.food)+'</b> days.</p>';
   S.pendingEvent={h:'THE PACKS', t:rows, ch:[{l:'Close',f(){}}]};
   render();
 }
@@ -2826,13 +2843,15 @@ function buyAnimal(id){
   if(!animalAvailable(id,c)){ log(cap1(ANIMALS[id].pl)+' are not sold in '+cityLabel(c)+'.'); render(); return; }
   const p=animalPrice(id,c);
   if(S.silver<p){ log("You haven't the silver for a "+ANIMALS[id].n+" ("+p+" s)."); render(); return; }
-  S.silver-=p; gainAnimal(id); S.water=waterMax();
+  S.silver-=p; gainAnimal(id); townCredit(c,p); S.water=waterMax();
   log("You buy a "+ANIMALS[id].n+" at "+p+" silver"+(['bactrian','dromedary','hybrid'].includes(id)?", its water-skins filled at the wells":"")+". The others size it up.");
   render();
 }
 function sellAnimal(id){
   if(!S.herd||(S.herd[id]||0)<=0){ render(); return; }
-  const sp=animalSell(id,city()); S.herd[id]--; S.silver+=sp; S.water=Math.min(S.water,waterMax());
+  const c=city(); const sp=animalSell(id,c);
+  if(c.hub==='minor'||isBaghdadVillage(c.name)){ var cur=townCashNow(c); if(cur<sp){ log("The buyers of "+c.name+" have not the ready silver for a "+ANIMALS[id].n+" just now \u2014 a larger market would take it."); render(); return; } S.townCash[c.name]-=sp; }
+  S.herd[id]--; S.silver+=sp; S.water=Math.min(S.water,waterMax());
   let note="";
   if(cargoW()>cargoCap()) note = totalAnimals()===0
     ? " You have no pack animal now — buy a beast before you set out, or the cargo stays here."
@@ -2883,12 +2902,12 @@ function applyAnimalPeril(terr){
     let p=0;
     if(id==='dromedary' && terr==='mountain')                         p=.04 + .07*passDanger();    // cold kills the desert camel
     else if(id==='bactrian' && (terr==='desert'||terr==='harsh') && f>=.74) p=.025 + ((m>=5&&m<=7)?.04:0); // heat kills the woolly camel in the Levant
-    else if(id==='horse' && terr==='harsh')                            p=.06;                       // the deep desert is no place for a horse
-    else if(id==='horse' && terr==='desert')                          p=.035;                      // thirsty horses die in the sands
+    else if(id==='horse' && terr==='harsh')                            p=.10;   // the killing waste is once again no place at all for horses                       // the deep desert is no place for a horse
+    else if(id==='horse' && terr==='desert')                          p=.045;                      // thirsty horses die in the sands
     else if(id==='horse' && terr==='mountain')                        p=.04 + .05*passDanger();    // high cold passes are no place for a horse either
-    else if(id==='donkey' && terr==='harsh')                          p=.025;                      // the deep desert takes the little donkey too
+    else if(id==='donkey' && terr==='harsh')                          p=.035;                      // the deep desert takes the little donkey too
     else if(id==='donkey' && terr==='desert')                         p=.015;
-    else if(id==='mule' && terr==='harsh')                            p=.022;                      // tough, but not proof against the killing waste
+    else if(id==='mule' && terr==='harsh')                            p=.03;                      // tough, but not proof against the killing waste
     else if(id==='mule' && terr==='desert')                           p=.012;
     if(p<=0) continue;
     if(rnd() < p*care){ const toll=Math.max(1, Math.round(S.herd[id]*0.08)); S.herd[id]=Math.max(0,S.herd[id]-toll); perilLog(id, terr, toll); }
@@ -3209,7 +3228,7 @@ function renderNotes(m){
   m.innerHTML='<h2>The Merchant’s Notes <span class="sub">· '+cityLabel(c)+'</span></h2>'+
     '<p class="sub">Prices here against the neighbouring towns. A town you have <b>been to</b> shows its remembered prices; one you have not shows only road-rumour of how it compares to here — <span class="blue">higher</span>, <span class="green">lower</span>, or unknown. <span class="blue">Blue</span> = dearer there (carry it and sell); <span class="green">green</span> = cheaper there.</p>'+
     '<table>'+head+rows+'</table>'+
-    '<p class="sub">Silver <b class="gold">'+Math.round(S.silver)+'</b> · cargo '+cargoW()+(S.seaMode?' aboard':'/'+cargoCap())+'. Remembered prices are what you saw last time you stood in that market.</p>'+
+    '<p class="sub">Silver <b class="gold">'+Math.round(S.silver)+'</b> · cargo '+cargoW()+(cargoCap()>=999999?' aboard':'/'+cargoCap())+'. Remembered prices are what you saw last time you stood in that market.</p>'+
     '<button class="seal" onclick="S.screen=\'city\';render()">Back to the bazaar</button>';
 }
 
@@ -3365,7 +3384,7 @@ function growNephew(){
 }
 
 /* ============ v0.9.19 — two-step setup flow ============ */
-let SETUP={name:'', origin:'east', style:'caravan', companyMode:'pick', nephewName:'', custom:[{t:'Mr',n:''},{t:'Mr',n:''},{t:'Mr',n:''}]};
+let SETUP={name:'', origin:'west', style:'caravan', companyMode:'pick', nephewName:'', custom:[{t:'Mr',n:''},{t:'Mr',n:''},{t:'Mr',n:''}]};
 function setupCompanyMode(mode){ if(SETUP.companyMode==='custom')saveCustom(); SETUP.companyMode=mode; render(); }
 function saveCustom(){ for(let i=0;i<3;i++){ const n=$('cn_'+i), t=$('ct_'+i); if(n)SETUP.custom[i].n=n.value; if(t)SETUP.custom[i].t=t.value; } if($('nname'))SETUP.nephewName=$('nname').value; }
 function setupCustomInput(){ saveCustom(); setupTick(); }
@@ -3433,7 +3452,7 @@ function renderSetupPage(m){
   m.innerHTML=
    '<h2>Choose your company</h2>'+
    '<p class="sub">'+(west?'Constantinople':'Chang’an')+' · a caravan venture · '+SETUP.name+'</p>'+
-   '<div class="panel"><p class="sub" style="margin:0 0 6px">Your sister’s boy comes whether you like it or not. His name: <input type="text" id="nname" value="'+escAttr(SETUP.nephewName||'')+'" placeholder="nephew" maxlength="18" style="width:120px" oninput="saveCustom()"></p>'+
+   '<div class="panel"><p class="sub" style="margin:0 0 6px">Your sister’s boy comes whether you like it or not. His name: <input type="text" id="nname" value="'+escAttr(SETUP.nephewName||(SETUP.origin==='west'?'Bart':'Little Tang'))+'" placeholder="'+(SETUP.origin==='west'?'Bart':'Little Tang')+'" maxlength="18" style="width:120px" oninput="saveCustom()"></p>'+
    '<div style="margin-bottom:8px;opacity:.85"><b>'+(west?'Bart':'Little Tang')+'</b> <span class="sub">— '+(west?'your nephew Bartholomew, more enthusiasm than sense':NEPHEW.role)+' · '+skillBlurb(NEPHEW.skills,NEPHEW)+' <span class="gold">(always with you)</span></span></div>'+
    '<div class="speedrow" style="margin-bottom:8px">'+modeBtn('pick','Choose from the roster')+modeBtn('custom','Name your own three')+'</div>'+
    body+'</div>'+
@@ -3519,6 +3538,11 @@ function evSeaWinds(){
   return {h:'UNFAVOURABLE WINDS', t:t,
    ch:[{l:(deep?'Beat back against it (about 3 days)':'Wait for a fair wind (about 3 days)'),f(){ const d=2+ri(3); S.day+=d; S.food=Math.max(0,S.food-foodNeed()*d); if(deep&&S.voy)S.voy.daysLeft+=Math.max(1,Math.round(d*0.6)); log(deep?("Days lost beating back against a foul wind on the open sea, before it turns fair."):("Three idle days at anchor, watching the rain run down the rigging. When the wind comes fair, you sail on.")); }}]};
 }
+function evLandFood(){ var terr=(S.voy&&S.voy.harsh)?'harsh':'desert'; var per=5+ri(4);
+  return {h:'PROVISIONS GONE ON THE ROAD', t:"The food is gone, and the nearest market is days of "+(terr==='harsh'?'burning waste':'dry country')+" away. There is game, sometimes, for those who can find it \u2014 and the pilgrim caravans that share these wells will sell grain, at a price that honours the distance from anywhere.", ch:[
+   {l:'Send out hunters (1 day)',f(){ var h=bestHunter()||{you:true,name:(S.name||'You')}; var m=doHunt(terr,false,h); S.day++; if(!S.dead) log(m); }},
+   {l:'Buy 20 days from a pilgrim caravan ('+per+' s/day)',f(){ var c=per*20; if(S.silver>=c){ S.silver-=c; S.food+=20; log('A passing caravan spares you twenty days of grain and dates at '+per+' s the day \u2014 dear, and worth every coin.'); } else log('You cannot raise their price; they wish you God\u2019s mercy and move on.'); }},
+   {l:'Press on, hungry',f(){ if(S.voy)S.voy.grace=S.day+4; applyDeprivation('hunger',5); if(!S.dead)log('You tighten belts and march on empty stomachs. It cannot last.'); }}]}; }
 function evSeaFood(){
   const per=12+ri(8), amt=30, cost=per*amt;
   return {h:'PROVISIONS GONE AT SEA', t:"The food runs out mid-passage. There is no market on the open water — only the captain, who happens to have provisions to spare, at a price that reflects exactly how trapped you are.",
@@ -3607,7 +3631,7 @@ function evHideout(){
    ]};
 }
 /* T5.1: a hunter forages during a forced halt for injury/illness, so the lost days aren't wholly wasted */
-function autoForage(days){ const h=bestHunter(); if(!h||days<=0||S.dead)return; const got=Math.round(days*(1+maxHuntComp())*(0.5+rnd()*0.6)); if(got>0){ S.food+=got; log(h.name+", idle while the camp tends its hurt, slips off to hunt and brings back about "+got+" days of meat — the halt is not wholly wasted."); } }
+function autoForage(days){ const h=bestHunter(); if(!h||days<=0||S.dead)return; const got=Math.round(days*(1+maxHuntComp())*(0.5+rnd()*0.6)); if(got>0){ S.food+=got; log(h.name+", idle while the camp tends its hurt, slips off to hunt and brings back about "+got+" measures of meat — the halt is not wholly wasted."); } }
 
 /* ====== MARITIME MODULE ====== */
 /* ============ MARITIME ROUTE — the Indian Ocean / maritime Silk Road ============ */
@@ -3669,7 +3693,22 @@ const SEA=[
    adm:"Gortyn, capital of Crete under the Romans and now the Byzantines, seat of the island's archbishop, set in the rich Messara plain between the mountains and the southern sea. It is an old place \u2014 by the river stand the ruins where, the poets say, Zeus in the shape of a bull carried Europa ashore, and in the hills are caves of a labyrinth that some name the Minotaur's. Crete sits squarely athwart the lanes between Constantinople, Egypt, and Syria, so for all that the town is modest, its harbours are busy and its merchants well-informed, warehousing and re-shipping the goods of three coasts."},
  {name:'Trebizond', terr:'forest', zh:'', frac:.96, hub:'minor', cash:420, desc:"A walled Byzantine port on the Black Sea, the sea-end of the long road up from Armenia and Persia. Silk and spice cross the mountains to be shipped west; the city watches its frontier and keeps its own counsel.",
    arr:"You come down to Trebizond on its shelf above the grey Black Sea, the mountains at its back and the road to Persia climbing away behind.",
-   adm:"Trebizond \u2014 Trapezous to the Greeks who founded it a thousand years past \u2014 sits on a high shelf of land above the Black Sea, the chief town of the Byzantine theme of Chaldia and the Empire's last firm hold on this wild north-eastern coast. The Pontic mountains wall it off from the interior, but a hard road climbs through them to Theodosiopolis and on into Armenia and Persia, and down it come the goods of the east \u2014 silk, spice, and slaves \u2014 to be shipped west along the coast. A frontier city: watchful, well-walled, Greek in tongue and faith, and a very long way from Constantinople."}
+   adm:"Trebizond \u2014 Trapezous to the Greeks who founded it a thousand years past \u2014 sits on a high shelf of land above the Black Sea, the chief town of the Byzantine theme of Chaldia and the Empire's last firm hold on this wild north-eastern coast. The Pontic mountains wall it off from the interior, but a hard road climbs through them to Theodosiopolis and on into Armenia and Persia, and down it come the goods of the east \u2014 silk, spice, and slaves \u2014 to be shipped west along the coast. A frontier city: watchful, well-walled, Greek in tongue and faith, and a very long way from Constantinople."},
+ {name:'Medina', terr:'desert', zh:'', frac:.75, hub:'minor', cash:380, desc:"The City of the Prophet \u2014 a great oasis of date-palms and lava-fields, second holiest of the Muslim cities.",
+   arr:"You come through black lava-fields into the green of Medina, the Prophet's city, its palm-groves ringing a mosque that is the second heart of Islam.",
+   adm:"Medina \u2014 Yathrib of old \u2014 where the Prophet fled, ruled, died and lies buried; around his mosque the city of the first caliphs spreads through a vast oasis of date-palms hemmed by black basalt wastes. Its dates are the finest in the world and priced accordingly; its scholars remember everything; and its old families, descendants of the Prophet's own Helpers, watch the Abbasid governor with the cool patience of people who consider the dynasty in Baghdad a pack of upstart cousins."},
+ {name:'Mecca', terr:'desert', zh:'', frac:.72, hub:'minor', cash:520, desc:"The holy city of Islam, in a bare ravine of rock \u2014 forbidden to unbelievers, but ringed by fairs where the world trades.",
+   arr:"The road brings you to the edge of Mecca's sacred territory, where the pilgrim masses gather and the fair-grounds hum \u2014 the sanctuary itself is not for unbelievers.",
+   adm:"Mecca lies in a stony ravine without a green thing in sight \u2014 and is nonetheless the axis of a world: the Kaaba at its heart draws pilgrims from Cordoba to Ferghana, and with them more trade than many a river-port. An unbeliever may not pass the boundary-stones of the haram; the caravans of the faithful go in, and everyone else does business, profitably enough, in the camps and fairs outside \u2014 as merchants did at Ukaz in the ages before the Prophet. What Mecca wants it pays for in pilgrim silver, and Mecca, having nothing, wants everything."},
+ {name:'Sanaa', terr:'mountain', zh:'', frac:.58, hub:'minor', cash:400, desc:"The high city of Yemen \u2014 tower-houses of stone on a mountain plain, amid terraced fields the monsoon feeds.",
+   arr:"You climb at last onto the Yemen highlands and come to Sanaa, its tower-houses banded in white gypsum under a thin bright sky.",
+   adm:"Sanaa stands higher than any city you have known west of the Pamirs, on a mountain plain where the monsoon off the southern sea makes Arabia Felix of Arabia \u2014 terraced fields thick with orchards, and the famous tower-houses rising six storeys in cut stone and gypsum bands. Here stood the cathedral the Abyssinians raised to rival Mecca, and the palace of Ghumdan whose bronze lions the poets still exaggerate; Persian governors, Abyssinian kings and now the Caliph's men have all held it, and Sanaa has outlasted each with highland composure."},
+ {name:'Yamama', terr:'desert', zh:'', frac:.66, hub:'minor', cash:180, desc:"The oasis country of central Arabia \u2014 palm-groves, wells and grain amid the red sands, the one green rung on the Basra road.",
+   arr:"After long days of red sand you raise the palm-heads of the Yamama \u2014 wells, gardens, and grain enough to feed the road.",
+   adm:"The Yamama is the granary of inner Arabia: a chain of oases where deep wells water date-groves and wheat between the great sand-seas. Here the false prophet Musaylima raised his rival call and was broken in the wars after the Prophet's death; now the district feeds the pilgrim caravans and ships grain to the Hijaz, and its Banu Hanifa cultivators regard all passing traffic \u2014 pilgrim, merchant or tax-collector \u2014 with the same well-earned wariness."},
+ {name:'Shibam', terr:'desert', zh:'', frac:.54, hub:'minor', cash:200, desc:"A walled town of mud-brick towers in the great canyon-oasis of Hadhramaut, on the old incense road.",
+   arr:"You descend into the great wadi of Hadhramaut and come to Shibam, its mud towers packed shoulder to shoulder like a city built on a table.",
+   adm:"Shibam stands in the bed of the Hadhramaut, the vast canyon-oasis that threads the waterless plateau \u2014 a city of tower-houses raised storey upon storey in sun-dried brick, packed inside one wall so tightly the whole town reads as a single fortress. It has grown rich the old way, on the incense road: frankincense from the coast lands, dates from the wadi, and the restless Hadhrami merchants whose sons ship out from every port of the southern sea and send silver home to build the towers higher."}
 ];
 const SEA_BYNAME={}; for(const _p of SEA) SEA_BYNAME[_p.name]=_p;
 const ALLCITY_BYNAME={}; for(const _c of [...MAIN1,...NORTH,...SOUTH,...MAIN2,...STEPPE,...SEA]) ALLCITY_BYNAME[_c.name]=_c;
@@ -3692,6 +3731,7 @@ Object.assign(OVR,{
  'Qulzum':    {glass:24,pepper:64,silk:58,coral:30,conut:20,linen:15,turq:16},
  'Fustat':    {glass:12,coral:28,silk:60,pepper:66,lapis:60,amber:52,wine:18,musk:120,paper:10,conut:21,linen:14},
  'Alexandria':{glass:14,coral:24,amber:42,silk:64,pepper:66,wine:14,lapis:66,musk:140,linen:12},
+ 'Medina':{frank:26,aloe:26,pearls:40,linen:20,dates:7},'Mecca':{silk:68,musk:132,frank:22,pearls:42,aloe:22,pepper:70,ivory:74,wine:16} /* wine finds no buyers at the holy city \u2014 the Turfan convention */,'Sanaa':{frank:16,indigo:28,wine:34},'Yamama':{pearls:34,felt:22,dates:6},'Shibam':{frank:13,aloe:24,dates:8},
 });
 const CITY_ADMIRE_SEA={}; for(const _p of SEA) CITY_ADMIRE_SEA[_p.name]=_p.adm;
 Object.assign(CITY_ADMIRE, CITY_ADMIRE_SEA);
@@ -3730,17 +3770,26 @@ const SEA_EDGES=[
  {a:'Ephesus',b:'Iconium', d:8, terr:'land', free:true, water:'the hill-roads of western Anatolia, climbing to the plateau'},
  {a:'Iconium',b:'Trebizond', d:24, terr:'land', free:true, water:'the hard mountain road north over the Pontic ranges to the Black Sea'},
  {a:'Constantinople',b:'Trebizond', d:9, terr:'med', storm:1.8, water:'the Black Sea, coasting east toward Trebizond', waterB:'the Black Sea, coasting west toward the City'},
+ {a:'Qulzum',b:'Medina', d:27, terr:'land', hajj:true, thirst:1.6, halt:'Aylah', haltAt:0.24, water:"over the Sinai and down the pilgrim road of the Hijaz, well to well", sight:"Days out of Aylah you pass beneath cliffs carved with great tomb-fronts \u2014 Hegra, the rock-cut city of the vanished Thamud, its doors opening on nothing. The caravan-men will not camp in its shadow."},
+ {a:'Medina',b:'Mecca', d:10, terr:'land', hajj:true, thirst:1.2, water:"along the pilgrim road between the holy cities, black lava-field and thorn"},
+ {a:'Medina',b:'Yamama', d:20, terr:'land', hajj:true, thirst:2.2, harsh:true, water:"east across the Najd on the Yamama road, well to well through the red sands"},
+ {a:'Mecca',b:'Sanaa', d:25, terr:'land', hajj:true, thirst:1.4, halt:'Najran', haltAt:0.7, water:"south along the highland rim toward the Yemen, by Taif and the mountain villages"},
+ {a:'Sanaa',b:'Aden', d:8, terr:'land', hajj:true, thirst:0, water:"down the long descent from the highlands to the burnt shore of Aden"},
+ {a:'Aden',b:'Shibam', d:15, terr:'land', hajj:true, thirst:2.2, harsh:true, lblA:'Dhofar, via Shibam', water:"east through the dry hills into the great wadi of the Hadhramaut"},
+ {a:'Shibam',b:'Dhofar', d:17, terr:'land', hajj:true, thirst:2.2, harsh:true, lblB:'Aden, via Shibam', water:"along the old incense road, plateau and sand, toward the hills of frankincense"},
+ {a:'Basra',b:'Yamama', d:18, terr:'land', hajj:true, thirst:2.2, harsh:true, water:"southwest across the red sands of Najd, well to well"},
+ {a:'Yamama',b:'Mecca', d:22, terr:'land', hajj:true, thirst:2.2, harsh:true, water:"west across the width of Arabia on the Basra pilgrim road"},
  {a:'Kollam',  b:'Zanzibar',d:20, terr:'deep', oneway:'Zanzibar', founder:0.15, coreMon:[5,6,7,8,9], water:'the open ocean, running east before the summer monsoon for the Malabar coast of India', sight:"Three weeks of empty blue \u2014 no land, no sail, only the wind hard at your back and the long swell of the open ocean \u2014 and then a low green smudge that is the coast of India."},
 ];
-function seaEdges(name){ const out=[]; for(const e of SEA_EDGES){ if(e.oneway && e.oneway!==name) continue; if(e.a===name)out.push({to:e.b,d:e.d,terr:e.terr,water:e.water,sight:e.sight}); else if(e.b===name)out.push({to:e.a,d:e.d,terr:e.terr,water:e.water,sight:e.sight}); } return out; }
+function seaEdges(name){ const out=[]; for(const e of SEA_EDGES){ if(e.oneway && e.oneway!==name) continue; if(e.a===name)out.push({to:e.b,d:e.d,terr:e.terr,water:e.water,sight:e.sight,lbl:e.lblA}); else if(e.b===name)out.push({to:e.a,d:e.d,terr:e.terr,water:e.water,sight:e.sight,lbl:e.lblB}); } return out; }
 function findLink(a,b){ for(const e of SEA_EDGES){ if((e.a===a&&e.b===b)||(e.a===b&&e.b===a)) return e; } return null; }
-const CITY_LL={"Chang'an":[108.95,34.27],Luoyang:[112.45,34.62],Yangzhou:[119.42,32.39],Guangzhou:[113.26,23.13],Kauthara:[109.2,12.25],Palembang:[104.75,-2.95],Mantai:[79.98,8.95],Kollam:[76.6,8.9],Dhofar:[54.0,17.0],Socotra:[53.9,12.5],Aden:[45.03,12.8],Zanzibar:[39.2,-6.16],Basra:[47.81,30.4],Baghdad:[44.36,33.31],Qulzum:[32.55,29.97],Fustat:[31.25,30.0],Alexandria:[29.9,31.2],Gortyn:[24.9,35.0],Constantinople:[28.97,41.01],Aleppo:[37.16,36.2],Ephesus:[27.34,37.94],Iconium:[32.49,37.87],Trebizond:[39.72,41.0]};
+const CITY_LL={"Chang'an":[108.95,34.27],Luoyang:[112.45,34.62],Yangzhou:[119.42,32.39],Guangzhou:[113.26,23.13],Kauthara:[109.2,12.25],Palembang:[104.75,-2.95],Mantai:[79.98,8.95],Kollam:[76.6,8.9],Dhofar:[54.0,17.0],Socotra:[53.9,12.5],Aden:[45.03,12.8],Zanzibar:[39.2,-6.16],Basra:[47.81,30.4],Baghdad:[44.36,33.31],Qulzum:[32.55,29.97],Fustat:[31.25,30.0],Alexandria:[29.9,31.2],Gortyn:[24.9,35.0],Constantinople:[28.97,41.01],Aleppo:[37.16,36.2],Ephesus:[27.34,37.94],Iconium:[32.49,37.87],Trebizond:[39.72,41.0],Medina:[39.61,24.47],Mecca:[39.83,21.42],Sanaa:[44.21,15.35],Yamama:[46.71,24.63],Shibam:[48.63,15.93]};
 const _WIND={deep:1.12,coast:1.28,med:1.16,canal:1.30,land:1.32};
 function legGCLi(a,b){ var pa=CITY_LL[a],pb=CITY_LL[b]; if(!pa||!pb)return 0; var toR=Math.PI/180; var la1=pa[1]*toR,la2=pb[1]*toR,dla=(pb[1]-pa[1])*toR,dlo=(pb[0]-pa[0])*toR; var h=Math.sin(dla/2)*Math.sin(dla/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)*Math.sin(dlo/2); var km=6371*2*Math.asin(Math.sqrt(h)); var lk=findLink(a,b); var w=(lk&&_WIND[lk.terr])||1.18; return Math.round(km/0.536*w); }
 function isSeaExitCity(name){ return name==='Constantinople'||name==='Aleppo'||name==='Baghdad'||name==='Iconium'||name==="Chang'an"; }
 
 /* monsoon: one direction favoured at a time. order rises toward the west/homeward end. */
-const SEA_ORDER={"Chang'an":-1,'Luoyang':0,'Yangzhou':0.5,'Guangzhou':1,'Kauthara':2,'Palembang':3,'Mantai':4,'Kollam':5,'Dhofar':6,'Socotra':7,'Aden':7,'Zanzibar':8,'Basra':8,'Baghdad':8,'Qulzum':9,'Fustat':10,'Alexandria':11,'Constantinople':12,'Aleppo':11.3,'Gortyn':11.5,'Ephesus':11.8,'Iconium':12.5,'Trebizond':12.7};
+const SEA_ORDER={"Chang'an":-1,'Luoyang':0,'Yangzhou':0.5,'Guangzhou':1,'Kauthara':2,'Palembang':3,'Mantai':4,'Kollam':5,'Dhofar':6,'Socotra':7,'Aden':7,'Zanzibar':8,'Basra':8,'Baghdad':8,'Qulzum':9,'Fustat':10,'Alexandria':11,'Constantinople':12,'Aleppo':11.3,'Gortyn':11.5,'Ephesus':11.8,'Iconium':12.5,'Trebizond':12.7,'Medina':8.4,'Mecca':8.2,'Yamama':7.9,'Shibam':7.0,'Sanaa':7.4};
 const MON_WEST=[10,11,12,1,2,3,4]; // toward Arabia/Africa/Med — the NE monsoon, winter
 const MON_EAST=[4,5,6,7,8,9,10];  // toward India/China — the SW monsoon, summer
 function monsoonGated(link){ return link && (link.terr==='coast'||link.terr==='deep'); }
@@ -3761,7 +3810,7 @@ function seaRouteOpen(){ if(S&&S.cheats){ if(S.cheats.seaOff)return false; if(S.
    Anatolian/Levant hops Constantinople<->Ephesus<->Aleppo stay open, as does the Black Sea passage once Trebizond is
    reached. Gortyn and everything beyond it are hidden until the network opens. "Horatio McCallister" unlocks all. */
 function maritimeOpen(){ if(S&&S.cheats){ if(S.cheats.seaOff)return false; if(S.cheats.seaOn)return true; } return !!(S&&S.seaUnlocked); }
-function legAlwaysOpen(a,to){ var lk=findLink(a,to); if(!lk)return false; if(lk.oneway&&lk.oneway!==a)return false; if(lk.terr==='land')return true; if(maritimeOpen())return true; var p=[a,to].sort().join('|'); if(p==='Constantinople|Ephesus'||p==='Aleppo|Ephesus')return true; if(p==='Constantinople|Trebizond'&&S&&S.onceFlags&&S.onceFlags.trebizondSea)return true; return false; }
+function legAlwaysOpen(a,to){ var lk=findLink(a,to); if(!lk)return false; if(lk.oneway&&lk.oneway!==a)return false; if(lk.terr==='land')return lk.hajj?maritimeOpen():true; if(maritimeOpen())return true; var p=[a,to].sort().join('|'); if(p==='Constantinople|Ephesus'||p==='Aleppo|Ephesus')return true; if(p==='Constantinople|Trebizond'&&S&&S.onceFlags&&S.onceFlags.trebizondSea)return true; return false; }
 function noOtherExit(a,b){ if(typeof isSeaExitCity==='function'&&isSeaExitCity(a))return false; var es=(typeof seaEdges==='function')?seaEdges(a):[]; for(var i=0;i<es.length;i++){ if(es[i].to===b) continue; if(legAlwaysOpen(a,es[i].to)) return false; } return true; }
 function voyAllowed(a,b){ var lk=findLink(a,b); if(!lk)return false; if(lk.oneway && lk.oneway!==a) return false; if(legAlwaysOpen(a,b)) return true;
   if(noOtherExit(a,b)) return true;   // never strand a port whose only way out is a gated sea-leg (e.g. Zanzibar->Socotra)
@@ -3809,6 +3858,7 @@ function beginVoyage(fromName, toName){
   if(totalAnimals()>0 && lk.terr!=='land'){ const v=herdValue(city()); S.silver+=v; clearHerd(); if(v>0) log("You sell off the caravan beasts at "+fromName+" for "+v+" s \u2014 there is no driving a herd onto a ship; you will buy fresh animals when you next take to the land."); }
   const fare=voyFare(fromName,toName);
   if(fare.total>0 && S.silver<fare.total){ var _lnd=lk&&lk.terr==='land'; S.pendingEvent={h:(_lnd?'THE ROAD TO '+toName.toUpperCase():'PASSAGE BY SEA'), t:(_lnd?"The guide shakes his head at your purse: "+fare.total+" silver for the road ("+fare.per+" for "+(livingComps()+1)+" head, "+fare.cargo+" in porterage), and he will not lead a party that cannot meet the fee for the road. Come back when you have raised it.":"The master of the "+toName+" ship counts your purse and shakes his head: "+fare.total+" silver for the passage ("+fare.per+" for "+(livingComps()+1)+" head, "+fare.cargo+" porterage on "+cargoW()+" of cargo), and he will not carry a merchant who cannot pay it. You keep ashore until you have raised the fare."), ch:[{l:(_lnd?'Back to '+fromName:'Stay in port'),f(){}}]}; render(); return; }
+  if(lk.terr==='land' && lk.hajj){ hajjGo(fromName,toName,lk); return; }
   if(lk.terr!=='land'){ S.seaCrew=5; }
   if(fare.total>0){ S.silver-=fare.total; log("You book passage for "+toName+": "+fare.per+" s for "+(livingComps()+1)+" head and "+fare.cargo+" s porterage on "+cargoW()+" of cargo — "+fare.total+" s in all."); }
   let d;
@@ -3823,14 +3873,24 @@ function beginVoyage(fromName, toName){
   if(!S.seaMode){ S.seaMode=true; if(typeof addSeaMarkets==='function')addSeaMarkets(); }
   S.portName=toName; // city() resolves to the destination during the leg
   const _rev=(lk.b===fromName); const _water=(_rev&&lk.waterB)?lk.waterB:lk.water;
-  S.voy={from:fromName, to:toName, daysLeft:d, total:d, terr:lk.terr, strait:!!lk.strait, storm:lk.storm||1, water:_water, sight:lk.sight||null, sightDone:false, crossFounder:lk.founder||0, east:(SEA_ORDER[fromName]>SEA_ORDER[toName]), li:legGCLi(fromName,toName)};
+  S.voy={from:fromName, to:toName, daysLeft:d, total:d, terr:lk.terr, hajj:!!lk.hajj, thirst:lk.thirst, harsh:!!lk.harsh, halt:lk.halt||null, haltAt:lk.haltAt, strait:!!lk.strait, storm:lk.storm||1, water:_water, sight:lk.sight||null, sightDone:false, crossFounder:lk.founder||0, east:(SEA_ORDER[fromName]>SEA_ORDER[toName]), li:legGCLi(fromName,toName)};
   S.screen='voyage'; S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS);
 }
+function hajjTerr(lk){ return lk.harsh?'harsh':(lk.thirst===0?'rugged':'desert'); }
+function hajjGo(from,to,lk){ var terr=hajjTerr(lk);
+  var fromObj=cityClone(from,terr,0,0.6), toObj=cityClone(to,terr,1,0.6);
+  S.seaMode=false; S.portName=null;
+  var D=Math.max(1,Math.round(70*(SPEED_MOD[terr]||1)));
+  toObj.dist=Math.round(lk.d*D);
+  S.dash={kind:'hajj',from:from,to:to,terr:terr,halt:lk.halt||null,haltAt:lk.haltAt,sight:lk.sight||null,lostChance:0,lostRolled:true,lostKm:0};
+  S.itin=[fromObj,toObj]; S.idx=0; S.dir=1; S.legKm=0; S.pace='s'; S.screen='travel';
+  log("You set out "+(lk.water||("on the road toward "+to))+" \u2014 "+fmtDist(toObj.dist)+".");
+  startJourney(); }
 function noCaptainsEvent(a,b){ return {h:'THE MONSOON IS AGAINST YOU', t:"You go down to the wharves to take ship for "+b+", and find every captain ashore, their vessels idle. The wind sits dead against that course: nothing will sail for "+b+" until "+monsoonWhen(a,b)+". The sea keeps its own calendar, and there is no arguing with it. You must wait for the wind to turn — or take another road.", ch:[{l:'Wait for the wind',f(){}}]}; }
 
 function stepVoy(){
   if(!S || !S.voyaging || S.pendingEvent || S.eventOutcome || S.screen!=='voyage' || !S.voy){ clearVoy(); return; }
-  if(S.food < foodNeed()){ S.voyaging=false; clearVoy(); S.pendingEvent=evSeaFood(); render(); return; }
+  if(S.food < foodNeed() && (!S.voy.grace||S.day>=S.voy.grace)){ S.voyaging=false; clearVoy(); S.pendingEvent=(S.voy.terr==='land'?evLandFood():evSeaFood()); render(); return; }
   S.day++; S.food=Math.max(0,S.food-foodNeed()); S.hp=clamp(S.hp+0.25,0,100); accrueGuardWages();
   S.voy.daysLeft--;
   // dated events on the Basra–Baghdad road, during the Alid revolt
@@ -3839,6 +3899,7 @@ function stepVoy(){
     if(!S.voy.inspDone && dateBetween(762,11,1,763,2,14) && rnd()<0.28){ S.voy.inspDone=true; S.voyaging=false; clearVoy(); S.pendingEvent=revoltInspection(); render(); return; }
     if(dateBetween(762,11,1,763,2,14) && rnd()<0.10){ S.voyaging=false; clearVoy(); S.pendingEvent=revoltBandits(); render(); return; }
   }
+  if(S.voy.terr==='land' && S.voy.hajj){ if(hajjDay()) return; }
   if(S.voy.daysLeft<=0){ S.voyaging=false; clearVoy(); voyArrive(); render(); return; }
   const p=(S.voy.total-S.voy.daysLeft)/S.voy.total;
   if(S.voy.crossFounder && !S.voy.founderRolled && p>=0.45){ S.voy.founderRolled=true; if(rnd()<S.voy.crossFounder){ S.voyaging=false; clearVoy(); for(const _q of (S.party||[])) _q.alive=false; S.hp=0; S.cause='shipwreck'; const _f=S.voy; S.voy=null; die(); log("Far out of sight of any land, in the heart of the great crossing from "+_f.from+", the monsoon that carried you turns and breaks the ship. No boat, no shore, no morning \u2014 the open ocean between Africa and India keeps you, your cargo, and every soul aboard."); render(); return; } }
@@ -3869,6 +3930,36 @@ function voyStorm(){
      if(S.voy) S.voy.daysLeft+=2+ri(3); log(s+". The battered ship limps on, days behind.");
    }}]};
 }
+function hajjAnimalPeril(harsh){ if(!S.herd) return; var care=Math.max(.35,1-.14*skillMax('handle'));
+ var RATES=harsh?{horse:.021,donkey:.012,mule:.010,bactrian:.012,hybrid:.004}:{horse:.010,donkey:.006,mule:.005,bactrian:.006,hybrid:.002}; // ~50%% horse loss over a full harsh crossing, halved by a good handler; dromedaries endure
+ for(var id in RATES){ var n=(S.herd[id]||0); if(!n) continue; var toll=0; for(var i=0;i<n;i++) if(rnd()<RATES[id]*care) toll++;
+  if(toll>0){ S.herd[id]=Math.max(0,n-toll); perilLog(id,'harsh',toll); } } }
+function hajjDay(){ var v=S.voy; if(!v) return false;
+ var th=(v.thirst!=null?v.thirst:1.6)*thirstFactor();
+ if(th>0){ S.water=Math.max(0,S.water-th);
+  if(S.water<=0){ S.hp=clamp(S.hp-12,0,100); S.cause='thirst';
+   if(livingComps()>0&&rnd()<.22){ var _v=pick(livingParty()); _v.alive=false; noteDeath(_v,'thirst'); S.party=S.party.filter(function(p){return p.alive;}); log(_v.name+" dies of thirst on the waterless road; you scrape a grave in the sand and stumble on."); }
+   if(S.hp<=0){ var _t=v.to; S.voy=null; S.voyaging=false; clearVoy(); die(); log("The water fails a long march short of "+_t+", and the sands of Arabia keep you."); render(); return true; } } }
+ hajjAnimalPeril(v.harsh);
+ var p=(v.total-v.daysLeft)/v.total;
+ if(v.halt && !v.haltDone && p>=(v.haltAt||0.5)){ v.haltDone=true; S.voyaging=false; clearVoy(); S.pendingEvent=evDesertHalt(v.halt); render(); return true; }
+ if(rnd()<0.04){ S.voyaging=false; clearVoy(); S.pendingEvent=evDesertRoad(); render(); return true; }
+ return false; }
+function evDesertHalt(nm){ var T={Aylah:"The road drops to the head of the eastern gulf and the little walled town of Aylah \u2014 wells, palms, a market of sorts, and the Prophet's letter of protection still proudly kept.",Najran:"The track comes down into the green wadi of Najran \u2014 vineyards and leather-tanners' pits, the old Christian city of Arabia dozing under the Caliph's tax.",Shibam:"In the bed of the great wadi rise the mud towers of Shibam, packed shoulder to shoulder like one fortress \u2014 dates, frankincense, and deep sweet wells."}[nm]||"A well-town on the road.";
+ return {h:nm.toUpperCase()+' \u2014 a halt on the road', t:T, ch:[
+  {l:'Fill every skin at the wells',f(){ S.water=waterMax(); log('You water the beasts and fill every skin at '+nm+'.'); }},
+  {l:'Buy food \u2014 15 s for 30',f(){ if(S.silver>=15){ S.silver-=15; S.food+=30; } else log('You have not the silver.'); S.water=waterMax(); }},
+  {l:'Rest two days',f(){ S.day+=2; S.food=Math.max(0,S.food-foodNeed()*2); S.hp=clamp(S.hp+8,0,100); healMembers(10); S.water=waterMax(); log('You lie over two days at '+nm+', and folk and beasts mend a little.'); }}]}; }
+function evDesertRoad(){ var r=rnd();
+ if(r<0.4){ var fee=Math.max(10,Math.round(S.silver*0.05));
+  return {h:'RIDERS OF THE SANDS', t:"Bedouin horsemen circle in from the glare \u2014 lords of these wells, by their own account, and collectors of a toll for the water and the passage. Their spears look more certain than their genealogy.", ch:[
+   {l:'Pay the toll ('+fee+' s)',f(){ if(S.silver>=fee){ S.silver-=fee; log('You pay the riders their toll and part with elaborate courtesies; the wells, at least, are honestly sweet.'); } else { S.silver=0; var lost=loseRandomGoods(.15); log('You cannot meet the toll; they take '+lost+' instead, and leave you the road.'); } }},
+   {l:'Refuse, and show your steel',f(){ var str=combatStrength(), foes=6+ri(6); if(str>=foes){ log('Your line of spears is longer than theirs; they weigh it, wheel, and vanish back into the sands with a parting insult.'); } else { var lost=loseRandomGoods(.25); S.hp=clamp(S.hp-12,0,100); var who=(livingComps()>0&&rnd()<.3)?casualty(rnd()<.35):null; log('They come in at a gallop. You lose '+lost+(who?', and '+who+' is hurt in the running fight':'')+', and are glad to see the dust of them go.'); if(S.hp<=0){S.cause='bedouin raiders';die();} } }}]}; }
+ if(r<0.7){ return {h:'THE DRY WELLS', t:"The wells at the appointed halt are sanded in and dead \u2014 a season's drift, or an old feud. The guides confer, spit, and name the next water two days off the track.", ch:[
+   {l:'March for the far water',f(){ var dd=1+ri(2); S.day+=dd; S.food=Math.max(0,S.food-foodNeed()*dd); if(S.voy)S.voy.daysLeft+=dd; S.hp=clamp(S.hp-6,0,100); S.water=Math.max(0,S.water-8); log('Hard, dry marching to the next water \u2014 '+dd+' day'+(dd>1?'s':'')+' lost, and the beasts drink an hour without lifting their heads.'); if(S.hp<=0){S.cause='thirst';die();} }}]}; }
+ return {h:'A PILGRIM CARAVAN', t:"A caravan of pilgrims shares the halt \u2014 hundreds strong, dust to the eyebrows, bound for the holy cities with the discipline of a small army. Their amir keeps good order and better wells-lore.", ch:[
+  {l:'Travel a stage in their company',f(){ S.hp=clamp(S.hp+4,0,100); healMembers(6); log('You fall in with the pilgrims for a stage \u2014 safe wells, shared fires, and the road-news of half the world. \u201c'+pickRumor()+'\u201d'); }},
+  {l:'Exchange news and part',f(){ log('You trade news at the well-head and part; their dust hangs in the south for a day.'); }}]}; }
 function witnessBakhamra(){
   return {h:'THE BATTLE OF BAKHAMRA', t:"On the dusty road between the rivers, somewhere short of Kufa, you blunder to the edge of history. Two armies are locked at a place called Bakhamra: the Alid rebel Ibrahim and his fifteen thousand against the Caliph's general Isa ibn Musa. You shelter in a ditch with your cargo and watch the Abbasid line buckle, hold, and then surge forward; you see the rebel centre break, and a knot of horsemen carry a wounded man from the field. It is, though you cannot know it yet, the death of the revolt — and very nearly the death of you, had an arrow flown a little wider.",
    ch:[
@@ -3908,6 +3999,8 @@ function bakhamraTalk(cityName){
 function checkSeaHistory(port){
   if(port==='Trebizond' && S.onceFlags && !S.onceFlags.trebizondSea){ S.onceFlags.trebizondSea=true; S.pendingEvent={h:'THE BLACK SEA ROAD', t:"Having found your way overland to Trebizond, you have also found the captains who run the wild Black Sea coast west to the capital. It is a stormy passage \u2014 the old Greeks named this the Inhospitable Sea before they dared flatter it as the Euxine \u2014 but it is swift, and direct. You may now take ship between Trebizond and Constantinople without the long road back through Iconium.", ch:[{l:'Good to know',f(){}}]}; return; }
   if(port==='Yangzhou' && !S.onceFlags.yangzhouMassacre){ S.onceFlags.yangzhouMassacre=true; S.pendingEvent={h:'A CITY THAT REMEMBERS', t:"In the foreigners' quarter an old Persian factor, hearing your trade, grips your sleeve. 'Two years,' he says. 'Two years since the soldiers came over the wall and cut the throats of every Tazi and Persian merchant they could find — thousands of us, for the silver in our chests. My sons among them.' He lets go, and straightens. 'And yet here I am, and here you are, and the ships still sail. Trade is a kind of forgetting.' He wishes you good trade in his own tongue's nearest equivalent, and is gone back into the crowd.", ch:[{l:'Take his meaning, and trade on',f(){}}]}; return; }
+  if(port==='Mecca' && !S.onceFlags.meccaHaram){ S.onceFlags.meccaHaram=true; S.pendingEvent={h:'THE BOUNDARY-STONES OF THE HARAM', t:"At the edge of Mecca's sacred territory the road divides: the faithful go on into the sanctuary, and everyone else stops here, at the boundary-stones, on pain of worse than confiscation. It is less hindrance than you feared. The fairs outside the haram have handled the unbeliever's trade since before the Prophet's day \u2014 brokers of the Quraysh come out to you, pilgrim silver is the readiest coin on earth, and no one who wants your silk cares what you worship. You camp, you trade, and the holy city hums beyond the stones, heard but unseen.", ch:[{l:'Trade at the fairs',f(){}}]}; return; }
+  if(port==='Medina' && dateBetween(762,9,25,762,12,14) && !S.onceFlags.medinaRising){ S.onceFlags.medinaRising=true; S.pendingEvent={h:'MEDINA IN REVOLT', t:"You arrive to find the Prophet's city risen against the Caliph: Muhammad, whom they call the Pure Soul \u2014 al-Nafs al-Zakiyya, of the Prophet's own line \u2014 holds Medina, and his brother Ibrahim raises Basra behind you. The markets run on nerves and rumour; the governor's men wait in the wells-country for the Caliph's army, and every trader in the oasis is quietly reckoning which way to be facing when it comes.", ch:[{l:'Trade carefully, and keep your papers close',f(){}}]}; return; }
   if(port==='Basra'){ if(bakhamraTalk('Basra')) return; }
 }
 
@@ -3921,7 +4014,7 @@ function updateVoy(){ if(!S||!S.voy)return; renderStats(); renderLog();
   set('sSkyTop','stop-color',ph.t); set('sSkyBot','stop-color',ph.b);
   set('sSun','opacity',ph.sun); set('sMoon','opacity',ph.moon); set('sStars','opacity',ph.star); set('sVeil','opacity',ph.veil);
 }
-function voyLon(nm){ return ({"Chang'an":108.9,'Luoyang':112.4,'Yangzhou':119.4,'Guangzhou':113.3,'Fustat':31.2,'Alexandria':29.9,'Qulzum':32.5,'Constantinople':28.9})[nm]; }
+function voyLon(nm){ return ({"Chang'an":108.9,'Luoyang':112.4,'Yangzhou':119.4,'Guangzhou':113.3,'Fustat':31.2,'Alexandria':29.9,'Qulzum':32.5,'Constantinople':28.9,'Medina':39.6,'Mecca':39.8,'Yamama':46.7,'Sanaa':44.2,'Shibam':48.6,'Aden':45.0,'Dhofar':54.1,'Basra':47.8})[nm]; }
 function voyChinaCanal(){ var c=["Chang'an",'Luoyang','Yangzhou']; var f=(S.voy&&S.voy.from), t=(S.voy&&S.voy.to); return c.indexOf(f)>=0||c.indexOf(t)>=0; }
 function voyChinaSea(){ var c=['Yangzhou','Guangzhou']; var f=(S.voy&&S.voy.from), t=(S.voy&&S.voy.to); return c.indexOf(f)>=0||c.indexOf(t)>=0; }
 function voyFaceEast(){ var f=(S.voy&&S.voy.from)||'', t=(S.voy&&S.voy.to)||''; var lf=voyLon(f), lt=voyLon(t); if(lf!=null&&lt!=null) return lt>lf; return (S.voy&&S.voy.east)||(S.sail&&S.sail.target==='Aleppo'); }
@@ -4012,6 +4105,10 @@ function junkScene(){
 }
 function voyDesertCanal(){ var d=['Fustat','Qulzum']; var f=(S.voy&&S.voy.from), t=(S.voy&&S.voy.to); return d.indexOf(f)>=0&&d.indexOf(t)>=0; }
 function voySeaVessel(){ if(voyChinaSea())return 'junk'; var arab=['Qulzum','Aden','Dhofar','Socotra','Basra','Kollam','Mantai','Palembang','Kauthara','Zanzibar','Muscat']; var f=(S.voy&&S.voy.from)||'',t=(S.voy&&S.voy.to)||''; if(arab.indexOf(f)>=0||arab.indexOf(t)>=0)return 'dhow'; return 'med'; }
+function voyCamp(){ if(!S||!S.voy)return; S.voyaging=false; clearVoy(); log('You make camp where you stand. The fire is small; the stars are many.'); render(); }
+function voyResume(){ if(!S||!S.voy)return; S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS); }
+function voyRest(){ if(!S||!S.voy)return; S.voyaging=false; clearVoy(); for(var i=0;i<3;i++){ S.day++; S.food=Math.max(0,S.food-foodNeed()); if(S.voy&&S.voy.hajj){ if(hajjDay()) return; } if(S.dead){render();return;} } S.hp=clamp(S.hp+8,0,100); healMembers(12); log('You hold camp three days on the road; folk and beasts mend a little.'); voyResume(); }
+function voyHunt(){ if(!S||!S.voy||S.voy.terr!=='land')return; S.voyaging=false; clearVoy(); var h=bestHunter()||{you:true,name:(S.name||'You')}; var m=doHunt((S.voy.harsh?'harsh':'desert'),false,h); S.day++; S.food=Math.max(0,S.food-foodNeed()); if(S.dead){render();return;} log(m); voyResume(); }
 function voyLine(){
   const t=S.voy.terr;
   if(t==='land')  return "The caravan track winds on through dust and heat, with the long patience of the road.";
@@ -4027,16 +4124,17 @@ function renderVoy(m){
     '<div class="bar"><i id="sProg" style="width:'+pct+'%"></i></div>'+
     (v.terr==='land'?journeyScene():v.terr==='canal'?(voyChinaCanal()?canalScene('junk','china'):voyDesertCanal()?canalScene('barge','desert'):canalScene('dhow','nile')):(function(){var _vv=voySeaVessel();return _vv==='junk'?junkScene():_vv==='dhow'?dhowScene():sailScene();})())+
     '<p class="sub" style="margin-top:8px;border-left:2px solid var(--line);padding-left:10px">'+voyLine()+'</p>'+
-    '<button class="seal" onclick="skipVoy()">Skip ahead</button>';
+    (v.terr==='land'?((S.voyaging?'<button onclick="voyCamp()">Make camp</button> ':'<button class="seal" onclick="voyResume()">Break camp &amp; press on</button> ')+'<button onclick="voyHunt()">Hunt (1 day)</button> <button onclick="voyRest()">Rest 3 days</button> '):'')+'<button class="seal" onclick="skipVoy()">Skip ahead</button>';
 }
 function skipVoy(){
   S.voyaging=false; clearVoy();
   for(let i=0;i<160 && S.voy;i++){
-    if(S.food<foodNeed()){ S.pendingEvent=evSeaFood(); render(); return; }
+    if(S.food<foodNeed() && (!S.voy.grace||S.day>=S.voy.grace)){ S.pendingEvent=(S.voy.terr==='land'?evLandFood():evSeaFood()); render(); return; }
     S.day++; S.food=Math.max(0,S.food-foodNeed()); accrueGuardWages(); S.voy.daysLeft--;
     if(S.voy.terr==='land' && (S.voy.from==='Basra'||S.voy.to==='Basra') && (S.voy.from==='Baghdad'||S.voy.to==='Baghdad')){
       if(!S.onceFlags.sawBakhamra && gameDate().y===763 && gameDate().m===1 && gameDate().d>=21){ S.onceFlags.sawBakhamra=true; S.pendingEvent=witnessBakhamra(); render(); return; }
     }
+    if(S.voy.terr==='land' && S.voy.hajj){ if(hajjDay()) return; }
     if(S.voy.daysLeft<=0){ voyArrive(); render(); return; }
     const p=(S.voy.total-S.voy.daysLeft)/S.voy.total;
     if(S.voy.sight && !S.voy.sightDone && p>=0.5){ S.voy.sightDone=true; log(S.voy.sight); }
@@ -4076,7 +4174,8 @@ function voyArrive(){
 /* ---- a sea-port city screen (markets + onward passages) ---- */
 function renderPort(m){
   const c=city(); if(!c){ S.screen='city'; render(); return; }
-  recordSeen();
+  ensureStock(c); recordSeen();
+  var _landOnly=(totalAnimals()>0)||(function(){var es=seaEdges(c.name); return es.length&&es.every(function(e){return e.terr==='land';});})();
   let rows=cityShownGoods(c).map(g=>{
     const p=price(g,c), held=S.goods[g.id], avail=(S.stock[c.name]&&S.stock[c.name][g.id])||0;
     const ref = held>0 ? (S.basis[g.id]||0) : (S.lastBasis[g.id]||0);
@@ -4097,10 +4196,10 @@ function renderPort(m){
     if(!open) closed.push(e.to);
     const verb = e.terr==='land'?'Set out overland for ':(e.terr==='canal'?'Take the waterway to ':'Take ship for ');
     const f=voyFare(c.name,e.to);
-    return '<button class="seal" onclick="portDepart(\''+e.to.replace(/'/g,"\\'")+'\')">'+verb+e.to+' <span class="sub">(~'+e.d+'d · '+f.total+' s)</span></button> ';
+    return '<button class="seal" onclick="portDepart(\''+e.to.replace(/'/g,"\\'")+'\')">'+verb+(e.lbl||e.to)+' <span class="sub">(~'+e.d+'d · '+f.total+' s)</span></button> ';
   }).join('');
   const warn = closed.length ? '<p class="sub">The monsoon now favours only some courses. No ship will sail for <b class="gold">'+closed.join(', ')+'</b> until the wind turns; you may go down to the wharf, but the captains will only shake their heads.</p>' : '';
-  m.innerHTML='<h2>'+cityLabel(c)+zhSpan(c)+(S.returning?' <span class="sub">· homeward</span>':'')+' <span class="sub">· in the harbour</span></h2><p class="sub">'+ (c.desc||'') +'</p>'+
+  m.innerHTML='<h2>'+cityLabel(c)+zhSpan(c)+(S.returning?' <span class="sub">· homeward</span>':'')+(_landOnly?' <span class="sub">· the caravan quarter</span>':' <span class="sub">· in the harbour</span>')+'</h2><p class="sub">'+ (c.desc||'') +'</p>'+
   warn+
   '<table><tr><th>Bazaar</th><th style="text-align:right">price</th><th style="text-align:right">avg&nbsp;paid</th><th style="text-align:right">held</th><th>buy / sell</th></tr>'+rows+'</table>'+
   '<p class="sub" style="margin:-2px 0 10px">Price is <span class="green">green</span> below what you last paid, <span class="blue">blue</span> above.'+(tradeSkill()>0?' Your haggling shaves every price in your favour; longer stays sharpen the edge.':'')+'</p>'+
@@ -4117,7 +4216,7 @@ function renderPort(m){
   '</div><div style="margin-top:12px"><button onclick="huntFood()">Hunt nearby (1 day)</button> <button onclick="openOutfitter()">Outfitter</button> '+((S.goods.slaves>0)?'<button onclick="openCoffle()">The coffle ('+S.goods.slaves+')</button> ':'')+(anatPortMapCity(c.name)?'<button onclick="openMap()">Open the road map</button> ':'')+(chartForCity(c.name)?'<button onclick="openChart()">Open the chart</button> ':'')+((seaEdges(c.name).some(function(e){return e.terr==='land';}))?'<button onclick="S.screen=\'animals\';render()">Livestock market</button> ':'')+travel+((isSeaExitCity(c.name)&&totalAnimals()>0)?'<button onclick="stepAshore()">Step back ashore (keep to the land road)</button>':'')+'</div>';
 }
 function portDepart(to){ if(!S)return; beginVoyage(S.portName, to); }
-const PORT_BIOME={Kauthara:"steaming coastal jungle, loud with gibbons and hornbills and hung with lianas",Palembang:"dense equatorial rainforest along the muddy river, where the rain falls warm and the leeches are democratic",Guangzhou:"subtropical hills of bamboo and banyan beyond the city wall",Mantai:"palm-fringed lagoons and dry thorn-scrub bright with peacocks",Kollam:"the wet green Malabar backwaters, pepper-vines and coconut and the cries of unseen birds",Dhofar:"monsoon-greened hills falling to a desert coast, frankincense trees gnarled in the gullies",Socotra:"a weird forest of dragon's-blood and bottle-trees on bare red mountains",Zanzibar:"mangrove channels and coastal forest, the air thick with clove and rot",Aden:"black volcanic crags above a near-waterless shore",Basra:"endless date-groves and reed-marshes where the great rivers meet",Fustat:"the green Nile floodplain that ends at once in bone-dry desert below the Pyramids",Alexandria:"flat salt-marsh and lagoon behind the dunes",Gortyn:"olive groves and vineyards under bare limestone mountains",Ephesus:"silted river-flats and dry Anatolian hills of scrub-oak and thyme",Qulzum:"utter desert, the mountains of Sinai shimmering across the gulf",Luoyang:"the loess hills and ploughed plains of the Yellow River",Yangzhou:"a green latticework of canals, paddy, and mulberry"};
+const PORT_BIOME={Kauthara:"steaming coastal jungle, loud with gibbons and hornbills and hung with lianas",Palembang:"dense equatorial rainforest along the muddy river, where the rain falls warm and the leeches are democratic",Guangzhou:"subtropical hills of bamboo and banyan beyond the city wall",Mantai:"palm-fringed lagoons and dry thorn-scrub bright with peacocks",Kollam:"the wet green Malabar backwaters, pepper-vines and coconut and the cries of unseen birds",Dhofar:"monsoon-greened hills falling to a desert coast, frankincense trees gnarled in the gullies",Socotra:"a weird forest of dragon's-blood and bottle-trees on bare red mountains",Zanzibar:"mangrove channels and coastal forest, the air thick with clove and rot",Aden:"black volcanic crags above a near-waterless shore",Basra:"endless date-groves and reed-marshes where the great rivers meet",Fustat:"the green Nile floodplain that ends at once in bone-dry desert below the Pyramids",Alexandria:"flat salt-marsh and lagoon behind the dunes",Gortyn:"olive groves and vineyards under bare limestone mountains",Ephesus:"silted river-flats and dry Anatolian hills of scrub-oak and thyme",Qulzum:"utter desert, the mountains of Sinai shimmering across the gulf",Luoyang:"the loess hills and ploughed plains of the Yellow River",Yangzhou:"a green latticework of canals, paddy, and mulberry",Medina:"black lava-fields ringing the date-palm oasis",Mecca:"barren rock hills where nothing grows but thorn",Sanaa:"terraced highland fields under basalt crags",Yamama:"red dunes and palm-groves around the deep wells",Shibam:"a canyon-oasis of palms walled in by stony plateau"};
 const PORT_FAUNA={
  Kauthara:{pred:'a tiger',small:'jungle fowl',big:'a jungle deer'},
  Palembang:{pred:'a tiger',small:'a brace of jungle fowl',big:'a wild boar'},
@@ -4135,7 +4234,12 @@ const PORT_FAUNA={
  Ephesus:{pred:'a wild boar',small:'hares',big:'a roe deer'},
  Qulzum:{pred:'a leopard',small:'a desert hare',big:'a Nubian ibex'},
  Luoyang:{pred:'a wolf',small:'a pheasant',big:'a deer'},
- Yangzhou:{pred:'a wild boar',small:'ducks',big:'a deer'}
+ Yangzhou:{pred:'a wild boar',small:'ducks',big:'a deer'},
+ Medina:{pred:'an Arabian wolf',small:'a hare',big:'a gazelle'},
+ Mecca:{pred:'an Arabian leopard',small:'a hare',big:'an ibex'},
+ Sanaa:{pred:'an Arabian leopard',small:'rock partridge',big:'an ibex'},
+ Yamama:{pred:'an Arabian wolf',small:'a hare',big:'an oryx'},
+ Shibam:{pred:'a striped hyena',small:'a hare',big:'a gazelle'}
 };
 function cooledFish(){ return (S.fishDay==null)||(S.day-S.fishDay)>=20; }
 function fishingEvent(c,fisher){ var hunter=fisher; var riv=!!fisher.salty;
@@ -4158,7 +4262,7 @@ function exploreWilds(){
     else { out="The hunt turns hunter: "+fa.pred+" comes out of the cover before anyone sees it. "+(v?(v+" is mauled and badly hurt before you beat it off"):("you are mauled and badly hurt before you beat it off"))+" \u2014 no meat today, only wounds and a story you will tell for years."; }
     if(S.hp<=0){ S.cause=fa.pred.replace(/^an? /,''); die(); return null; }
   } else { const r=rnd()+hs*0.06;
-    if(r>1.10){ const food=9+ri(9); S.food+=food; out="A rare day: "+who+" "+(who==='You'?'take':'takes')+" "+fa.big+", a fine beast \u2014 about "+food+" days of good meat, and a tale to match."; }
+    if(r>1.10){ const food=9+ri(9); S.food+=food; out="A rare day: "+who+" "+(who==='You'?'take':'takes')+" "+fa.big+", a fine beast \u2014 about "+food+" measures of good meat, and a tale to match."; }
     else if(r>0.5){ const food=1+ri(3); S.food+=food; out=who+" "+(who==='You'?'bring':'brings')+" in "+fa.small+" \u2014 a day or two of meat, no more."; }
     else { out="A long, empty day; the local game knows its ground far better than you, and you come back with sore feet and nothing else."; }
   }
@@ -4184,18 +4288,19 @@ const CHARTS={
  hexi:{img:"Maps/hexi762.png",vbw:1980,vbh:889,seasonal:true,geo:[88.5,113,32.5,43.5],title:"the Hexi corridor and the Jade Gate",cities:{Miran:{x:32,y:345,r:9,ldx:14,ldy:-4},Hami:{x:405,y:54,r:9,ldx:10,ldy:14},Dunhuang:{x:498,y:272,r:9,ldx:-104,ldy:-4},Jiuquan:{x:808,y:304,r:9,ldx:6,ldy:-12},Zhangye:{x:966,y:369,r:9,ldx:6,ldy:18},Wuwei:{x:1142,y:450,r:9,ldx:10,ldy:-10},Lanzhou:{x:1238,y:601,r:9,ldx:-96,ldy:6},"Chang'an":{x:1653,y:746,r:9,ldx:-150,ldy:-10},Luoyang:{x:1936,y:718,r:9,ldx:-150,ldy:-6}},legs:{"Miran|Dunhuang":"32,343 51,339 67,339 86,342 104,346 122,347 140,345 158,344 176,343 194,343 212,343 230,343 248,343 266,343 284,343 302,343 320,342 338,338 356,332 374,324 393,316 411,309 429,304 447,301 465,296 481,287 491,278 497,271","Hami|Dunhuang":"404,53 411,61 416,69 422,77 429,85 437,94 446,102 454,111 463,119 471,128 480,136 488,145 493,153 496,162 497,170 497,178 497,187 497,195 497,204 497,212 497,221 497,229 497,238 497,246 498,255 498,262 497,268 497,271","Dunhuang|Jiuquan":"497,271 507,277 517,281 528,283 541,283 553,283 565,283 577,283 589,283 601,283 613,283 625,283 638,283 650,283 662,284 674,286 686,289 698,293 710,296 722,297 734,297 747,297 759,297 771,297 783,297 795,299 803,301 808,303","Jiuquan|Zhangye":"808,303 814,308 819,311 825,314 831,318 838,323 844,328 850,332 856,335 862,336 868,337 874,341 880,347 886,353 892,358 898,362 904,363 910,364 916,364 922,364 928,364 935,364 941,364 947,364 953,364 959,366 963,367 966,368","Zhangye|Wuwei":"966,368 972,373 978,377 985,379 992,382 999,386 1006,392 1013,398 1019,405 1026,411 1033,416 1040,420 1047,424 1053,428 1060,430 1067,430 1074,430 1081,430 1088,430 1094,431 1101,432 1108,434 1115,437 1122,440 1128,443 1135,446 1139,448 1142,449","Wuwei|Lanzhou":"1142,449 1147,454 1152,459 1158,465 1164,471 1170,477 1175,482 1180,488 1185,494 1190,500 1195,506 1200,511 1206,517 1211,523 1215,529 1216,535 1216,541 1216,546 1217,552 1218,558 1220,564 1222,570 1225,575 1228,581 1231,587 1233,593 1235,597 1236,600","Lanzhou|Chang'an":"1236,600 1252,615 1266,629 1282,646 1298,661 1314,671 1331,676 1347,677 1363,677 1379,677 1395,677 1411,677 1427,679 1444,685 1460,694 1476,702 1492,708 1508,710 1524,711 1541,711 1557,712 1573,714 1589,718 1605,727 1621,736 1636,743 1653,746","Chang'an|Luoyang":"1653,746 1661,741 1670,738 1681,736 1692,736 1703,734 1714,731 1725,727 1737,723 1748,722 1759,722 1770,721 1781,721 1792,721 1803,721 1814,721 1826,720 1837,719 1848,718 1859,718 1870,717 1881,717 1892,717 1903,717 1914,717 1925,717 1936,717"},stubs:["32,343 32,343 31,343 29,343 28,342 27,342 26,341 24,341 23,341 22,342 21,342 19,343 18,344 17,345 16,345 14,346 13,347 12,347 11,348 9,348 8,349 7,350 5,350 4,351 3,352 2,352 1,353 0,353 0,354","404,53 394,49 383,47 370,46 358,46 345,46 332,46 319,46 306,46 293,44 280,42 267,40 255,40 242,40 229,40 216,40 203,40 190,40 177,40 164,40 151,40 139,40 126,40 113,40 100,40 88,39 79,38 73,36"],corridor:["Chang'an","Lanzhou","Wuwei","Zhangye","Jiuquan","Dunhuang"],open:["Chang'an","Lanzhou","Wuwei","Zhangye","Jiuquan","Dunhuang"]},
  china:{img:"Maps/china762.png",vbw:1552,vbh:1702,title:"the rivers of Cathay",cities:{"Chang'an":{x:365,y:242,ldx:-150,ldy:-4},Luoyang:{x:665,y:209,ldx:-75,ldy:-22},Yangzhou:{x:1262,y:425,ldx:8,ldy:2},Guangzhou:{x:734,y:1324,ldx:8,ldy:8}},chartLinks:[{x:514,y:1400,w:440,h:74,to:"kauthara",at:"Guangzhou",label:"\u2193 south \u2014 to the southern seas"}],open:["Luoyang","Yangzhou"]},
  kauthara:{img:"Maps/kauthara762.png",vbw:1032,vbh:1560,title:"the South China Sea",cities:{Kauthara:{x:512,y:666},Palembang:{x:319,y:1335},Guangzhou:{x:690,y:189}},chartLinks:[{x:540,y:40,w:450,h:140,to:"china",at:"Guangzhou"}],open:["Kauthara","Guangzhou"]},
- egypt:{img:"Maps/egypt_redsea762.png",vbw:1980,vbh:2194,seasonal:true,geo:[28.5,47.0,11.5,32.0],title:"Egypt and the Red Sea",cities:{Alexandria:{x:150,y:86,r:9,ldx:14,ldy:8},Fustat:{x:294,y:214,r:9,ldx:-132,ldy:-12},Qulzum:{x:433,y:217,r:9,ldx:14,ldy:6},Aden:{x:1769,y:2055,r:9,ldx:-130,ldy:8}},open:["Alexandria","Fustat","Qulzum"]},
+ egypt:{img:"Maps/egypt_redsea762.png",vbw:1980,vbh:2194,seasonal:true,geo:[28.5,47.0,11.5,32.0],title:"Egypt and the Red Sea",cities:{Alexandria:{x:150,y:86,r:9,ldx:14,ldy:8},Fustat:{x:294,y:214,r:9,ldx:-132,ldy:-12},Qulzum:{x:433,y:217,r:9,ldx:14,ldy:6},Aden:{x:1769,y:2055,r:9,ldx:-130,ldy:8},Medina:{x:1189,y:806,r:9,ldx:14,ldy:-8},Mecca:{x:1212,y:1132,r:9,ldx:16,ldy:28}},legs:{"Medina|Qulzum":"432.4,216.2 445.2,218.3 458.1,218.3 470.9,218.3 483.8,223.7 496.6,226.9 509.4,226.9 522.3,226.9 535.1,226.9 547.9,229.0 560.8,229.0 573.6,236.6 586.6,237.6 599.4,239.4 612.1,239.7 625.1,239.7 637.9,239.7 650.8,242.8 661.5,251.7 674.3,257.6 687.0,259.1 695.6,263.3 695.6,263.3 708.6,263.3 721.3,268.2 734.3,269.6 747.1,272.6 757.7,280.2 770.5,287.5 781.4,297.5 792.0,308.3 802.7,319.0 813.4,329.7 824.1,340.3 834.8,351.0 845.6,361.7 856.3,372.4 866.9,383.1 877.6,393.9 888.3,404.6 899.0,415.3 909.7,425.9 918.2,436.6 927.0,448.7 937.5,458.0 948.3,468.8 957.6,479.5 967.4,490.2 976.1,500.9 984.4,511.6 990.6,524.5 995.4,537.3 1004.0,550.1 1011.3,563.0 1019.4,573.7 1027.4,586.5 1035.9,599.4 1044.3,610.1 1047.7,622.9 1052.5,635.7 1053.9,648.6 1057.7,661.4 1064.1,674.2 1072.3,687.1 1081.0,697.8 1089.3,708.5 1093.9,721.4 1104.5,732.1 1115.3,742.8 1126.0,753.5 1136.6,762.2 1144.6,772.7 1153.5,783.4 1164.5,792.3 1177.3,800.0 1187.9,804.8","Mecca|Medina":"1187.9,804.8 1187.9,817.7 1189.3,830.5 1194.8,843.3 1196.6,856.2 1204.1,869.0 1205.1,881.9 1205.9,894.7 1211.7,907.5 1216.7,920.5 1220.1,933.2 1220.1,946.0 1221.5,959.0 1222.9,971.8 1225.2,984.7 1232.8,997.5 1237.3,1010.3 1237.3,1023.2 1240.1,1036.0 1242.2,1048.8 1243.6,1061.7 1242.9,1074.5 1237.7,1087.3 1234.2,1100.2 1227.3,1113.0 1218.0,1123.7 1211.5,1130.2","Mecca|Sanaa":"1211.5,1130.2 1224.3,1123.7 1237.3,1122.4 1250.1,1129.5 1262.7,1131.2 1271.6,1143.0 1282.2,1153.5 1295.0,1158.0 1307.8,1158.0 1320.7,1158.0 1333.5,1160.0 1346.5,1162.5 1357.1,1173.0 1367.1,1183.7 1376.4,1194.1"},farLabels:[{x:1420,y:1330,text:"to Sanaa and Aden",anchor:"start"}],chartLinks:[{x:520,y:150,w:560,h:56,to:"arabia",at:"Qulzum",label:"the overland roads of Arabia \u203a"}],open:["Alexandria","Fustat","Qulzum"]},
  aleppo:{img:"Maps/aleppo_relief762.png",vbw:1980,vbh:1076,title:"Aleppo and the Levant",hideUnkeyed:true,corridor:["Constantinople","Iconium","Aleppo","Baghdad"],cities:{Constantinople:{x:467,y:117,ldx:14,ldy:-6},Iconium:{x:786,y:401,ldx:14,ldy:8},Aleppo:{x:1208,y:552,ldx:16,ldy:4},Ephesus:{x:320,y:394,ldx:-150,ldy:6},Trebizond:{x:1439,y:118,ldx:-150,ldy:6},Antioch:{x:1098,y:559,ldx:-118,ldy:20,r:6,faint:true},Gortyn:{x:99,y:660,ldx:14,ldy:8},Alexandria:{x:552,y:1004,ldx:14,ldy:8},Baghdad:{x:1859,y:813,ldx:-150,ldy:6}},legs:{"Constantinople|Iconium":"465,115 478,120 492,124 506,126 520,127 534,132 548,141 553,151 547,159 540,169 541,181 548,194 558,204 571,211 585,218 599,225 613,235 628,249 642,263 656,277 670,291 684,306 699,320 713,333 727,345 741,357 756,371 770,385 779,395 783,399","Iconium|Aleppo":"783,399 803,407 823,411 844,413 864,414 884,415 905,419 925,423 946,428 966,434 982,442 992,456 998,468 1008,474 1023,474 1043,473 1064,470 1084,463 1105,459 1122,466 1130,481 1130,501 1126,521 1123,537 1128,545 1145,545 1166,545 1186,547 1199,549 1205,551","Ephesus|Iconium":"318,393 333,399 348,401 365,399 382,397 399,395 416,398 433,400 450,402 467,402 484,402 501,400 518,398 535,396 552,392 568,388 584,388 600,388 617,383 634,376 651,373 667,373 683,371 699,366 716,358 733,358 750,366 767,382 778,394 783,399","Iconium|Trebizond":"783,399 808,408 834,412 860,414 885,416 911,420 937,426 959,424 980,410 1001,386 1026,363 1046,339 1065,315 1086,294 1112,275 1138,257 1163,243 1187,231 1210,221 1235,215 1260,207 1283,197 1307,185 1330,169 1350,149 1370,131 1394,120 1418,115 1438,115","Antioch|Aleppo":"1096,557 1099,555 1103,554 1107,554 1111,554 1115,554 1119,554 1123,554 1127,554 1131,553 1135,552 1139,551 1143,551 1147,551 1151,551 1155,551 1159,551 1163,551 1167,551 1171,551 1175,551 1179,551 1183,551 1186,551 1190,551 1194,551 1198,551 1202,551 1204,551 1205,551","Baghdad|Aleppo":"1857,812 1834,805 1810,802 1787,799 1763,794 1739,788 1715,782 1692,774 1668,765 1644,756 1620,745 1597,732 1573,716 1552,697 1531,675 1509,655 1486,636 1463,622 1439,607 1415,594 1392,582 1369,576 1347,573 1323,574 1299,573 1275,567 1252,560 1228,555 1212,553 1205,551"},sealegs:{"Aleppo|Ephesus":"1098,559 1095,559 1060,561 1024,562 987,562 949,564 911,566 874,572 837,577 799,578 763,577 732,580 709,585 680,594 655,601 622,607 579,609 510,578 461,556 427,542 394,527 285,521 270,518 267,510 264,495 260,470 266,437 292,416 295,415 302,406 320,394 320,394","Aleppo|Gortyn":"1098,559 1095,559 1060,561 1024,562 987,562 949,564 911,566 874,572 837,577 799,578 763,577 731,580 696,589 669,597 646,603 621,609 585,617 536,640 486,670 446,671 400,669 302,655 252,653 240,658 228,667 210,674 178,677 138,677 105,670 100,660","Ephesus|Constantinople":"320,394 320,394 312,396 302,403 299,404 294,404 274,406 236,397 194,373 181,353 177,333 177,313 176,294 178,273 185,254 191,236 200,219 219,206 235,196 256,180 277,168 300,160 321,155 343,147 406,132 453,123 464,122 467,122 468,122 468,121 468,120 467,117","Gortyn|Alexandria":"100,660 100,660 102,668 119,674 132,677 147,678 161,679 172,682 185,694 205,736 225,777 243,805 259,824 275,841 291,857 307,873 322,888 338,904 355,919 372,934 394,949 425,964 474,979 526,991 540,994 544,994 545,994 546,995 547,996 551,1002 552,1004","Aleppo|Alexandria":"1098,559 1098,559 1085,560 1065,561 1050,562 1029,564 1013,570 995,596 975,656 955,693 936,717 917,737 898,757 879,776 860,795 841,814 822,832 803,851 784,870 764,888 743,904 721,919 698,932 670,945 634,958 599,975 593,976 558,988 548,995 551,1003 552,1004","Trebizond|Constantinople":"1439,118 1427,109 1389,99 1351,100 1314,100 1277,96 1241,91 1207,82 1171,71 1138,60 1105,44 1070,34 1037,19 1000,12 963,12 926,12 888,12 851,14 814,18 776,20 738,21 700,26 663,34 622,49 561,74 504,98 501,96 478,104 468,117 467,117","Ephesus|Gortyn":"320,394 320,394 311,396 300,408 296,415 295,414 294,416 286,421 269,435 261,452 260,470 262,485 264,498 267,509 269,520 270,537 264,594 252,640 241,655 229,666 214,672 197,675 178,677 158,678 138,677 119,674 104,670 100,665 100,660"},stubs:["1859,813 1929,788 1978,758"],farLabels:[{x:1860,y:755,text:"east \u2014 to Rey and Persia",anchor:"end"}],open:["Aleppo"]},
  easternseas:{img:"Maps/easternseas762.png",vbw:1552,vbh:951,title:"the Eastern Seas",cities:{Basra:{x:108,y:83},Dhofar:{x:240,y:377},Kollam:{x:725,y:555},Mantai:{x:797,y:554,ldy:26},Palembang:{x:1328,y:815},Kauthara:{x:1423,y:481}},open:["Kollam","Mantai","Palembang"]},
- basra:{img:"Maps/basra762.png",vbw:1232,vbh:983,title:"Basra and the Gulf",cities:{Basra:{x:214,y:147},Baghdad:{x:103,y:49},Dhofar:{x:417,y:613},Kollam:{x:1145,y:892}},open:["Basra"]},
- dhofar:{img:"Maps/dhofar762.png",vbw:1232,vbh:949,title:"Dhofar and the western ocean",cities:{Dhofar:{x:395,y:554},Kollam:{x:1143,y:839},Basra:{x:186,y:79},Socotra:{x:388,y:713},Aden:{x:94,y:702}},open:["Dhofar"]},
- indianocean:{img:"Maps/indianocean762.png",vbw:1292,vbh:855,title:"the Western Ocean",cities:{Zanzibar:{x:87,y:765},Aden:{x:247,y:239},Socotra:{x:492,y:248},Dhofar:{x:497,y:123},Kollam:{x:1117,y:347},Mantai:{x:1210,y:346,ldy:24}},open:["Aden","Socotra","Zanzibar"]},
+ basra:{img:"Maps/basra762.png",vbw:1232,vbh:983,title:"Basra and the Gulf",cities:{Basra:{x:214,y:147},Baghdad:{x:103,y:49},Dhofar:{x:417,y:613},Kollam:{x:1145,y:892}},chartLinks:[{x:70,y:230,w:520,h:56,to:"arabia",at:"Basra",label:"the desert roads of Arabia \u203a"}],open:["Basra"]},
+ dhofar:{img:"Maps/dhofar762.png",vbw:1232,vbh:949,title:"Dhofar and the western ocean",cities:{Dhofar:{x:395,y:554},Kollam:{x:1143,y:839},Basra:{x:186,y:79},Socotra:{x:388,y:713},Aden:{x:94,y:702}},chartLinks:[{x:120,y:430,w:500,h:56,to:"arabia",at:"Dhofar",label:"the incense road inland \u203a"}],open:["Dhofar"]},
+ indianocean:{img:"Maps/indianocean762.png",vbw:1292,vbh:855,title:"the Western Ocean",cities:{Zanzibar:{x:87,y:765},Aden:{x:247,y:239},Socotra:{x:492,y:248},Dhofar:{x:497,y:123},Kollam:{x:1117,y:347},Mantai:{x:1210,y:346,ldy:24}},chartLinks:[{x:60,y:120,w:440,h:56,to:"arabia",at:"Aden",label:"the roads of Arabia \u203a"},{x:40,y:20,w:520,h:95,to:"arabia"}],open:["Aden","Socotra","Zanzibar"]},
  baghdadhub:{img:"Maps/baghdad_hub762.png",vbw:1980,vbh:978,seasonal:true,geo:[36.0,52.0,29.3,37.2],title:"Baghdad \u2014 the Tigris and the roads of the Caliphate",cities:{Baghdad:{x:1035,y:482,r:9,ldx:14,ldy:-12},Aleppo:{x:144,y:124,r:9,ldx:14,ldy:8},Rey:{x:1909,y:199,r:9,ldx:-150,ldy:6},Basra:{x:1461,y:842,r:9,ldx:-130,ldy:8}},open:["Baghdad"]},
  bukhara:{img:"Maps/bukhara762.png",vbw:1980,vbh:1157,seasonal:true,geo:[60.3,68.0,36.6,41.1],title:"Bukhara \u2014 between the Oxus and the Zarafshan",corridor:["Merv","Bukhara","Samarkand"],cities:{Merv:{x:393,y:884,r:9,ldx:14,ldy:8},Bukhara:{x:1059,y:342,r:9,ldx:14,ldy:-12},Samarkand:{x:1715,y:373,r:9,ldx:-150,ldy:6}},open:["Bukhara"]},
  persia:{img:"Maps/persiacorridor762.png",vbw:1980,vbh:818,seasonal:true,geo:[43.0,66.0,31.4,40.9],title:"the Khurasan road \u2014 Baghdad to Bukhara",corridor:["Baghdad","Rey","Nishapur","Merv","Bukhara"],cities:{Baghdad:{x:117,y:654,r:9,ldx:14,ldy:8},Rey:{x:726,y:457,r:9,ldx:14,ldy:-10},Nishapur:{x:1360,y:404,r:9,ldx:14,ldy:10},Merv:{x:1621,y:279,r:9,ldx:14,ldy:-10},Bukhara:{x:1844,y:97,r:9,ldx:-150,ldy:6}},open:["Merv","Nishapur","Rey"]},
  transoxiana:{img:"Maps/transoxiana762.png",vbw:1980,vbh:1273,geo:[57.3,65.7,35.2,40.6],title:"Transoxiana \u2014 the Oxus and the road to Khurasan",cities:{Bukhara:{x:1678,y:196,r:9,ldx:14,ldy:6},Merv:{x:1068,y:693,r:9,ldx:14,ldy:-6},Nishapur:{x:354,y:1035,r:9,ldx:14,ldy:-20}},open:["Bukhara","Merv"]},
  khorasan:{img:"Maps/khorasan762.png",vbw:1980,vbh:739,geo:[50.2,62.8,33.9,38.6],title:"the Khurasan road \u2014 between the Elburz and the salt desert",cities:{Merv:{x:1828,y:148,r:9,ldx:-150,ldy:6},Nishapur:{x:1351,y:376,r:9,ldx:14,ldy:-10},Rey:{x:193,y:473,r:9,ldx:14,ldy:8}},open:["Nishapur"]},
  jibal:{img:"Maps/jibal762.png",vbw:1980,vbh:668,geo:[43.2,59.8,31.6,37.2],title:"the Jibal \u2014 over the Zagros to Baghdad",cities:{Nishapur:{x:1861,y:118,r:9,ldx:-150,ldy:6},Rey:{x:982,y:192,r:9,ldx:14,ldy:-10},Baghdad:{x:138,y:464,r:9,ldx:14,ldy:8}},open:["Rey","Baghdad"]},
+ arabia:{img:"Maps/arabia762.png",vbw:1980,vbh:1510,geo:[31.5,61.0,10.0,32.5],title:"Arabia \u2014 the pilgrim and incense roads",cities:{Qulzum:{x:70,y:170,r:9,ldx:14,ldy:-12},Medina:{x:544,y:539,r:9,ldx:14,ldy:-8},Mecca:{x:559,y:744,r:9,ldx:-30,ldy:42},Sanaa:{x:853,y:1151,r:9,ldx:-150,ldy:10},Aden:{x:908,y:1322,r:9,ldx:14,ldy:8},Socotra:{x:1503,y:1342,r:9,ldx:-160,ldy:-14},Dhofar:{x:1516,y:1038,r:9,ldx:-24,ldy:-40},Basra:{x:1095,y:141,r:9,ldx:-160,ldy:10},Yamama:{x:1021,y:528,r:9,ldx:14,ldy:-10},Shibam:{x:1150,y:1112,r:9,ldx:-24,ldy:-26}},legs:{"Qulzum|Medina":"69.8,169.1 77.8,170.5 85.9,170.5 94.0,170.5 102.1,173.8 110.1,175.8 118.1,175.8 126.2,175.8 134.2,175.8 142.3,177.2 150.4,177.2 158.4,181.9 166.5,182.5 174.5,183.7 182.5,183.9 190.6,183.9 198.7,183.9 206.8,185.8 213.5,191.4 221.5,195.1 229.5,196.0 234.9,198.7 234.9,198.7 243.0,198.7 251.0,201.8 259.1,202.6 267.1,204.5 273.8,209.2 281.9,213.8 288.6,220.1 295.3,226.9 302.0,233.6 308.7,240.3 315.4,247.0 322.1,253.7 328.9,260.4 335.6,267.1 342.3,273.8 349.0,280.6 355.7,287.3 362.4,294.0 369.1,300.7 374.5,307.4 380.0,314.9 386.6,320.7 393.3,327.5 399.2,334.2 405.3,340.9 410.8,347.6 416.0,354.3 419.9,362.4 422.9,370.5 428.3,378.5 432.8,386.6 437.9,393.3 443.0,401.3 448.3,409.4 453.5,416.1 455.7,424.1 458.7,432.2 459.5,440.3 461.9,448.3 466.0,456.3 471.1,464.4 476.5,471.1 481.7,477.8 484.7,485.9 491.3,492.6 498.1,499.3 504.8,506.0 511.5,511.5 516.5,518.1 522.0,524.8 528.9,530.4 536.9,535.2 543.6,538.2","Mecca|Medina":"543.6,538.2 543.6,546.3 544.5,554.3 547.9,562.3 549.1,570.5 553.8,578.5 554.4,586.6 554.9,594.6 558.5,602.6 561.7,610.7 563.8,618.8 563.8,626.8 564.7,634.9 565.6,642.9 567.0,651.0 571.7,659.0 574.6,667.1 574.6,675.2 576.3,683.2 577.6,691.2 578.5,699.3 578.1,707.3 574.8,715.4 572.6,723.5 568.3,731.5 562.5,738.2 558.4,742.2","Mecca|Sanaa":"558.4,742.2 566.4,738.2 574.6,737.4 582.6,741.8 590.5,742.9 596.1,750.3 602.8,756.9 610.8,759.7 618.8,759.7 626.9,759.7 634.9,760.9 643.0,762.5 649.7,769.1 656.0,775.8 661.8,782.4 669.8,785.8 676.5,791.4 683.2,796.4 690.0,801.5 696.7,807.8 704.7,813.4 711.4,820.1 718.1,826.8 724.9,833.6 731.6,839.6 738.1,844.2 743.7,850.9 750.4,857.7 755.8,864.4 761.1,871.1 765.2,879.1 770.0,885.8 774.4,893.9 776.0,902.0 781.1,910.1 786.6,916.8 793.3,923.5 798.3,930.2 802.1,938.2 806.8,946.2 813.5,950.8 820.0,957.0 825.4,965.1 828.4,973.1 832.1,981.2 836.3,989.2 842.1,995.9 847.1,1001.3 847.1,1001.3 842.0,1008.0 840.7,1016.1 839.1,1024.1 838.0,1032.1 836.3,1040.3 836.3,1048.3 835.0,1056.3 839.0,1064.4 843.0,1072.4 845.6,1080.4 850.2,1087.2 856.0,1093.9 861.6,1100.6 861.9,1108.7 861.8,1116.8 859.0,1124.8 853.9,1131.5 852.4,1139.5 852.4,1147.6 852.4,1150.3","Aden|Sanaa":"852.4,1150.3 857.6,1157.0 860.0,1165.1 863.0,1173.1 865.4,1181.2 866.3,1189.2 865.8,1197.2 868.7,1205.3 871.4,1213.4 876.1,1221.4 880.4,1229.5 884.0,1237.5 887.6,1245.5 892.5,1252.3 894.0,1260.3 895.2,1268.4 895.5,1276.5 897.7,1284.5 903.4,1291.2 906.1,1299.3 906.1,1307.3 906.6,1315.3 907.4,1318.1","Aden|Shibam":"907.4,1318.1 911.9,1311.4 918.2,1304.7 924.7,1297.9 927.7,1289.9 932.9,1283.2 939.7,1276.6 946.2,1271.1 951.8,1264.4 958.5,1257.7 965.2,1250.9 971.9,1244.2 978.6,1237.7 982.8,1230.8 985.8,1222.8 990.6,1216.0 992.6,1208.0 994.4,1200.0 1000.1,1193.3 1006.6,1186.5 1012.1,1179.8 1018.8,1173.1 1025.5,1166.4 1030.0,1159.7 1035.0,1153.0 1036.9,1144.9 1043.0,1138.2 1049.7,1133.6 1057.8,1130.2 1065.8,1130.2 1073.9,1128.8 1082.0,1126.1 1090.0,1123.5 1098.1,1123.5 1106.1,1122.1 1114.2,1122.1 1122.2,1121.5 1130.3,1119.0 1138.4,1115.4 1146.4,1112.0 1149.1,1111.4","Dhofar|Shibam":"1149.1,1111.4 1157.1,1109.7 1165.2,1106.4 1173.3,1104.7 1181.1,1100.6 1188.0,1094.6 1194.7,1089.6 1202.8,1087.2 1210.8,1085.9 1218.9,1085.8 1226.9,1085.8 1235.0,1085.6 1243.1,1083.2 1251.1,1083.2 1259.1,1081.9 1267.2,1081.3 1275.2,1080.4 1283.3,1080.4 1291.4,1079.3 1299.4,1079.1 1307.5,1076.7 1315.5,1076.0 1323.6,1073.7 1331.6,1071.2 1338.3,1066.2 1345.0,1060.4 1351.7,1054.1 1359.8,1050.9 1367.9,1049.4 1376.0,1047.0 1384.0,1044.4 1392.0,1044.2 1400.1,1042.9 1408.1,1042.9 1416.2,1041.6 1424.3,1041.6 1432.3,1041.6 1440.4,1041.6 1448.4,1041.8 1456.4,1041.6 1464.5,1041.6 1472.6,1041.6 1480.7,1040.3 1488.7,1041.4 1496.7,1041.6 1504.8,1041.1 1512.8,1038.4 1515.6,1037.5","Basra|Yamama":"1094.0,140.9 1094.0,149.0 1094.0,157.1 1094.0,165.1 1093.9,173.1 1089.3,179.9 1088.7,187.9 1085.9,195.9 1080.6,202.6 1075.9,209.4 1073.0,217.4 1069.0,225.5 1068.6,233.6 1068.6,241.6 1068.6,249.6 1067.7,257.7 1067.1,265.7 1066.0,273.8 1064.9,281.9 1063.2,289.9 1061.0,298.0 1060.4,306.0 1058.0,314.1 1055.2,322.2 1053.7,330.2 1052.1,338.2 1051.1,346.3 1051.1,354.3 1050.9,362.4 1047.7,370.5 1047.1,378.5 1047.1,386.6 1047.1,394.6 1045.8,402.6 1045.7,410.7 1045.6,418.8 1044.4,426.8 1042.3,434.9 1041.7,442.9 1040.8,451.0 1040.4,459.0 1040.4,467.1 1039.9,475.2 1038.5,483.2 1035.0,491.2 1029.6,498.0 1025.3,504.7 1022.9,512.7 1022.0,520.7 1020.2,527.5","Mecca|Yamama":"1020.2,527.5 1012.1,527.5 1004.1,527.5 996.0,528.4 988.0,528.9 979.9,528.9 971.9,528.9 963.9,529.3 955.7,530.2 947.7,531.5 939.7,534.2 931.6,534.4 923.6,536.9 915.5,536.9 907.4,537.1 899.4,541.6 891.3,544.2 884.6,550.2 876.6,554.5 868.5,558.2 860.5,562.4 853.8,569.1 847.1,574.6 839.0,578.5 830.9,580.0 822.8,583.0 814.8,588.0 808.1,592.9 800.1,596.3 792.0,598.7 784.0,602.7 777.3,608.9 769.2,613.4 762.5,619.5 754.4,621.9 746.3,626.8 739.6,632.3 732.9,638.2 724.9,641.1 716.8,645.6 710.1,651.0 703.4,656.0 696.7,661.7 690.0,667.0 681.9,672.4 675.2,679.1 668.5,684.9 660.5,686.7 652.4,687.2 644.4,689.9 637.7,694.6 629.6,698.4 621.5,699.3 613.4,699.3 605.4,699.9 598.7,705.4 590.7,708.0 582.6,712.7 575.9,718.1 571.1,726.1 566.4,734.2 559.7,740.9 558.4,742.2","Medina|Yamama":"542.3,536.9 553.1,536.9 563.8,536.9 574.5,537.3 585.3,539.5 596.0,539.6 606.8,539.6 617.5,539.6 628.2,539.6 639.0,539.6 649.7,541.7 660.4,544.8 671.2,544.9 681.9,544.9 692.7,544.9 703.4,544.9 714.1,545.9 724.9,547.6 735.6,547.6 746.4,547.6 757.1,547.6 767.8,547.1 778.6,541.8 789.3,539.6 800.1,539.6 810.8,539.6 821.5,539.6 832.3,538.1 840.3,531.9 851.1,524.8 861.8,523.5 872.5,523.5 883.3,523.5 894.0,523.5 904.8,523.5 915.5,523.5 926.2,523.5 937.0,523.5 947.7,523.9 958.5,526.1 969.2,526.2 979.9,526.3 990.7,530.1 1001.4,527.5 1012.1,526.2 1020.2,526.2"},sealegs:{"Aden|Qulzum":"72.5,174.5 72.6,185.2 75.2,196.0 80.9,206.7 87.6,214.8 94.1,222.8 101.5,230.9 104.7,241.6 104.7,252.3 107.9,263.1 115.0,271.1 119.9,281.9 126.3,292.6 134.2,300.7 142.3,308.7 150.3,316.8 158.4,324.8 166.5,332.9 174.5,340.9 182.6,349.0 190.6,357.0 197.2,365.1 198.7,375.8 198.7,386.6 198.7,397.3 198.7,408.0 198.7,418.8 199.2,429.5 206.7,440.2 214.8,448.3 222.8,456.4 230.9,464.4 238.9,472.5 247.0,480.5 255.1,488.6 263.1,496.6 271.2,504.7 279.2,512.7 287.3,520.8 295.3,528.8 303.4,536.9 311.4,544.9 319.5,553.0 327.5,561.0 335.6,569.1 343.6,577.2 351.7,585.2 359.8,593.3 367.8,601.3 375.9,609.4 383.9,617.4 392.0,625.5 400.0,633.5 408.1,641.6 416.1,649.6 424.2,657.7 432.2,665.7 440.3,673.8 448.4,681.8 456.4,689.9 464.5,698.0 472.5,706.0 480.6,714.1 488.6,722.1 496.7,730.2 504.2,738.2 507.4,749.0 507.4,759.7 507.9,770.4 515.1,781.2 521.2,789.2 528.9,797.3 535.6,805.3 542.0,816.1 548.1,824.1 554.3,832.2 555.7,842.9 557.2,853.7 563.7,861.7 569.1,872.4 572.0,883.2 580.0,893.9 588.0,902.0 596.0,910.0 604.0,918.1 609.3,928.8 610.8,939.6 615.7,950.3 619.2,961.0 621.5,971.8 625.5,982.5 628.2,993.2 632.7,1004.0 639.1,1014.7 645.7,1022.8 651.4,1033.5 658.1,1044.2 664.0,1052.3 670.1,1063.0 671.2,1073.8 671.2,1084.5 671.2,1095.3 671.2,1106.0 671.2,1116.7 671.2,1127.5 671.2,1138.2 671.2,1148.9 671.2,1159.7 671.2,1170.4 671.3,1181.2 676.7,1191.9 684.6,1199.9 692.7,1208.0 700.7,1216.1 708.8,1224.1 716.8,1232.2 724.9,1240.2 732.9,1248.3 741.0,1256.3 749.0,1264.4 757.1,1272.4 765.2,1280.5 773.2,1288.5 781.3,1296.6 788.9,1304.6 794.7,1315.4 800.5,1325.6 810.8,1328.9 821.5,1332.1 832.3,1335.9 843.0,1337.2 853.7,1339.4 864.5,1339.5 875.2,1339.4 886.0,1336.2 896.7,1330.8 907.4,1326.1 907.4,1326.1","Aden|Socotra":"907.4,1326.1 918.2,1326.1 928.9,1326.1 939.7,1326.1 950.4,1326.1 961.1,1326.1 971.9,1326.1 982.6,1326.1 993.4,1326.1 1004.1,1326.1 1014.8,1326.1 1025.6,1326.1 1036.3,1326.1 1047.1,1326.1 1057.8,1326.1 1068.5,1326.1 1079.3,1326.1 1090.0,1326.1 1100.7,1326.1 1111.5,1326.1 1122.2,1326.1 1133.0,1326.1 1143.7,1326.1 1154.4,1326.1 1165.2,1326.1 1175.9,1326.1 1186.7,1326.1 1197.4,1326.1 1208.1,1326.1 1218.9,1326.1 1229.6,1326.1 1240.4,1326.1 1251.1,1326.1 1261.8,1326.1 1272.6,1326.1 1283.3,1326.1 1294.0,1326.1 1304.8,1326.1 1315.5,1326.1 1326.3,1326.1 1337.0,1326.1 1347.7,1326.1 1358.5,1326.1 1369.2,1326.1 1380.0,1326.1 1390.7,1326.1 1401.4,1326.1 1412.2,1326.1 1422.9,1326.1 1433.7,1326.1 1444.4,1326.2 1455.1,1331.6 1463.2,1339.4 1471.2,1345.9 1479.3,1351.9 1490.0,1355.6 1500.8,1355.6 1511.5,1350.3 1511.5,1350.3","Dhofar|Socotra":"1514.2,1038.9 1519.1,1049.6 1519.6,1060.4 1519.6,1071.1 1519.6,1081.8 1519.6,1092.6 1519.6,1103.3 1521.3,1114.0 1522.3,1124.8 1522.3,1135.5 1522.3,1146.3 1522.3,1157.0 1522.3,1167.7 1522.3,1178.5 1523.2,1189.2 1524.9,1199.9 1524.9,1210.7 1524.9,1221.4 1524.9,1232.2 1524.9,1242.9 1524.9,1253.6 1524.9,1264.4 1524.9,1275.1 1524.9,1285.8 1524.9,1296.6 1524.9,1307.3 1528.1,1318.1 1535.7,1326.1 1541.8,1334.2 1535.7,1343.8 1524.9,1350.2 1514.2,1351.6 1511.5,1350.3","Basra|Dhofar":"1514.2,1038.9 1524.9,1041.6 1535.7,1041.6 1546.4,1041.6 1557.2,1041.6 1567.9,1041.2 1578.6,1036.8 1586.7,1030.7 1594.7,1022.8 1602.8,1014.8 1613.5,1009.1 1624.3,1006.8 1635.0,1006.7 1645.7,1006.7 1656.5,1006.7 1667.2,1003.5 1675.3,995.9 1683.3,987.9 1691.4,979.8 1699.4,971.8 1707.5,963.7 1715.6,955.7 1723.6,947.6 1731.7,939.6 1739.7,931.5 1747.8,923.4 1755.8,915.4 1763.9,907.3 1771.9,899.3 1780.0,891.2 1787.0,883.2 1791.1,872.4 1795.6,861.7 1799.3,851.0 1806.8,842.9 1814.9,834.9 1822.9,826.8 1830.6,818.8 1836.6,810.7 1841.6,800.0 1841.7,789.2 1841.7,778.5 1844.9,767.8 1852.5,759.7 1860.5,751.6 1868.2,743.6 1874.6,732.9 1880.3,722.1 1886.0,711.4 1893.3,700.6 1898.7,689.9 1900.8,679.2 1897.6,668.4 1890.1,660.4 1882.0,652.3 1874.0,644.3 1865.9,636.2 1857.8,628.2 1849.8,620.1 1841.7,612.1 1833.7,604.0 1825.6,595.9 1817.6,587.9 1809.5,579.8 1801.5,571.8 1793.4,563.7 1785.4,555.7 1777.3,547.6 1769.2,539.6 1761.2,531.5 1753.1,523.5 1745.1,515.4 1737.0,507.4 1729.0,499.3 1720.9,491.3 1712.9,483.2 1704.8,475.1 1696.8,467.1 1688.7,459.0 1681.1,451.0 1678.0,440.2 1678.0,429.5 1676.2,418.8 1669.8,409.5 1659.2,408.0 1648.4,408.0 1637.7,408.0 1627.0,408.0 1616.2,408.0 1605.5,408.1 1594.7,410.3 1584.0,410.6 1573.3,408.4 1562.5,408.0 1551.8,408.0 1541.0,406.6 1533.0,400.4 1522.3,394.6 1511.5,392.0 1500.8,391.9 1490.0,391.9 1479.3,388.8 1471.2,381.2 1463.2,373.5 1452.4,367.1 1441.7,362.4 1431.0,357.1 1420.2,351.6 1409.5,343.5 1401.4,336.0 1390.7,332.9 1380.0,332.9 1369.2,332.9 1358.5,332.9 1347.7,332.4 1337.0,325.8 1328.9,319.4 1320.9,311.4 1312.8,303.3 1304.8,295.3 1296.7,287.2 1288.7,279.2 1280.6,271.1 1272.6,263.1 1264.5,255.0 1256.5,247.0 1248.4,238.9 1240.4,232.2 1229.6,227.6 1218.9,225.5 1208.1,225.5 1197.4,225.0 1186.7,218.9 1175.9,217.3 1165.2,212.0 1157.1,204.0 1149.1,196.0 1141.0,187.9 1133.0,179.9 1124.9,171.9 1114.2,167.6 1106.1,171.8","Socotra|Zanzibar":"1511.5,1350.3 1500.8,1355.6 1490.0,1355.6 1479.3,1356.6 1468.6,1358.3 1457.8,1358.3 1447.1,1358.3 1436.3,1358.3 1425.6,1358.3 1414.9,1358.3 1404.1,1359.8 1393.4,1365.9 1382.6,1366.4 1371.9,1366.4 1361.2,1366.4 1350.4,1366.4 1339.7,1366.4 1328.9,1366.4 1318.2,1366.4 1307.5,1366.4 1296.7,1366.4 1286.0,1366.4 1275.3,1366.4 1264.5,1366.4 1253.8,1366.4 1243.0,1366.4 1232.3,1366.4 1221.6,1366.4 1210.8,1366.4 1200.1,1369.5 1189.3,1376.4 1178.6,1381.5 1167.9,1385.9 1157.1,1391.1 1146.4,1395.3 1135.6,1400.6 1124.9,1405.7 1114.2,1410.0 1103.4,1415.4 1092.7,1420.1 1082.0,1424.4 1071.2,1425.5 1060.5,1427.5 1049.7,1433.9 1041.7,1440.5 1030.9,1446.3 1020.2,1452.8 1009.5,1456.4 1004.1,1460.3","Kollam|Socotra":"1511.5,1350.3 1522.3,1352.9 1533.0,1353.0 1543.7,1353.0 1554.5,1353.0 1565.2,1353.0 1575.9,1353.0 1586.7,1353.0 1597.4,1353.0 1608.2,1353.0 1618.9,1353.0 1629.6,1353.0 1640.4,1353.0 1651.1,1353.0 1661.9,1353.0 1672.6,1353.0 1683.3,1353.0 1694.1,1353.0 1704.8,1353.0 1715.6,1353.0 1726.3,1353.0 1737.0,1353.0 1747.8,1353.0 1758.5,1353.0 1769.2,1353.0 1780.0,1353.0 1790.7,1353.0 1801.5,1353.0 1812.2,1353.0 1822.9,1353.0 1833.7,1353.0 1844.4,1355.1 1855.2,1360.0 1865.9,1364.4 1876.6,1369.7 1887.4,1374.4 1898.1,1379.1 1908.9,1384.5 1919.6,1388.8 1930.3,1393.9 1941.1,1399.2 1951.8,1403.4 1962.5,1408.7 1973.3,1413.3 1976.0,1414.7","Dhofar|Kollam":"1514.2,1038.9 1524.9,1041.6 1535.7,1041.6 1546.4,1041.6 1557.2,1042.5 1567.9,1044.2 1578.6,1044.2 1589.4,1044.2 1600.1,1044.2 1610.8,1044.3 1621.6,1047.6 1632.3,1052.9 1643.1,1057.1 1653.8,1060.3 1664.5,1060.4 1675.3,1060.4 1686.0,1060.4 1696.8,1060.4 1707.5,1060.4 1718.2,1060.4 1729.0,1060.4 1739.7,1060.4 1750.5,1060.4 1761.2,1060.4 1771.9,1060.4 1782.7,1060.4 1793.4,1060.4 1804.1,1060.4 1814.9,1060.4 1825.6,1061.8 1833.7,1068.4 1841.7,1076.5 1849.8,1084.5 1857.8,1092.6 1865.9,1100.6 1874.0,1108.7 1882.0,1116.7 1890.1,1124.8 1898.1,1132.8 1906.2,1140.9 1914.2,1148.9 1922.3,1157.0 1930.3,1165.0 1938.4,1173.1 1946.4,1181.2 1954.5,1189.2 1962.5,1197.3 1970.6,1204.3 1976.0,1208.0","Basra|Kollam":"1106.1,171.8 1116.9,167.4 1127.6,174.1 1135.6,180.2 1143.7,187.9 1151.8,196.0 1159.8,204.0 1167.9,212.1 1175.9,220.1 1184.0,227.7 1194.7,232.3 1202.8,238.9 1210.8,247.0 1218.9,255.0 1226.9,263.1 1235.0,271.1 1243.0,279.2 1251.1,287.2 1259.1,295.3 1267.2,303.3 1275.3,311.4 1283.3,319.4 1291.4,327.5 1299.4,335.6 1307.5,343.6 1315.5,351.7 1323.6,359.7 1331.6,367.8 1339.7,375.8 1347.7,383.9 1355.8,391.8 1366.5,398.3 1377.3,403.3 1388.0,408.0 1398.8,410.6 1409.5,410.7 1420.2,410.7 1431.0,410.7 1441.7,410.7 1452.4,410.7 1463.2,410.7 1473.9,410.7 1484.7,410.7 1495.4,410.7 1506.1,410.7 1516.9,410.7 1527.6,410.7 1538.4,410.7 1549.1,410.7 1559.8,410.7 1570.6,410.7 1581.3,410.7 1592.1,410.7 1602.8,410.7 1613.5,410.7 1624.3,410.7 1635.0,410.7 1645.7,410.7 1656.5,410.7 1667.2,409.0 1678.0,411.2 1686.0,418.8 1694.1,426.8 1702.1,434.9 1710.2,442.9 1718.2,451.0 1726.3,459.0 1734.3,467.1 1742.4,475.1 1750.5,483.2 1758.5,491.3 1766.6,499.3 1774.6,507.4 1782.7,515.4 1790.7,523.5 1798.8,531.5 1806.8,539.6 1814.9,547.6 1822.9,555.7 1831.0,563.7 1839.1,571.8 1847.1,579.8 1855.2,587.9 1863.2,595.9 1871.3,604.0 1879.3,612.1 1887.4,620.1 1895.4,628.2 1903.5,636.1 1911.5,642.2 1922.3,647.0 1933.0,651.6 1943.8,657.0 1954.5,661.3 1965.2,666.3 1976.0,671.1 1976.0,671.1"},stubs:["1101,131 1145,4","1105,135 1285,36","62,164 4,130"],farLabels:[{x:1100,y:24,text:"to Baghdad and Aleppo",anchor:"end"},{x:1240,y:50,text:"to Rey and Persia",anchor:"start"},{x:20,y:110,text:"to Fustat and the Nile"},{x:1180,y:1490,text:"to Zanzibar and the Zanj coast",anchor:"end"},{x:1960,y:640,text:"to Kollam and India",anchor:"end"},{x:1960,y:1240,text:"to Kollam and India",anchor:"end"}],chartLinks:[{x:30,y:240,w:460,h:52,to:"egypt",at:"Qulzum",label:"\u2039 the Red Sea and Egypt"},{x:1120,y:110,w:520,h:52,to:"basra",at:"Basra",label:"\u2039 Basra and the Gulf"},{x:880,y:1380,w:440,h:52,to:"indianocean",at:"Aden",label:"\u2039 the Western Ocean"},{x:1300,y:880,w:460,h:52,to:"dhofar",at:"Dhofar",label:"\u2039 Dhofar and the ocean"}],open:["Medina","Mecca","Sanaa","Yamama","Shibam"]},
  mesopotamia:{img:"Maps/mesopotamia762.png",vbw:1292,vbh:815,title:"Mesopotamia and the road east",cities:{Aleppo:{x:207,y:305},Baghdad:{x:521,y:456},Basra:{x:670,y:605},Rey:{x:828,y:337},Nishapur:{x:1148,y:304}},open:[]}
 };
 const ANAT_NAME={constantinople:'Constantinople',iconium:'Iconium',ephesus:'Ephesus',gortyn:'Gortyn',aleppo:'Aleppo',trebizond:'Trebizond',antioch:'Antioch',nicaea:'Nicaea'};
@@ -4216,10 +4321,10 @@ const ANAT_ROUTES=[
   {type:"land",from:"aleppo",end:[1385, 579],wp:[[1259,546]],dest:"east"},
   {type:"land",from:"iconium",to:"trebizond",wp:[[737,374],[748,375],[765,380],[784,383],[802,387],[821,388],[839,389],[858,391],[876,391],[892,386],[906,374],[918,358],[931,340],[945,323],[962,310],[979,297],[997,284],[1016,269],[1034,256],[1053,244],[1071,233],[1090,224],[1108,215],[1126,206],[1144,197],[1161,188],[1177,181],[1194,177],[1210,175],[1225,170],[1234,160],[1241,148],[1246,135],[1253,122],[1265,113],[1281,107],[1299,106],[1316,106]]},
   {type:"land",from:"iconium",to:"ephesus",wp:[[726,367],[720,360],[710,351],[699,341],[687,335],[675,333],[664,335],[652,340],[641,344],[630,346],[618,344],[607,341],[595,340],[584,342],[572,346],[560,350],[549,351],[537,355],[526,360],[515,366],[503,370],[492,373],[480,375],[469,375],[457,375],[445,375],[434,373],[422,371],[410,369],[399,368],[387,367],[375,368],[364,369],[352,371],[340,371],[329,372],[317,371],[307,369]]},
-  {type:"sea",from:"constantinople",to:"ephesus",wp:[[434,112],[435,113],[434,113],[434,113],[433,113],[424,114],[402,118],[336,131],[309,140],[281,147],[263,154],[248,160],[231,171],[206,190],[189,199],[180,210],[176,224],[171,238],[164,267],[164,282],[164,296],[164,311],[173,341],[193,355],[235,377],[257,377],[277,375],[279,375],[282,374],[290,366]]},
-  {type:"sea",from:"constantinople",to:"gortyn",wp:[[269,193],[151,336],[101,495]],gortyn:true},
-  {type:"sea",from:"ephesus",to:"antioch",wp:[[297,366],[281,376],[274,386],[274,386],[256,398],[241,435],[244,457],[248,472],[250,480],[261,483],[359,487],[389,499],[415,511],[468,532],[530,565],[567,565],[599,560],[619,555],[654,544],[673,540],[697,536],[725,536],[771,536],[802,532],[833,528],[864,524],[910,522],[941,522],[971,521],[1001,520]]},
-  {type:"sea",from:"gortyn",end:[512, 932],wp:[[92,613],[92,620],[106,625],[118,628],[126,629],[149,630],[156,632],[167,636],[175,650],[192,689],[221,741],[233,757],[245,771],[257,783],[269,794],[292,818],[304,829],[316,841],[328,852],[340,863],[372,885],[397,896],[433,907],[482,919],[499,923],[506,923],[506,923],[507,923],[507,924],[508,926]],dest:"alexandria",gortyn:true}
+  {type:"sea",from:"constantinople",to:"ephesus",wp:[[403, 134], [383, 134], [363, 134], [343, 134], [322, 134], [304, 143], [286, 151], [266, 156], [246, 159], [231, 172], [214, 183], [194, 192], [179, 206], [179, 226], [176, 247], [171, 266], [185, 281], [201, 296], [209, 315], [203, 335], [220, 347], [238, 355], [258, 360]]},
+  {type:"sea",from:"constantinople",to:"gortyn",wp:[[395, 118], [377, 127], [358, 134], [338, 134], [317, 134], [300, 147], [280, 152], [260, 156], [241, 164], [225, 176], [208, 188], [189, 197], [179, 215], [179, 235], [170, 254], [169, 274], [169, 294], [168, 314], [168, 334], [168, 354], [168, 375], [168, 395], [168, 415], [177, 433], [192, 448], [194, 468], [194, 488], [194, 509], [194, 529], [194, 549], [194, 569], [207, 585], [211, 605], [193, 615], [173, 615], [153, 615], [133, 616], [113, 620]],gortyn:true},
+  {type:"sea",from:"ephesus",to:"antioch",wp:[[272, 401], [272, 421], [280, 440], [298, 450], [318, 451], [334, 466], [347, 481], [367, 484], [387, 484], [407, 484], [427, 485], [442, 499], [460, 510], [479, 518], [499, 521], [519, 521], [539, 521], [558, 529], [579, 529], [599, 529], [619, 529], [639, 529], [659, 529], [679, 529], [699, 529], [720, 529], [740, 529], [760, 530], [780, 530], [800, 530], [820, 530], [841, 530], [861, 530], [881, 530], [901, 530], [921, 530], [941, 530], [962, 530], [982, 530]]},
+  {type:"sea",from:"gortyn",end:[512, 932],wp:[[110, 624], [130, 627], [150, 627], [170, 627], [190, 627], [209, 638], [224, 653], [239, 668], [254, 683], [269, 698], [284, 712], [299, 727], [314, 742], [330, 758], [345, 773], [360, 788], [375, 803], [390, 818], [405, 833], [420, 848], [435, 862], [450, 878], [467, 890]],dest:"alexandria",gortyn:true}
 ];
 /* who can be reached from where, and how: itin = overland S.itin neighbour; land = caravan spur via the graph; sea = by ship */
 const ANAT_LINKS={
@@ -4398,11 +4503,11 @@ function renderChart(m){
   if(ch.boldLegs){ ch.boldLegs.forEach(function(pp){ legSvg+='<polyline points="'+pp+'" fill="none" stroke="#241606" stroke-width="3.6" stroke-dasharray="12 7" stroke-linecap="round" stroke-linejoin="round" opacity="0.97"/>'; }); }
   if(ch.sealegs && typeof maritimeOpen==='function' && maritimeOpen()){ for(var _slk in ch.sealegs){ var _spp=_slk.split('|'); var _stk=(typeof voyAllowed==='function')&&((_spp[0]===here&&voyAllowed(here,_spp[1]))||(_spp[1]===here&&voyAllowed(here,_spp[0]))); legSvg+='<polyline points="'+ch.sealegs[_slk]+'" fill="none" stroke="'+(_stk?'#2aa0d4':'#5f93a8')+'" stroke-width="'+(_stk?4.2:3)+'" stroke-dasharray="12 8" stroke-linecap="round" opacity="'+(_stk?0.97:0.62)+'"/>'; } }
   (ch.farLabels||[]).forEach(function(_fl){ s+='<text x="'+_fl.x+'" y="'+_fl.y+'"'+(_fl.anchor?' text-anchor="'+_fl.anchor+'"':'')+' font-size="22" font-style="italic" font-family="Georgia,serif" fill="#3a2c17" style="paint-order:stroke;stroke:#efe2c2;stroke-width:4px">'+_fl.text+'</text>'; });
-  (ch.chartLinks||[]).forEach(function(_cl){ if(_cl.at && here!==_cl.at) return; s+='<g style="cursor:pointer" onclick="chartSwitch(&quot;'+_cl.to+'&quot;)">'; s+='<rect x="'+_cl.x+'" y="'+_cl.y+'" width="'+_cl.w+'" height="'+_cl.h+'" fill="#fff" fill-opacity="0" pointer-events="all"/>'; if(_cl.label) s+='<text x="'+(_cl.x+_cl.w/2)+'" y="'+(_cl.y+_cl.h/2+8)+'" text-anchor="middle" font-size="26" font-style="italic" font-family="Georgia,serif" fill="#f4ecd6" style="paint-order:stroke;stroke:#2a2010;stroke-width:5px">'+_cl.label+'</text>'; s+='</g>'; });
+  (ch.chartLinks||[]).forEach(function(_cl){ if(_cl.at && here!==_cl.at) return; s+='<g style="cursor:pointer" onclick="chartSwitch(&quot;'+_cl.to+'&quot;)">'; s+='<rect x="'+_cl.x+'" y="'+_cl.y+'" width="'+_cl.w+'" height="'+_cl.h+'" fill="#fff" fill-opacity="0" pointer-events="all"/>'; if(_cl.label) s+='<text x="'+(_cl.x+_cl.w/2)+'" y="'+(_cl.y+_cl.h/2+8)+'" text-anchor="middle" font-size="26" font-style="italic" font-family="Georgia,serif" fill="#3a2c17" style="paint-order:stroke;stroke:#efe2c2;stroke-width:4px">'+_cl.label+'</text>'; s+='</g>'; });
   var nx=(typeof nextCity==='function')?nextCity():null;
   var onward=(!S.seaMode && nx&&!C[nx.name])?'<button class="seal" onclick="S.screen=\''+(S.seaMode?'port':'city')+'\';setOut(S.dir||1)">Set out on the road — toward '+nx.name+'</button> ':'';
   var off=(typeof seaEdges==='function'?seaEdges(here):[]).filter(function(e){return !C[e.to];});
-  var offb=off.map(function(e){ var f=voyFare(here,e.to); return '<button class="seal" onclick="chartGo(\''+e.to.replace(/'/g,"\\'")+'\')">'+(e.terr==='land'?'Overland to ':'Take ship for ')+e.to+' <span class="sub">(~'+e.d+'d · '+f.total+' s)</span></button> '; }).join('');
+  var offb=off.map(function(e){ var f=voyFare(here,e.to); return '<button class="seal" onclick="chartGo(\''+e.to.replace(/'/g,"\\'")+'\')">'+(e.terr==='land'?'Overland to ':'Take ship for ')+(e.lbl||e.to)+' <span class="sub">(~'+e.d+'d · '+f.total+' s)</span></button> '; }).join('');
   m.innerHTML='<h2>Leave '+(city()?cityLabel(city()):'the city')+' <span class="sub">· '+ch.title+'</span></h2>'+
     '<div style="position:relative;max-width:880px;margin:6px auto;line-height:0">'+
     '<img src="'+chartImg(ch)+'" alt="chart" style="width:100%;display:block;border:5px solid #6b4f2a;border-radius:3px" onerror="this.style.visibility=\'hidden\'">'+
@@ -4486,14 +4591,14 @@ function renderStats(){
    '<span>Guards <b>'+guardCount()+'</b></span>'+
    '<span style="cursor:pointer;text-decoration:underline dotted var(--dim)" title="View the company" onclick="showParty()">Party <b>'+(1+livingComps())+'</b></span>'+
    '<span>Health <b>'+hpWord()+'</b></span>'+
-   '<span'+w+' style="cursor:pointer;text-decoration:underline dotted var(--dim)" title="What you are carrying" onclick="showCargo()">Cargo <b'+w+'>'+cargoW()+(S.seaMode?'':'/'+cargoCap())+'</b></span>'+(typeof ptBar==='function'?ptBar():'');
+   '<span'+w+' style="cursor:pointer;text-decoration:underline dotted var(--dim)" title="What you are carrying" onclick="showCargo()">Cargo <b'+w+'>'+cargoW()+(cargoCap()>=999999?'':'/'+cargoCap())+'</b></span>'+(typeof ptBar==='function'?ptBar():'');
   renderCrew();
 }
 function renderRibbon(){
   const el=$('ribbon');
   if(!S){el.innerHTML='';return;}
-  if(S.voy){ el.innerHTML='<span class="city">'+S.voy.from+'</span><span style="opacity:.4"> \u2014 </span><span class="city here">at sea</span><span style="opacity:.4"> \u2014 </span><span class="city">'+S.voy.to+'</span>'; return; }
-  if(S.seaMode){ const nb=(typeof seaEdges==='function')?seaEdges(S.portName).map(e=>e.to):[]; el.innerHTML='<span class="sub">\u2693 the maritime road · </span><span class="city here">'+(S.portName||'in port')+'</span>'+(nb.length?'<span style="opacity:.4"> \u2014 </span><span class="sub">'+nb.join(' / ')+'</span>':''); return; }
+  if(S.voy){ el.innerHTML='<span class="city">'+S.voy.from+'</span><span style="opacity:.4"> \u2014 </span><span class="city here">'+(S.voy.terr==='land'?'on the road':'at sea')+'</span><span style="opacity:.4"> \u2014 </span><span class="city">'+S.voy.to+'</span>'; return; }
+  if(S.seaMode){ const nb=(typeof seaEdges==='function')?seaEdges(S.portName).map(e=>e.to):[]; var _lo=(typeof totalAnimals==='function'&&totalAnimals()>0)||(nb.length&&seaEdges(S.portName).every(function(e){return e.terr==='land';})); el.innerHTML='<span class="sub">'+(_lo?'\ud83d\udc2b the overland road · ':'\u2693 the maritime road · ')+'</span><span class="city here">'+(S.portName||'in port')+'</span>'+(nb.length?'<span style="opacity:.4"> \u2014 </span><span class="sub">'+nb.join(' / ')+'</span>':''); return; }
   let h=S.itin.map((c,i)=>{
     let cls=i<S.idx?'done':i===S.idx?'here':'';
     return '<span class="city '+cls+'">'+c.name+'</span>';
@@ -5399,7 +5504,8 @@ function kitBuy(slot,id,price){ if(slot==='armor'){ var _km=kitTargetMember(); i
     } else { S.silver+=resale; log('The old '+oldL+' is sold back for '+resale+' s.'); }
     render(); return;
   }
-  log(kitTargetName()+(slot==='weapon'?' takes up ':slot==='bow'?' is fitted with ':' is outfitted with ')+gLabel(slot,id)+' ('+price+' s)'+(had?', setting aside '+gLabel(slot,had):'')+'.');
+  if(had){ S.baggage=S.baggage||[]; S.baggage.push({slot:slot,id:had}); }
+  log(kitTargetName()+(slot==='weapon'?' takes up ':slot==='bow'?' is fitted with ':' is outfitted with ')+gLabel(slot,id)+' ('+price+' s)'+(had?', and the old '+gLabel(slot,had)+' goes into the caravan baggage for another to take up':'')+'.');
   render();
 }
 function renderOutfitter(m){
