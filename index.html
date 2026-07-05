@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.08.14';
+const VERSION='2.08.18';
 const RESUME_B64="";
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
@@ -1197,10 +1197,10 @@ function startJourney(){ if(S.pendingEvent)return;
   journeyTimer=setInterval(stepDay, DAY_MS);
 }
 function evNicaea(){ const dest=(nextCity()?nextCity().name:'Iconium'); return {h:'NICAEA', t:"A day or two out of the City the road bends past the grey walls of Nicaea, mirrored in its long still lake. The town is a fortress now, one of the keys that locks the road into Anatolia \u2014 but its fame is older and stranger than its battlements. It was here, more than four centuries ago, that the Emperor Constantine summoned the bishops of the whole world to argue the nature of God, and out of that quarrel came the Creed that Christendom still recites against the memory of the priest Arius. The monks at the lakeside will tell you the whole of it, at length, whether you ask or not.", ch:[{l:'Hear them out, then press on for '+dest,f(){ passDays(1); }},{l:'Press on for '+dest,f(){}}]}; }
-function checkNicaeaLeg(){ if(!S||S.seaMode||(S.onceFlags&&S.onceFlags.nicaea))return false; const a=city()&&city().name, b=nextCity()&&nextCity().name; if(!((a==='Constantinople'&&b==='Iconium')||(a==='Iconium'&&b==='Constantinople')))return false; const p=S.legKm/(legDist()||1); const w=(a==='Constantinople')?(p>=0.18&&p<=0.42):(p>=0.58&&p<=0.82); if(!w)return false; S.onceFlags.nicaea=true; S.journeying=false; clearJourney(); S.pendingEvent=evNicaea(); render(); return true; }
+function checkNicaeaLeg(){ if(!S||S.seaMode||(S.onceFlags&&S.onceFlags.nicaea))return false; const a=city()&&city().name, b=nextCity()&&nextCity().name; if(!((a==='Constantinople'&&b==='Iconium')||(a==='Iconium'&&b==='Constantinople')))return false; const p=S.legKm/(legDist()||1); const w=(a==='Constantinople')?(p>=0.18&&p<=0.42):(p>=0.58&&p<=0.82); if(!w)return false; S.onceFlags.nicaea=true; log("A day or two out of the City the road bends past the grey walls of Nicaea, mirrored in its long still lake \u2014 a fortress now, but famous older and stranger: here Constantine once summoned the bishops of the world to argue the nature of God, and out of that quarrel came the Creed that Christendom still recites against the memory of the priest Arius."); return false; }
 const RIVERX={"Constantinople|Iconium": [{"f": 0.294, "n": "the Sakarya", "ice": false}], "Iconium|Aleppo": [{"f": 0.694, "n": "the Ceyhan", "ice": false}], "Baghdad|Aleppo": [{"f": 0.923, "n": "the Euphrates", "ice": false, "cls": "f"}], "Baghdad|Damascus": [{"f": 0.928, "n": "the Euphrates", "ice": false, "cls": "f"}], "Merv|Nishapur": [{"f": 0.33, "n": "the Hari Rud \u2014 the Tejen", "ice": false, "cls": "s"}], "Bukhara|Merv": [{"f": 0.311, "n": "the Oxus \u2014 the Amu Darya", "ice": true, "cls": "f"}], "Akhsikath|Samarkand": [{"f": 0.491, "n": "the Jaxartes \u2014 the Syr Darya", "ice": true, "cls": "f"}], "Chach|Samarkand": [{"f": 0.243, "n": "the Jaxartes \u2014 the Syr Darya", "ice": true, "cls": "f"}], "Constantinople|Konya": [{"f": 0.278, "n": "the Sakarya", "ice": false}], "Konya|Sivas": [{"f": 0.401, "n": "the Halys", "ice": false}], "Ayas|Sivas": [{"f": 0.065, "n": "the Ceyhan", "ice": false}], "Erzurum|Sivas": [{"f": 0.097, "n": "the Halys", "ice": false}], "Baghdad|Tabriz": [{"f": 0.898, "n": "the Tigris", "ice": false, "cls": "f"}], "Bukhara|Urgench": [{"f": 0.582, "n": "the Oxus \u2014 the Amu Darya", "ice": true, "cls": "f"}], "Badakhshan|Balkh": [{"f": 0.281, "n": "the Oxus \u2014 the Amu Darya", "ice": true, "cls": "f"}], "Balkh|Samarkand": [{"f": 0.354, "n": "the Oxus \u2014 the Amu Darya", "ice": true, "cls": "f"}], "Kashgar|Samarkand": [{"f": 0.245, "n": "the Jaxartes \u2014 the Syr Darya", "ice": true, "cls": "f"}], "Ningxia|Tenduc": [{"f": 0.071, "n": "the Yellow River", "ice": true, "cls": "f"}], "Kenjanfu|Taiyuan": [{"f": 0.442, "n": "the Yellow River", "ice": true, "cls": "f"}, {"f": 0.047, "n": "the Wei", "ice": false}], "Khanbaliq|Yangzhou": [{"f": 0.381, "n": "the Yellow River", "ice": true, "cls": "f"}], "Kinsay|Yangzhou": [{"f": 0.082, "n": "the Yangtze", "ice": false, "cls": "f"}]};  /* TRUE route-x-river fractions (from alphabetically-first city), computed from routes_master x Natural Earth. ice:false = southern river, never freezes. */
 function checkRiverX(){ if(!S||S.seaMode||S.pendingEvent||S.screen!=='travel')return false; var a=city()&&city().name,b=nextCity()&&nextCity().name; if(!a||!b)return false; var lk=(typeof findLink==='function')?findLink(a,b):null; if(lk&&lk.riverKey)return false; var key=legPairKey(a,b); var lst=RIVERX[key]; if(!lst)return false; var p=(S.legKm||0)/(legDist()||1); var pf=(a<b)?p:(1-p); if(!S._rxDone)S._rxDone={};
-  for(var i=0;i<lst.length;i++){ var e2=lst[i]; var fl=key+'#'+i; if(S._rxDone[fl])continue; if(Math.abs(pf-e2.f)>0.045)continue; S._rxDone[fl]=true; var riv=Object.assign({},(typeof RIVERS!=='undefined'&&RIVERS[key])?RIVERS[key]:{name:e2.n,type:'ferry',noIce:!e2.ice},{cls:e2.cls}); S.journeying=false; if(typeof clearJourney==='function')clearJourney(); S.pendingEvent=crossingEvent(riv); render(); return true; }
+  for(var i=0;i<lst.length;i++){ var e2=lst[i]; var fl=key+'#'+i; if(S._rxDone[fl])continue; if(Math.abs(pf-e2.f)>0.045)continue; S._rxDone[fl]=true; if({'the Sakarya':1,'the Ceyhan':1,'the Halys':1}[e2.n]){ log("You cross "+e2.n+" dry-shod on a broad stone bridge of Roman work \u2014 arches the old emperors threw across the water, still standing and still carrying the road."); continue; } var riv=Object.assign({},(typeof RIVERS!=='undefined'&&RIVERS[key])?RIVERS[key]:{name:e2.n,type:'ferry',noIce:!e2.ice},{cls:e2.cls}); S.journeying=false; if(typeof clearJourney==='function')clearJourney(); S.pendingEvent=crossingEvent(riv); render(); return true; }
   return false; }
 function checkLegCrossing(){ if(typeof RIVERX!=='undefined'){ var _a=city()&&city().name,_b=nextCity()&&nextCity().name; if(_a&&_b&&RIVERX[legPairKey(_a,_b)]) return false; } if(!S||S.seaMode||S.pendingEvent||S.screen!=='travel'||S._legCrossed)return false; var a=city()&&city().name,b=nextCity()&&nextCity().name; if(!a||!b)return false; var rv=RIVERS[legPairKey(a,b)]; if(!rv||rv.at!==a)return false; var p=S.legKm/(legDist()||1); if(p<0.05||p>0.2)return false; S._legCrossed=true; S.journeying=false; clearJourney(); S.pendingEvent=crossingEvent(rv); render(); return true; }
 function evPaykand(){ return {h:'PAYKAND, THE CITY OF MERCHANTS', t:"You pass through Paykand, that the Sogdians called the City of Merchants \u2014 once the richest town of the whole Bukhara oasis, its traders\u2019 caravans reaching the gates of Cathay, its bazaars heaped with silk and silver. The wealth was its undoing: two generations back the Arab general Qutayba came against it, and when the merchants \u2014 away on the long roads, as merchants always are \u2014 came home to ransom their town, they were betrayed and it was put to the sword, its treasures carried off and a great silver idol of the old gods melted down for the Caliph\u2019s coin. The walls still stand and a thin trade still trickles through, but the grand houses are shuttered, the canals are silting, and the place has the held breath of a town waiting on a prosperity that is not coming back.", ch:[{l:'Walk its quiet streets, and go on',f(){}}] }; }
@@ -1510,7 +1510,7 @@ function setOut(dir){
   if(!c.silent && d>0 && (S.wageDebt||0)>0 && S.silver<(S.wageDebt||0) && !S._oweConfirmed){ S.screen='city'; var _ow=Math.round(S.wageDebt); var _gs=S.party.filter(function(p){return p.alive&&p.kind==='guard';}); var _pl=_gs.length>1; S.pendingEvent={h:'Leave without paying the guard?', t:"You still owe "+_ow+" s in back-pay and have not the silver to cover it. Ride out of "+c.name+" now and your "+(_pl?'guards':'guard')+" will down tools and walk off in disgust \u2014 and word spreads, so every guard you hire afterwards will cost more.", ch:[{l:'Go back and settle up',f:function(){}},{l:"Leave anyway \u2014 let "+(_pl?'them':'him')+" walk",f:function(){ S._oweConfirmed=true; S._departNow=true; }}]}; render(); return; }
   S._oweConfirmed=false;
   if((S.wageDebt||0)>0 && !c.silent){ const pay=Math.min(S.silver,S.wageDebt);   /* silent waypoints NEVER settle wages: they accrue and settle at the next true town */ S.silver-=pay; S.wageDebt-=pay; if(S.wageDebt>0){ const guards=S.party.filter(p=>p.alive&&p.kind==='guard'); const quit=guards.length; if(quit>0){ S.stiffed=S.stiffed||{}; S.stiffed[c.name]=(S.stiffed[c.name]||[]).concat(guards.map(g=>g.name)); S.stiffedOwed=S.stiffedOwed||{}; S.stiffedOwed[c.name]=(S.stiffedOwed[c.name]||0)+Math.round(S.wageDebt); S.party=S.party.filter(p=>!(p.alive&&p.kind==='guard')); S.hirePenalty=(S.hirePenalty||1)*Math.pow(1.25,quit); log(quit+" guard"+(quit>1?'s':'')+" you could not pay down tools and walk off in disgust. Word spreads; hiring will cost you more hereafter, and they will not have forgotten."); } S.wageDebt=0; } }
-  if(isWest() && !S.returning && c.name==='Constantinople' && !S.onceFlags.stChris){ S.onceFlags.stChris=true; S.pendingEvent=stChristopher(); }
+  if(isWest() && !S.returning && c.name==='Constantinople' && !S.onceFlags.stChris){ S.onceFlags.stChris=true; log("At Chalcedon you pause at the little martyrium of Saint Christopher, patron of travellers \u2014 its painted images lately scraped away by the Emperor's iconoclasts: only pale rectangles and fresh chisel-marks where the saint once hung."); }
   if(d>0 && legHasMountain() && passDanger()>=0.85 && !S._forcePass){ var _cc=city(); if(_cc && _cc.pass){ S.screen='travel'; S.pendingEvent=evSnowedIn(); render(); return; } S.screen='city'; S.pendingEvent=winterPassWarn(); render(); return; }
   if(d>0 && S.day>20 && !S.onceFlags.nephewNoShow){ var _neph=livingParty().find(function(p){return p.nephew && !p.grown;}); if(_neph && rnd()<0.12){ S.onceFlags.nephewNoShow=true; S.pendingEvent=evNephewNoShow(_neph); S._departNow=true; render(); return; } }
   S._forcePass=false;
@@ -4976,7 +4976,7 @@ function anatRoutePts(r){ var a=[[ANAT_CITIES[r.from].x,ANAT_CITIES[r.from].y]];
 function openMap(){ if(!S)return; S.screen='map'; render(); }
 function renderMap(m){
   const here=mapHereId(); const links=anatLinksFor(here);
-  if(here==='constantinople'){ S.onceFlags=S.onceFlags||{}; if(!S.onceFlags.cnIntroW){ S.onceFlags.cnIntroW=true;
+  if(here==='constantinople'){ S.onceFlags=S.onceFlags||{}; if(!S.onceFlags.cnIntroW){ S.onceFlags.cnIntroW=true; setTimeout(cnZoomOverlay,40); } if(false){
     m.innerHTML='<h2>Leave Constantinople <span class="sub">\u00b7 the road east, toward Cathay</span></h2>'+
     '<div class="cnEstab" id="cnbox" style="position:relative;max-width:880px;margin:6px auto;aspect-ratio:1980 / 1411;overflow:hidden;border:5px solid #6b4f2a;border-radius:3px;background:#0d0a06;cursor:pointer" onclick="if(window.cnSkip)cnSkip()">'+
     '<svg id="cnsvg" viewBox="0 0 4500 1755" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:0;width:100%;height:100%">'+
@@ -5018,7 +5018,7 @@ function renderMap(m){
   var _nx=(typeof nextCity==='function')?nextCity():null; var _onMap=function(nm){ for(var _k in ANAT_NAME) if(ANAT_NAME[_k]===nm) return true; return false; };
   var _onward=(_nx && !_onMap(_nx.name))? '<button class="seal" onclick="S.screen=\'city\';setOut(S.dir||1)">Set out on the main road \u2014 toward '+_nx.name+'</button> ' : '';
   m.innerHTML='<h2>Leave '+(city()?cityLabel(city()):'the city')+' <span class="sub">· choose your road</span></h2>'+
-    '<div style="position:relative;max-width:800px;margin:6px auto;line-height:0">'+
+    '<div id="cnmapbox" style="position:relative;max-width:800px;margin:6px auto;line-height:0">'+
     '<img src="'+anatImg()+'" alt="map of Anatolia" style="width:100%;display:block;border:5px solid #6b4f2a;border-radius:3px" onerror="this.style.visibility=\'hidden\'">'+
     '<svg viewBox="0 0 1402 999" preserveAspectRatio="xMidYMid meet" style="position:absolute;left:5px;top:5px;width:calc(100% - 10px);height:calc(100% - 10px)">'+s+'</svg></div>'+
     '<p class="sub" style="text-align:center;max-width:780px;margin:6px auto">Click a destination. The bright lines are roads open to you now \u2014 <span style="color:#e23b25">red overland</span> (with the caravan) or <span style="color:#2f8fb0">blue by ship</span> (sell the beasts, pay a fare). Faint lines are the roads that carry on from there.</p>'+
@@ -5071,7 +5071,25 @@ function chartGo(name){ if(!S)return; var here=city()&&city().name;
   if(typeof mapSetOutTo==='function' && mapSetOutTo(name)) return;                       /* an adjacent overland stage */
   mapHint(name+" is no single stage from "+here+". Make for a nearer town on the road first.", name);
 }
-function cnPlayIntro(win,holdT){
+function cnZoomOverlay(){
+  var box=document.getElementById('cnmapbox'); if(!box) return;
+  if(document.getElementById('cnZoomOv')) return;
+  var ov=document.createElement('div'); ov.id='cnZoomOv';
+  ov.style.cssText='position:absolute;inset:0;z-index:5;overflow:hidden;background:#0d0a06;border-radius:3px;transition:opacity .6s;cursor:pointer';
+  ov.innerHTML='<svg id="cnsvg" viewBox="0 0 4500 1755" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:0;width:100%;height:100%">'
+   +'<g id="cnpan"><image href="Maps/silkroad_wide762.png" x="0" y="0" width="4500" height="1755"/>'
+   +'<g id="cnlbl" font-family="Georgia,serif" font-weight="bold">'
+   +'<circle cx="237" cy="551" r="13" fill="#c0241a" stroke="#fff" stroke-width="3"/><text x="262" y="544" font-size="42" fill="#7a1208" stroke="#f7e9c8" stroke-width="6" paint-order="stroke">Constantinople</text>'
+   +'</g></g></svg>'
+   +'<img id="cncorr" src="'+anatImg()+'" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0">'
+   +'<div class="cnCap" style="position:absolute;left:0;right:0;bottom:0">Constantinople \u2014 the western end of the Silk Road, and the start of your road east. <em>(tap to skip)</em></div>';
+  var kill=function(){ if(!ov)return; var _o=ov; ov=null; _o.style.opacity='0'; setTimeout(function(){ if(_o&&_o.parentNode)_o.parentNode.removeChild(_o); },600); };
+  ov.onclick=function(){ if(window.cnSkip)window.cnSkip(); else kill(); };
+  box.appendChild(ov);
+  cnPlayIntro({x0:0,y0:486,x1:816,y1:1083},1.4,kill);
+  setTimeout(function(){ if(document.getElementById('cnZoomOv'))kill(); }, 8000);
+}
+function cnPlayIntro(win,holdT,_onEnd){
   var pan=document.getElementById('cnpan'), svg=document.getElementById('cnsvg'), corr=document.getElementById('cncorr'), lbl=document.getElementById('cnlbl');
   if(!pan) return;
   var VW=4500,VH=1755;
@@ -5084,7 +5102,7 @@ function cnPlayIntro(win,holdT){
   function snap(){ if(done)return; done=true;
     if(svg){svg.style.transition='filter .5s,opacity .5s'; svg.style.opacity='0'; svg.style.filter='blur(8px)';}
     if(corr){corr.style.transition='opacity .5s'; corr.style.opacity='1';}
-    setTimeout(function(){ if(S&&(S.screen==='chart'||S.screen==='map')) render(); }, 560); }
+    setTimeout(function(){ if(typeof _onEnd==='function'){ _onEnd(); return; } if(S&&(S.screen==='chart'||S.screen==='map')) render(); }, 560); }
   window.cnSkip=snap;
   function frame(now){ if(!document.getElementById('cnpan'))return;
     var e=(now-t0)/1000, u=e<hold?0:Math.min(1,(e-hold)/dur), k=ease(u);
@@ -5174,7 +5192,7 @@ function render(){
   const m=$('main');
   if(!S){renderTitle(m);return;}
   try{
-  if(S.eventOutcome)renderOutcome(m);
+  if(S.eventOutcome){ if(S.screen==='travel'){ renderTravel(m); m.innerHTML+=outcomeHtml(); } else renderOutcome(m); }
   else if(S.pendingEvent){ if(S.screen==='travel'){ renderTravel(m); m.innerHTML+=eventHtml(); } else renderEvent(m); }
   else if(S.screen==='city'){ if(S.seaMode) renderPort(m); else renderCity(m); }
   else if(S.screen==='map')renderMap(m); else if(S.screen==='chart')renderChart(m); else if(S.screen==='lost')renderLost(m);
@@ -5550,10 +5568,11 @@ function eventHtml(){
   e.ch.map((c,i)=>'<button onclick="evChoice('+i+')">'+c.l+'</button>').join('')+'</div>';
 }
 function renderEvent(m){ m.innerHTML=eventHtml(); }
-function renderOutcome(m){
-  m.innerHTML='<div class="panel event"><h3>'+(S.outcomeH||'OUTCOME')+'</h3><p>'+S.eventOutcome+'</p>'+
+function outcomeHtml(){
+  return '<div class="panel event"><h3>'+(S.outcomeH||'OUTCOME')+'</h3><p>'+S.eventOutcome+'</p>'+
   '<button class="seal" onclick="continueOutcome()">Continue</button></div>';
 }
+function renderOutcome(m){ m.innerHTML=outcomeHtml(); }
 function continueOutcome(){ S.eventOutcome=null; if(S.deathQueue && S.deathQueue.length){ S.pendingEvent=deathDialog(); render(); return; } resumeAfterEvent(); }
 function evChoice(i){
   const e=S.pendingEvent; if(!e||!e.ch||!e.ch[i])return;

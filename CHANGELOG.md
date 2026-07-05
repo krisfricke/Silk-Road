@@ -19,9 +19,49 @@
 #    tavern, moving-map, ...). Check the other's claims BEFORE starting; overlap = coordinate by note first.
 #
 # NAMES (Kris, 762-flavored): Opus -> OXUS (the Transoxiana river) · Fable -> FADAK (an oasis near Medina)
-# Fadak (was Fable) : INACTIVE - index released at v2.08.14 (land set-out blocked >130% cap; land voyages get the close-follow camera). Claim released.
-# Oxus (was Opus)  : INACTIVE - index released @2.08.04 ('hide map' button removed from live travel map; the map now always shows while travelling. Old saves with liveMapOff=true keep the 'Show the moving map' recovery button).
+# Fadak (was Fable) : INACTIVE - index released at v2.08.18 (Cpl establishing zoom restored to original: meet not slice; Nicaea -> log line). Claim released.
+# Oxus (was Opus)  : INACTIVE - index released @2.08.17 (establishing zoom now fits the map box + fades seamlessly to the set-out map).
 # =====================================================================================================
+
+# ----- OXUS : DONE @2.08.17 - establishing-zoom overlay now fits in-screen + syncs (Kris feedback) -----
+# 2.08.16 put the zoom in a position:FIXED full-viewport overlay (covered the whole screen, didn't line up with
+# the set-out map). Now: tagged the set-out map container id="cnmapbox"; cnZoomOverlay() appends the zoom as a
+# position:ABSOLUTE inset:0 child of THAT box, so it occupies exactly the map's rectangle in the content column.
+# preserveAspectRatio slice + the zoom window (816x597 ~ box aspect) end framed on Anatolia; cross-fade to
+# cncorr(anatImg) then fade the overlay out -> reveals the identical anat map + clickable routes underneath =
+# seamless. Tap-to-skip removes the node (map already live below); auto-end on pan; 8s safety kill. Map is
+# clickable the whole time (routes live under the overlay).
+# node --check clean.
+# ------------------------------------------------------------------------------------------------------------
+
+# ----- OXUS : DONE @2.08.16 - three launch-polish items (Kris live on reddit) -----
+# (A) ROMAN-TERRITORY RIVERS = STONE BRIDGES: checkRiverX now bridges the Sakarya, Ceyhan, Halys (the cls-less
+#     Anatolian/former-Roman crossings) - just a log line ("...a broad stone bridge of Roman work..."), no ferry
+#     prompt, no stop. The seasonal/flood rivers (Euphrates/Oxus/Jaxartes/Tigris/Tejen/Yellow/Yangtze) keep their
+#     crossings. (The Wei, near Chang'an, is cls-less but Chinese - left as-is; flag if you want it bridged too.)
+# (B) OUTCOMES UNDER THE MOVING MAP: renderOutcome refactored to outcomeHtml(); dispatch now renders the travel
+#     map + the outcome box beneath it when screen==='travel' (was replacing the screen). Matches the pendingEvent
+#     behaviour - so hot-springs/caravanserai "Continue" boxes now sit under the map too.
+# (C) ESTABLISHING ZOOM BACK, done right: instead of the old in-place intro that RETURNED before drawing the
+#     clickable routes (async hand-off -> first-serve unclickable), the Cpl map now renders the clickable routes
+#     immediately and cnZoomOverlay() lays the zoom on TOP as a fixed overlay. Tap-to-skip just removes the DOM
+#     node (map already live underneath); auto-ends after the pan; 9s safety kill. cnPlayIntro() gained an optional
+#     _onEnd cb (Chang'an chart intro unchanged). Old in-place intro left as dead code under if(false).
+# node --check clean.
+# ------------------------------------------------------------------------------------------------------------
+
+# ----- OXUS : DONE @2.08.15 - LAUNCH FIXES (Kris hosting live, Cpl departure broken) -----
+# (1) MARTYRIUM AT CHALCEDON: was S.pendingEvent=stChristopher() fired in setOut() leaving Cpl. Demoted to a
+#     one-time log() line ("At Chalcedon you pause at the little martyrium of Saint Christopher...") - no modal.
+# (2) CPL SET-OUT MAP NOT CLICKABLE FIRST TIME: renderMap's constantinople branch played an async establishing
+#     zoom (cnPlayIntro) and RETURNED before drawing the clickable routes; the interactive map only appeared on
+#     a delayed snap()->render() (or 2nd visit once cnIntroW was set) - so first serve felt dead. Gated the intro
+#     OFF (if(false && !cnIntroW)) so the clickable route map renders SYNCHRONOUSLY on first serve, same as the
+#     working 2nd visit. Establishing animation is temporarily disabled - FADAK, if you want it back, fix the
+#     hand-off so the intro overlays the ALREADY-rendered clickable map (or auto-advances reliably) rather than
+#     replacing it. stChristopher() fn left defined but unused.
+# node --check clean.
+# ------------------------------------------------------------------------------------------------------------
 
 # ----- OXUS : DONE @2.08.03 - Kucha's bazaar was near-empty (Kris: "Kucha showing as a minor market") -----
 # ROOT CAUSE: the comparative-advantage bazaar (cityShownGoods/wouldStock: show a good only if local price is
@@ -365,6 +405,20 @@ Fable's last known baseline before this run: **v2.05.01**.
 #    day): if rnd()<0.125 schedule the fire at a random fraction of that leg; keep the 14-day cooldown as a
 #    floor. Carrying more jars may nudge it up slightly (e.g. +0.01/10 jars, cap 0.2) - your call.
 # ==================================================================
+
+## v2.08.18 - Fadak - THE CONSTANTINOPLE ZOOM, RESTORED (ending the fix-one-break-two spiral)
+- Root of the whole saga, isolated by reading the trail: the ORIGINAL inline intro (Kris: 'perfect') used
+  preserveAspectRatio='xMidYMid meet' on the wide-map SVG; the only real bug was it RETURN'd before drawing
+  the clickable routes. Oxus's 2.08.15 correctly made the route map render SYNCHRONOUSLY (kept) and 2.08.17
+  moved the zoom into an overlay child of the map box (the right architecture, kept) - but flipped meet->SLICE,
+  which reframes the zoom's endpoint onto Cyprus instead of Anatolia.
+- FIX: one character of intent - slice->meet. The overlay box already shares the anat map's aspect
+  (1402/999), so with meet the zoom reproduces the original framing exactly, cross-fades to cncorr(anatImg),
+  and fades out to reveal the identical clickable anat map underneath - seamless AND clickable, as it was.
+- Nicaea demoted to a log line (Kris, matching the Chalcedon martyrium): checkNicaeaLeg now log()s the
+  Creed passage and returns false - no modal, no journey interrupt.
+- Method note for the board: this was a 3-version regression untangled by READING the changelog trail +
+  the dead if(false) original before touching code, not by re-guessing. Minimal diff wins.
 
 ## v2.08.14 - Fadak - NO MARCHING AT 30x CAPACITY (Kris arrived beast-less with 2103 cargo)
 - The chain: sea/river passage is PAID PORTERAGE (correct - his 500s carried it), but stepping off at
