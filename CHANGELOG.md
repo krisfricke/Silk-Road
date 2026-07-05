@@ -19,9 +19,30 @@
 #    tavern, moving-map, ...). Check the other's claims BEFORE starting; overlap = coordinate by note first.
 #
 # NAMES (Kris, 762-flavored): Opus -> OXUS (the Transoxiana river) · Fable -> FADAK (an oasis near Medina)
-# Fadak (was Fable) : INACTIVE - index released at v2.08.01 - THE GO-LIVE BUILD (Kris's call). Seasonal rivers live per Oxus's spec; Alay retraced; claims rule added.
-# Oxus (was Opus)  : INACTIVE - stood down: Fadak already ACTIVE on the SAME river-crossing/seasonal work. Did NOT write index. My spec left for Fadak below.
+# Fadak (was Fable) : INACTIVE - index released at v2.08.14 (land set-out blocked >130% cap; land voyages get the close-follow camera). Claim released.
+# Oxus (was Opus)  : INACTIVE - index released @2.08.04 ('hide map' button removed from live travel map; the map now always shows while travelling. Old saves with liveMapOff=true keep the 'Show the moving map' recovery button).
 # =====================================================================================================
+
+# ----- OXUS : DONE @2.08.03 - Kucha's bazaar was near-empty (Kris: "Kucha showing as a minor market") -----
+# ROOT CAUSE: the comparative-advantage bazaar (cityShownGoods/wouldStock: show a good only if local price is
+# <=2.6x the world-cheapest) + Kucha having ZERO OVR entries. At frac .32 with no source-prices, Kucha was
+# never the cheapest source of anything, so its buy-side collapsed to ~nothing (only carried goods showed).
+# Kucha & Aksu were the ONLY N-rim oases with no OVR (Kashgar/Khotan/Yarkand/Turfan/Hami/Dunhuang all have some).
+# FIX: 'Kucha':{felt:12,wine:26,musk:40} - a wool/felt oasis, a grape/wine oasis (dearer than Turfan's 22),
+# and a northern-rim musk entrepot. All three now pass wouldStock (ratios 1.09/1.18/1.82). Modest values, no
+# wild arbitrage (Kashgar felt:11 sits right next door).
+# STILL OPEN: Aksu has the identical empty-OVR gap - left it for now (Aksu was the lesser garrison; and I only
+# had Kris's word on Kucha). Ask Kris if Aksu should get the same (e.g. felt:13,musk:46).
+# ------------------------------------------------------------------------------------------------------------
+
+# ----- OXUS : DONE @2.08.02 - no strangers in the deep desert (Kris: "buyer on the road" mid-Taklamakan) -----
+# buildEvent() added evRoadDeal (roadside buyer) + evMonk UNCONDITIONALLY, so they could fire on an uncharted
+# desert crossing. Gated both: skip when terr==='harsh' OR (S.dash && terr==='desert') - i.e. the open sand-sea
+# (dash crossings) and harsh waste. Normal oasis-RIM desert legs (non-dash) keep them - those were real trade
+# roads. evHideout left as-is (it's grave-gated via openGrave(), not a passer-by). Desert dashes still get the
+# proper hazards (sandstorm/mirage/dry well/oasis/snakebite/raiders/thirst). node --check clean.
+# (Thanks Fadak for landing the seasonal rivers per my spec in the go-live build.)
+# ------------------------------------------------------------------------------------------------------------
 
 # ----- OXUS -> FADAK : seasonal-river SPEC (Kris-approved) - yours to land, you own RIVERX -----
 # We collided: I started the same feature (Kris asked about the Sarakhs river + a 3rd seasonal state)
@@ -344,6 +365,104 @@ Fable's last known baseline before this run: **v2.05.01**.
 #    day): if rnd()<0.125 schedule the fire at a random fraction of that leg; keep the 14-day cooldown as a
 #    floor. Carrying more jars may nudge it up slightly (e.g. +0.01/10 jars, cap 0.2) - your call.
 # ==================================================================
+
+## v2.08.14 - Fadak - NO MARCHING AT 30x CAPACITY (Kris arrived beast-less with 2103 cargo)
+- The chain: sea/river passage is PAID PORTERAGE (correct - his 500s carried it), but stepping off at
+  Baghdad onto a land trek never re-checked for backs to carry it. NEW overloadBlock(): any LAND set-out
+  (setOut + hajjGo/dash) with cargo >130% of capacity is HARD BLOCKED - THE PACKS WON'T RIDE dialog offers
+  jettison-to-cap or stay and rearrange (buy beasts/hire hands). Within 130% still departs with the existing
+  pace-halving penalty; mid-leg the existing auto-shed keeps cutting. Sea porterage untouched (verified).
+- CAMERA per Kris: LAND voyages (Basra|Baghdad) now use the close-follow caravan camera; the whole-leg
+  static frame stays for water. (Baghdad|Damascus is a dash leg - already close-follow.)
+
+## v2.08.13 - Fadak - THE ROAD UP THE TIGRIS (Basra|Baghdad)
+- The last leg of Kris's circumnavigation lacked its moving map: Baghdad|Basra is a land VOYAGE leg and no
+  chart carried its vector. Traced off the basra chart's baked road (19/21 on-ink), wired as its legs entry
+  (bakedLegs already gating). The witnessBakhamra leg itself - the road where this run may end as it began,
+  in history.
+
+## v2.08.12 - Fadak - NO MORE BLACK VOID (Kris asked if west Arabia was missing data)
+- It wasn't data - the arabia chart is complete. The whole-leg voyage camera CLAMPED the map flush to one
+  edge when the scaled map was smaller than the viewport, leaving black letterbox (Dhofar|Basra hugs the
+  chart's east edge, so the void sat over 'missing' west Arabia and looked like a data hole). When the
+  scaled map fits the frame in a dimension, the camera now CENTERS it instead.
+
+## v2.08.11 - Fadak - THE ZANJ COAST LANE (Socotra|Zanzibar, third time true)
+- Kris's screenshot: the trace detoured via Aden's bright lane junction because the DIRECT lane is drawn in
+  a FAINTER tint (128,168,184) than the standard dash (48,108,132) - my color detection had missed it and
+  the A* preferred connected bright ink. Fix: sampled the faint cluster along the pair's own corridor,
+  corridor-masked out the Aden hop, retraced: 78/94 pts on the true lane - Zanzibar north along the Zanj
+  coast, around Cape Guardafui to Socotra, which is ALSO the historically correct monsoon coasting run.
+  Visual verified. MAP_NOTES amended: charts may use MULTIPLE lane tints (faint = secondary routes) -
+  sample per-pair along the pair's own corridor, not per-chart.
+
+## v2.08.10 - Fadak - THE ARABIAN SEA MAPPED (Kris mid-passage)
+- Kollam|Socotra / Socotra|Zanzibar / Dhofar|Kollam showed no map: their vectors lived on the ARABIA chart
+  whose cities dict lacks Kollam/Zanzibar (off-map stubs), so the lookup's city check failed. Fix without
+  engine surgery: traced the lanes on the INDIANOCEAN chart (which holds all six cities) + Basra|Kollam on
+  the basra chart (164/166 on-lane). Socotra|Zanzibar's dash fades in stretches (42/122) - the A* held the
+  lane where ink exists and a fair coast arc where it doesn't; flag if it looks off in play.
+- Verified end-to-end: every Arabian-sea pair now resolves (Kollam|Socotra, Socotra|Zanzibar, Dhofar|Kollam,
+  Basra|Kollam via new traces; Aden|Socotra, Dhofar|Socotra via arabia's existing vectors). With 2.08.09's
+  lost-at-sea extension these are the full monsoon waters: mapped, and dangerous.
+
+## v2.08.09 - Fadak - THE BLUE LANES (Kris: Palembang|Mantai ran off its track)
+- ROOT CAUSE x2: (1) my sea traces used the LAND-ROUTE ink colors (dark/red) - but the sea charts draw
+  their lanes in DASH BLUE (48,108,132 on easternseas); with no mask to follow, A* cut straight across the
+  Bay of Bengal. (2) the crop-box optimization clipped lanes that arc outside the endpoints' box (Malacca).
+  Fix: per-chart LANE-COLOR AUTO-DETECTION (histogram at three points along the pair, pick the dark-blue
+  cluster; union with dark|red for mixed charts) + full-frame A* at lane-hugging cost 700. Retraced:
+  Palembang|Mantai (92/98 pts on-mask, was 0), Kollam|Mantai, both kauthara legs, Luoyang|Yangzhou.
+  MAP_NOTES rule: NEVER trace with an assumed ink color - detect it from the raster first.
+- LOST AT SEA extended to the INDIAN & ARABIAN SEAS (Kris, mid-passage): open-ocean gating now includes
+  coast-terr legs among Kollam/Mantai/Socotra/Zanzibar/Dhofar/Aden/Basra at 30% (deep stays 45%);
+  enclosed seas (Black Sea etc.) verified never-stranding (0/300). Monsoon waters now carry the fear
+  they deserve.
+
+## v2.08.08 - Fadak - LOST AT SEA (Kris's Taklamakan-of-the-water idea)
+- Surviving a STORM on a DEEP-water leg now carries a 45% chance the ship is blown off her reckoning:
+  v.lost - the header reads '??? - position unknown', and on the moving map the ship-dot FREEZES at the
+  last known fix and dims to a quarter (the map itself keeps its whole-leg frame: you know the sea, not
+  your place in it). Each day: 30% chance of a re-fix (a named headland, a hailed fisherman) - 55% if a
+  PILOT is aboard (Leo earns his keep at last); re-fixing costs 1-2 course-correction days. Statistical
+  check: .56/.31 observed vs .55/.30 targets.
+- THE PHILIPPINES QUESTION (Kris): honestly, nothing citable in 762 - Butuan/Ma-i enter the record
+  centuries later - so those waters ARE the unknown: on the eastern legs a failed fix can instead sight
+  'a low green coast to the east - islands no chart aboard has a name for, smoke from unseen fires' before
+  the master stands away west. The unknown shore stays unknown; the mechanic wears the geography.
+- FOR KRIS TO APPROVE (real 762 additions near this frame, not yet built): LONGBIAN (Hanoi - Tang Annam's
+  port, natural minor stop on the Guangzhou run), PANDURANGA (Phan Rang - Champa's southern port, dlg),
+  KEDAH + CHAIYA (Srivijayan entrepots on the Malacca approaches, on the Palembang-Mantai leg), and a
+  Mekong-delta dlg line for Funan's silted ghosts. Say the word and they join the network.
+
+## v2.08.07 - Fadak - THE SEA GETS ITS MOVING MAPS (Kris sails east)
+- voyMapEntry's chart fallback now also searches ch.SEALEGS (both key orders) - the aleppo/arabia/levant/
+  pontic sea-lane vectors light up instantly (Aden|Qulzum, Aleppo|Alexandria, the whole Red Sea fan...).
+- The charts whose lanes were only BAKED got them traced (crop-boxed lane-following A*, dark|red masks):
+  china (Chang'an|Luoyang, the Grand Canal Luoyang|Yangzhou, the coast run Yangzhou|Guangzhou), kauthara
+  (Guangzhou|Kauthara, Kauthara|Palembang), easternseas (Palembang|Mantai), indianocean (Kollam|Mantai).
+  Kris's whole eastbound sea route now maps: Luoyang -> Yangzhou -> Guangzhou -> Kauthara -> Palembang ->
+  Mantai -> Kollam, joining the arabia vectors westward. bakedLegs now ALSO gates sealegs drawing (the
+  new vectors sit exactly on the baked lanes - data for the dot, no double ink).
+- With 2.08.06's whole-leg static camera these render as a still sea with a gliding ship-dot.
+
+## v2.08.06 - Fadak - SEA-LEG CAMERA: THE WHOLE LEG IN FRAME (Kris, pre-sea-legs)
+- Voyage moving maps no longer follow the dot at 0.55x (which read as rocketing on long sea days). The
+  panel now FITS THE ENTIRE LEG: zoom from the route's bounding box (clamped 0.16-0.55), camera static on
+  the leg's center - the sea holds still and the dot glides across it; the dot counter-scales so it stays
+  ~14px on screen. Land travel keeps the following camera (travMapTick untouched).
+
+## v2.08.05 - Fadak - CANAL MOVING MAPS + THE LUOYANG EVICTION (first claim-rule round: worked)
+- Kris found Chang'an->Luoyang shows no moving map: canal/sea VOYAGES only knew the hand-built VOYMAPS.
+  voyMapEntry now FALLS BACK to the chart lookup (era-aware, both key orders, city dots included) - the
+  Grand Canal leg rides the hexi chart; every charted voyage leg gains the map automatically.
+- THE SNAFU: viewing prices at Luoyang then 'Back to the bazaar' teleported Kris to Chang'an. Two culprits:
+  six back-buttons hardcoded S.screen='city', and MY seaMode self-heal then 'fixed' the inconsistent state
+  by evicting the traveler to the itinerary city. Fixes: all six buttons -> backToBazaar() (port-aware),
+  and the heal now repairs the SCREEN when portName is a real port (right place, wrong screen) instead of
+  clearing the flags. Both directions tested; true leaks still heal.
+- Protocol note: rebased mid-patch when the version assert caught Oxus's 2.08.02-04 (count-asserts doing
+  their job); his claim board was clear; my claim posted and now released.
 
 ## v2.08.01 - Fadak - GO-LIVE RELEASE (Kris: 'it seems to be working well!')
 - VERSION LINE 2.08: the location-aware era - full moving-map coverage both eras, positional terrain,

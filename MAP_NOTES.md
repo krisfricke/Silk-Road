@@ -568,3 +568,11 @@ can grow: re-run bake_master with new MN and more strips).
   tones + green) clipped to lowland/river proximity, feathered. Master stays era-neutral; each chart's
   slice call provides its era's towns. DEM inventory note: Transylvania sliver (24.3-27.2 x 45.3-47.5)
   fetched 07-04 - coverage for master [8,123]x[24,52] + Amber band now COMPLETE, no holes.
+- SEA-LANE TRACING RULE (the Palembang straight-line bug): sea charts draw lanes in DASH BLUE (e.g.
+  48,108,132 on easternseas), not the land dark/red - NEVER trace with an assumed ink color; histogram-
+  detect the lane cluster from the raster at points along the pair first (union dark|red|detected-blue).
+  And never crop-box a sea trace: lanes arc far outside endpoint boxes (Malacca) - full-frame, cost 700.
+- LANE TINTS ARE PER-ROUTE, not per-chart (Socotra|Zanzibar lesson): sea charts draw secondary lanes in a
+  FAINTER tint (indianocean: 128,168,184 vs primary 48,108,132). Detect the lane color per-pair by sampling
+  along that pair's own corridor; corridor-mask the A* when bright junction lanes (Aden) offer a cheap wrong
+  way round.
