@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.08.18';
+const VERSION='2.08.20';
 const RESUME_B64="";
 const GOODS=[
  {id:'silk',  n:'Silk',      u:'bolt',  wt:2, e:8,  w:58},
@@ -5890,7 +5890,7 @@ function originWeapon(p){ var t=(((p&&p.role)||'')+' '+((p&&p.name)||'')).toLowe
   if((typeof GUARD_CITY_REGION!=='undefined') && GUARD_CITY_REGION[fc] && rmap[GUARD_CITY_REGION[fc]]) return rmap[GUARD_CITY_REGION[fc]];
   return 'saif'; }
 const ARMOR={ leather:{n:'a leather jerkin',hp:1}, lamellar:{n:'a lamellar coat',hp:2,fs:1}, mail:{n:'a mail hauberk',hp:3,fs:1} };
-const BOWS={ bow:{n:'a hunting bow',hs:1}, recurve:{n:'a composite recurve',hs:2} };
+const BOWS={ bow:{n:'a hunting bow',hs:1}, recurve:{n:'a composite recurve',hs:2}, crossbow:{n:'a crossbow',hs:1} };
 const CLOAKS={ fur:{n:'a fur coat'} };
 function gWeaponDie(g){ var w=g&&g.weapon&&WEAPONS[g.weapon]; return w?w.die:0; }
 function gWeaponFS(g){ return 0; }
@@ -5948,7 +5948,7 @@ function buildYouFighter(){
     cHP:Math.max(1,Math.round(cMax*clamp(S.hp,0,100)/100)),
     fs:youCombFS()+gWeaponFS(g)+gArmorFS(g),
     hs:youCombHS()+gBowHS(g), die:(gWeaponDie(g)||defaultSimpleWeapon(null).die),
-    bow:gHasBow(g), mount:false, alive:true, _withdraw:false};
+    bow:gHasBow(g), bowId:(g&&g.bow)||null, mount:false, alive:true, _withdraw:false};
 }
 function buildCompFighter(p){
   var g=p.gear, role=cbRole(p), cMax=combHP(p)+gArmorHP(g);
@@ -5956,7 +5956,7 @@ function buildCompFighter(p){
     cHP:Math.max(1,Math.round(cMax*clamp(memHp(p),0,100)/100)),
     fs:combFS(p)+gWeaponFS(g)+gArmorFS(g),
     hs:combHS(p)+gBowHS(g),
-    die:(gWeaponDie(g)||defaultSimpleWeapon(p).die), bow:gHasBow(g), mount:false, alive:true,
+    die:(gWeaponDie(g)||defaultSimpleWeapon(p).die), bow:gHasBow(g), bowId:(g&&g.bow)||null, mount:false, alive:true,
     _withdraw:false};
 }
 function buildFighters(sea){
@@ -6048,7 +6048,7 @@ function battleJoin(){
   if(pa.length||ba.length){
     var al=[];
     ba.forEach(function(b){ var t=pick(stayers.filter(function(f){return f.alive;})); if(t&&rnd()<b.hs/30){ cbHit(t,cbDie(6)); al.push('an arrow hits '+cbName(t)+(t.cHP<=0?' <span class="red">— down!</span>':'')); } });
-    pa.forEach(function(p){ var t=pick(B.filter(function(f){return f.alive;})); if(t&&p.alive&&rnd()<p.hs/30){ cbHit(t,cbDie(6)); al.push(cbName(p)+'’s arrow strikes a '+(sea?'pirate':'bandit')+(t.cHP<=0?' <span class="green">— down!</span>':'')); } });
+    pa.forEach(function(p){ var t=pick(B.filter(function(f){return f.alive;})); if(t&&p.alive&&rnd()<(p.bowId==='crossbow'?Math.max(p.hs,6):p.hs)/30){ cbHit(t,cbDie(6)); al.push(cbName(p)+'’s '+(p.bowId==='crossbow'?'bolt':'arrow')+' strikes a '+(sea?'pirate':'bandit')+(t.cHP<=0?' <span class="green">— down!</span>':'')); } });
     c.L.push('<b>Arrows:</b> '+(al.length?al.join('; ')+'.':'a flurry of shafts, all wide.'));
   }
   var _yA=stayers.find(function(f){return f.you;}); if(_yA && _yA.cHP<=0){ c.youFell=true; c.startHP=B.length*10; var _oth=stayers.filter(function(f){return !f.you && f.alive && f.cHP>0;}); if(_oth.length){ var _h=_oth.find(function(f){return f.ref&&f.ref.nephew;}); c.L.push('<span class="red">You fall in the opening volley. '+(_h?cbName(_h)+' takes up the fight':'Your people close ranks and fight on')+'.</span>'); } else { c.L.push('<span class="red">You fall in the opening volley, and no one stands to take your place.</span>'); return battleFinish('loss'); } }
@@ -6173,7 +6173,7 @@ function cbCityRegion(name){
 const CB_KIT={
   west:[['weapon','spatha',45],['armor','leather',28],['armor','mail',170],['bow','bow',26],['cloak','fur',26]],
   central:[['weapon','saber',42],['armor','leather',26],['armor','lamellar',95],['bow','recurve',58],['cloak','fur',40]],
-  east:[['weapon','dao',44],['armor','leather',26],['armor','lamellar',88],['bow','recurve',52],['cloak','fur',34]],
+  east:[['weapon','dao',44],['armor','leather',26],['armor','lamellar',88],['bow','crossbow',54],['cloak','fur',34]],
   sea:[['weapon','saif',52],['armor','leather',34],['bow','bow',30]],
 };
 function cityKit(name){ return CB_KIT[cbCityRegion(name)]||CB_KIT.central; }
