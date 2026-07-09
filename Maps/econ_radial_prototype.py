@@ -11,7 +11,7 @@ DREF=140.0
 # SRC: good -> (peak, {source_city: floor, ...})  -- per-source floors (Kris: Zanzibar cheapest, hubs pegged higher)
 SRC={
  'silk':(58,{"Chang'an":8}),'tea':(26,{"Chang'an":4,'Luoyang':5}),'paper':(34,{"Chang'an":5,'Luoyang':6,'Samarkand':7}),
- 'musk':(150,{'Khotan':22,'Kucha':30}),'jade':(55,{'Khotan':12}),'pepper':(72,{'Kollam':40,'Mantai':44}),
+ 'musk':(150,{'Khotan':22,'Kucha':30}),'jade':(55,{'Khotan':12}),'pepper':(72,{'Kollam':40,'Mantai':44,'Yarkand':52})   # Fadak: Yarkand = Karakoram/Leh through-route source (>Kollam 40). Replaced dead OVR.Kashgar:18. NB econ_dump.json is GONE - build a 762 dumper before any full re-bake.,
  'lapis':(55,{'Samarkand':11}),'turq':(46,{'Nishapur':28}),'glass':(60,{'Baghdad':12,'Aleppo':14,'Alexandria':16}),
  'coral':(135,{'Constantinople':34,'Aleppo':40}),'amber':(120,{'Constantinople':40,'Trebizond':42}),
  'wine':(78,{'Turfan':15,'Aleppo':22,'Constantinople':24}),'pearls':(120,{'Basra':26,'Mantai':30}),
