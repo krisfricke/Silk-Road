@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='2.10.04';
+const VERSION='2.10.06';
 const DEV_1271=false;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -983,7 +983,7 @@ function hmStep(){ var H=S.hm; if(!H||H.phase!=='run')return; if(H.timer){clearT
  hmShow(); hmTimer(hmStep,HM_CONF.round_ms); }
 
 function hmEncounter(a){ var H=S.hm; if(!a)return (hmShow(),hmTimer(hmStep,HM_CONF.round_ms)); if(a.pred) return hmPredator(a);
- var b=hmHsBest()*(H.dark?0.6:1)*(H.returning?0.8:1); if(rnd()>=b/(b+a.perc)){ H.L.push('Something rustles in '+H.sub+' and is gone — you never get eyes on it.'); hmTrack(a); hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
+ var b=hmHsBest()*(H.dark?0.6:1)*(H.returning?0.8:1); if(rnd()>=b/(b+a.perc)){ H.L.push('Something rustles in '+H.sub+' and is gone — you never get eyes on it.'); if(!H.returning) hmTrack(a); hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
  hmStalk(a); }
 function hmStalk(a){ var H=S.hm; var w=hmHsWorst();
  if(rnd()>=w/(w+a.stealth)){ H.L.push('You make out '+a.n+' in '+H.sub+' — but a careless step sends it bounding away.'); hmTrack(a); hmShow(); hmTimer(hmStep,HM_CONF.round_ms); return; }
@@ -2674,7 +2674,7 @@ function exGuardTavern(cn){ const owe=guardOweTotal(cn); return {h:'SETTLING UP'
   {l:'Pay the '+owe+' s',f(){ if(S.silver>=owe){ S.silver-=owe; delete S.stiffedOwed[cn]; if(S.stiffed)delete S.stiffed[cn]; S.exGuardWait=null; log("You pay in full. They finish their drinks, nod once, and are done with you."); } else { S.cause='a disgruntled former employee'; die(); log("You still cannot pay. The conversation ends the only way it was ever going to."); } } },
   {l:'Refuse, and go for your knife first',f(){ if(rnd()<0.15){ S.exGuardWait=null; delete S.stiffedOwed[cn]; if(S.stiffed)delete S.stiffed[cn]; S.hp=clamp(S.hp-20,0,100); log("Astonishingly, you get the first blow in — ugly, brief, and very nearly fatal to you. They decide you are not worth burying, and leave."); if(S.hp<=0){S.cause='a tavern brawl';die();} } else { S.cause='a disgruntled former employee'; die(); log("He was always going to be quicker. He shoots first."); } } },
 ]}; }
-function tavern(){ if(!S||S.dead)return; { var _nm=(S.seaMode?S.portName:(city()&&city().name)); var _at=(typeof poloAt==='function')&&poloAt(S.day); if(_at&&_at.p===_nm&&!S.onceFlags['_pm_'+_nm]){ S.onceFlags['_pm_'+_nm]=true; passDays(1); if(S.dead){S.screen='dead';render();return;} restock(_nm,1); S.pendingEvent=poloMeeting(_nm); render(); return; } } if(!S.seaMode && city() && (city().name==='Constantinople'||city().name==="Chang'an")){ S.screen='tavern'; S.tavView=null; S.pendingEvent=tavernEvent(); render(); return; } passDays(1); if(S.dead){S.screen='dead';render();return;} restock(city().name,1); S.cityDay[city().name]=S.day; if(S.exGuardWait===city().name && guardOweTotal(city().name)>0){ S.pendingEvent=exGuardTavern(city().name); } else if((S.wageDebt||0)>0){ S.pendingEvent=guardPayEvent(); } else { S.pendingEvent=tavernEvent(); } render(); }
+function tavern(){ if(!S||S.dead)return; { var _nm=(S.seaMode?S.portName:(city()&&city().name)); var _at=(typeof poloAt==='function')&&poloAt(S.day); if(_at&&_at.p===_nm&&!S.onceFlags['_pm_'+_nm]){ S.onceFlags['_pm_'+_nm]=true; passDays(1); if(S.dead){S.screen='dead';render();return;} restock(_nm,1); S.pendingEvent=poloMeeting(_nm); render(); return; } } if(!S.seaMode && city() && (city().name==='Constantinople'||city().name==="Chang'an"||city().name==='Samarkand')){ S.screen='tavern'; S.tavView=null; S.pendingEvent=tavernEvent(); render(); return; } passDays(1); if(S.dead){S.screen='dead';render();return;} restock(city().name,1); S.cityDay[city().name]=S.day; if(S.exGuardWait===city().name && guardOweTotal(city().name)>0){ S.pendingEvent=exGuardTavern(city().name); } else if((S.wageDebt||0)>0){ S.pendingEvent=guardPayEvent(); } else { S.pendingEvent=tavernEvent(); } render(); }
 function jettison(){
   let dumped=[];
   while(cargoW()>cargoCap()){
@@ -3218,8 +3218,6 @@ function tavernEvent(){
   } else if((c.name==='Suyab' || (c.name==='Urgench' && S.era==='1271' && !S.onceFlags.conanUrgench)) && !S.party.some(p=>p.name==='Conan'&&p.alive)){
     if(c.name==='Urgench')S.onceFlags.conanUrgench=true;
     return conanTavern(scene);
-  } else if(c.name==='Samarkand'){
-    return qlodseraiTavern(scene);
   } else if(c.name==='Andijan' && (S&&S.era)==='1271' && !S.party.some(p=>p.name==='Roshanak'&&p.alive) && !S.onceFlags.andijanHerb && (livingParty().some(p=>p.id==='abaskunson') || livingParty().some(p=>p.nephew&&p.alive))){
     S.onceFlags.andijanHerb=true; return andijanHerbTavern(scene, livingParty().some(p=>p.id==='abaskunson')?'sohrab':'nephew');
   } else {
@@ -6555,7 +6553,7 @@ function tavProphecy(){
   return pick(lines);
 }
 function placeTavBet(team,kind){ const amt=Math.min(S.silver, Math.max(0, parseInt((document.getElementById('betamt')||{}).value||'0',10)||0)); if(amt<=0){ S.tavMsg='Name a stake first.'; render(); return; } if(S.tavBet){ S.tavMsg='You already have a wager riding.'; render(); return; } S.silver-=amt; S.tavBet={team:team,amt:amt,kind:kind||'chariot'}; S.tavMsg='Done \u2014 '+amt+' s on '+team+'. It runs tomorrow; you will know the result when you leave.'; render(); }
-function buyTraderDrink(){ S.silver-=1; S.traderDrinks=(S.traderDrinks||0)+1; const lim=(S.traderLim||(S.traderLim=3+ri(3))); const k=S.traderDrinks;
+function buyTraderDrink(cost){ cost=cost||1; S.silver-=cost; S.traderDrinks=(S.traderDrinks||0)+1; const lim=(S.traderLim||(S.traderLim=3+ri(3))); const k=S.traderDrinks;
   if(k>lim){ S.traderMsg="\u201cIf I were you,\u201d he confides, listing badly, \u201cI\u2019d run "+pick(FAKE_GOODS)+" out of "+pick(FAKE_CITIES)+" and sell it in "+pick(FAKE_CITIES)+" \u2014 cleared four hundred percent, I did, the year the two moons crossed.\u201d He is no use to you tonight; come back another day."; render(); return; }
   const here=(city()||{}).name||'Constantinople'; const idx=Math.max(0,SPINE.indexOf(here)); const r=Math.min(k,SPINE.length-1);
   let bt=null, there=null;
@@ -6570,7 +6568,7 @@ function leaveTavern(){
   S.traderDrinks=0; S.traderLim=0; S.traderMsg=''; S.tavMsg=''; S.tavView=null;
   S.screen='city'; render();
 }
-function tavGo(v){ S.tavView=v; S.tavMsg=''; if(v==='plaques'){ loadBoard().then(()=>{ if(document.getElementById('board')) renderBoardInto(document.getElementById('board')); }); } if(v==='facilities'){ loadGraffiti().then(()=>render()); } if(v==='traders'){ S.tavTraderLine = (city()&&city().name==="Chang'an")?CHANGAN_TAV_INTRO:TAV_INTRO; } render(); }
+function tavGo(v){ S.tavView=v; S.tavMsg=''; if(v==='plaques'){ loadBoard().then(()=>{ if(document.getElementById('board')) renderBoardInto(document.getElementById('board')); }); } if(v==='facilities'){ loadGraffiti().then(()=>render()); } if(v==='traders'){ S.tavTraderLine = (city()&&city().name==='Samarkand')?QLOD_TAV_INTRO:((city()&&city().name==="Chang'an")?CHANGAN_TAV_INTRO:TAV_INTRO); } render(); }
 let GRAFFITI=null;
 async function loadGraffiti(){ if(GRAFFITI)return GRAFFITI;
   if(typeof SB_ON!=='undefined' && SB_ON){ try{ const rows=await sbGet('graffiti?select=text,name,created_at&order=created_at.desc&limit=40'); GRAFFITI=rows; return GRAFFITI; }catch(e){} }
@@ -6613,8 +6611,43 @@ function exportLog(){ if(!S)return; var L=[]; L.push('=== The Silk Road, 762 —
 function tavAsk(){ var el=document.getElementById('asktopic'); var q=el?(el.value||''):''; if(/chronicle|scribe|run-?log|export|debug/.test((q||'').toLowerCase())){ S.debugExport=true; S.tavTraderLine="<b>The scribe</b> in the corner looks up. “Your whole chronicle, copied fair to carry where you will? Aye — it is yours.” <span class='sub'>(An <b>Export run-log</b> button now sits on your city screen.)</span>"; if(el)el.value=''; render(); return; } if(/beware of kal durak/.test((q||'').toLowerCase())){ S._ptArmed=true; S.tavTraderLine="The trader goes very still. \u201cThat is a name from another road,\u201d he says, low. \u201cIf you truly know it, then say what you came to say.\u201d"; if(el)el.value=''; render(); return; } if(S._ptArmed && /playtest/.test((q||'').toLowerCase())){ S.playtest=true; S.debugExport=true; S._ptArmed=false; S.tavTraderLine="<b>Playtest mode unlocked.</b> <span class='sub'>A green debug bar now rides atop the screen \u2014 heal &amp; resupply, add silver, and export the run-log at will.</span>"; if(el)el.value=''; render(); return; } if(S.playtest && !S._marcoArmed && /^\s*marco\s*$/i.test(q||'')){ S._marcoArmed=true; S.tavTraderLine="The trader lifts one eyebrow over his cup. \u201cPolo?\u201d"; if(el)el.value=''; render(); return; } if(S.playtest && S._marcoArmed && /^\s*polo\s*$/i.test(q||'')){ S._marcoArmed=false; marcoJump(); if(el)el.value=''; render(); return; } if(S.playtest && /teleport/.test((q||'').toLowerCase())){ S.screen='teleport'; if(el)el.value=''; render(); return; } var k=findTopic(q);
   if(k){ S.tavTraderLine=TOPICS[k].t; } else { S.tavTraderLine="<b>Diogenes</b> spreads his hands. “Never heard of it. Ask us of a <b>bukht</b>, or <b>silk</b>, or <b>water</b>, or <b>guards</b> — the things a man lives or dies by out here. The rest is philosophy, and we have a surplus of that at this table.”"; }
   if(el)el.value=''; render(); }
+const QLOD_TAV_INTRO="Khurshid and Qlod shove out a stool for you. “You have LIVED it,” says Qlod, “so tell us — or better, ask us, for we have thought of little else — how a venture like this truly goes. The <b>fighting</b>? The <b>hunting</b>? Surviving the <b>desert</b>? The <b>sea</b>? Or name a trade good, and we will say where it comes cheap and where it sells dear.”";
+const QLOD_TOPICS={
+ fight:{trig:['fight','fighting','combat','fs','hitpoint',' hp','wound'],t:"Qlod leans in. “A fighter carries two numbers — a skill at arms, his FS, and a pool of hitpoints, HP. Come through a fight alive and there is a chance the skill sharpens; but the better he already is, the less each brawl can teach him. And the hurt itself hardens a man — at the end of a fight he has a chance to gain a point of HP equal to the share of his old strength the wounds took from him. A bad hurt, survived, makes a tougher body.”"},
+ hunt:{trig:['hunt','hunting','hs','game','forage','quarry'],t:"Khurshid, whose country is the hills, takes this one. “Each turn afield you roll for game. When something shows, it is your BEST hunter’s eye that decides whether it is spotted at all — but your WORST hunter’s clumsiness that decides whether it bolts before a shot. So the surest pot is your best man hunting alone. Send more, and if they do not spook the beast they pull it down likelier between them — and a green hand out at a master’s shoulder learns the craft, a little each season. There is no other school for it.”"},
+ desert:{trig:['desert','ds','sand','waste','thirst','dune'],t:"“The desert keeps its own reckoning,” says Qlod, “a survival number — DS. A great many things feed it, so a seasoned company fares far better in the sand than a raw one ever could. Take on someone desert-born, or hire a guide who knows the wells, and the waste loses much of its teeth.”"},
+ sea:{trig:['sea','seaman','seamanship','ship','sail','boat','pirate','storm','voyage'],t:"“And the sea keeps its own,” Qlod goes on. “Some hands come to you already sea-wise, off a life aboard, and keep a hull off the rocks in a blow. Most of your people sail as passengers, glad to be carried — but weeks on the water teach even them, and should pirates thin the crew too far, the passengers must take a hand at the ropes, which both tests their seamanship and, if they live through it, builds it.”"}
+};
+function qlodAsk(){ var el=document.getElementById('asktopic'); var q=(el?el.value:'')||''; var lq=(' '+q+' ').toLowerCase(); var hit=null;
+  for(var k in QLOD_TOPICS){ for(var i=0;i<QLOD_TOPICS[k].trig.length;i++){ if(lq.indexOf(QLOD_TOPICS[k].trig[i])>=0){ hit=k; break; } } if(hit)break; }
+  if(hit){ S.tavTraderLine=QLOD_TOPICS[hit].t; if(el)el.value=''; render(); return; }
+  var gk=(typeof findTopic==='function')?findTopic(q):null;
+  if(gk){ S.tavTraderLine=TOPICS[gk].t; } else { S.tavTraderLine="Qlod spreads his hands. “We have not worked that part out yet. Ask us of the <b>fighting</b>, the <b>hunting</b>, the <b>desert</b>, the <b>sea</b> — or a good you mean to trade.”"; }
+  if(el)el.value=''; render(); }
+function renderTavernSamarkand(m){
+  const scene="<p>Samarkand keeps no tavern grander than the rest, and yet it keeps <b>the Qlodserai</b> — a caravanserai between times, its walls the colour of dried honey, a fountain in the courtyard long since gone to a still green pool, and travellers under the colonnade who seem unsure what year it is, or whether that matters. In one corner a wiry beekeeper, <b>Khurshid Farrokh</b>, argues with a foreign friend he calls <b>Qlod</b> over whether the whole of this road could be set down as a game. They have been at it, by the look of them, for years.</p>";
+  let menu='<div style="margin:10px 0">'+
+    '<button onclick="tavGo(\'traders\')">Join Khurshid and Qlod at their table</button> '+
+    '<button onclick="tavGo(\'trader\')">Ask an old trader for counsel (10 s)</button> '+
+    '<button onclick="tavGo(\'facilities\')">Leave your mark on the wall</button>'+
+    '</div>';
+  let body=''; const v=S.tavView;
+  if(v==='traders'){ body='<div class="panel"><p>'+(S.tavTraderLine||QLOD_TAV_INTRO)+'</p>'+
+      '<div style="margin-top:8px"><input type="text" id="asktopic" placeholder="type a word they stress — fighting, hunting, the desert, the sea, or a trade good" style="width:62%" onkeydown="if(event.key===\'Enter\')qlodAsk()"> <button onclick="qlodAsk()">Ask</button></div>'+
+      '<p class="sub" style="margin-top:4px">Ask them how a venture like this works — the fighting, the hunting, the desert, the sea — or name any good and hear where it comes cheap and sells dear. The words they stress are the ones worth asking after.</p></div>'; }
+  else if(v==='trader'){ body='<div class="panel"><p class="sub">An old trader nurses a cup by the pool; he has forgotten more roads than you will ever ride, and will share them for the price of a drink. The first cups buy the best counsel.</p>'+
+      (S.traderMsg?('<p>'+S.traderMsg+'</p>'):'<p class="sub">He raises an empty cup and looks at you hopefully.</p>')+
+      '<button onclick="buyTraderDrink(10)" '+((S.silver<10)?'disabled':'')+'>Buy him a cup (10 s)</button></div>'; }
+  else if(v==='facilities'){ var gg=(GRAFFITI||[]).slice(0,30); body='<div class="panel"><p class="sub">The whitewashed wall by the fountain is a palimpsest of every traveller who ever waited here for a caravan that may or may not have come — names, boasts, prayers, and the odd line of real poetry. A charred stick lies on the sill.</p>'+
+      '<div class="log" style="height:auto;max-height:220px;font-style:italic">'+gg.map(x=>'<div>“'+(x.text||'')+'” <span class="sub" style="font-style:normal">— '+(x.name||'a hand unknown')+'</span></div>').join('')+'</div>'+
+      '<div style="margin-top:8px"><input type="text" id="graffititext" maxlength="140" placeholder="leave your mark…" style="width:70%"> <button onclick="tavWriteGraffiti()">Scratch it on the wall</button></div></div>'; }
+  m.innerHTML='<h2>The Qlodserai <span class="sub">· Samarkand, a place between times</span></h2>'+scene+menu+body+
+    '<div style="margin-top:10px"><button class="seal" onclick="leaveTavern()">Settle up and go (a day passes)</button></div>'+
+    '<p class="sub">Silver <b class="gold">'+Math.round(S.silver)+'</b></p>';
+}
 function renderTavern(m){
   if(city()&&city().name==="Chang'an") return renderTavernChangan(m);
+  if(city()&&city().name==='Samarkand') return renderTavernSamarkand(m);
   if(!S.onceFlags.lostTraderSeen){ S.onceFlags.lostTraderSeen=true; }
   const scene="<p>You duck under the low lintel of <b>The Lost Trader\u2019s Tavern</b>, hard by the Golden Horn where the masts crowd thick as a winter wood. Lamplight, woodsmoke, and the reek of a hundred ports; a long room of Greeks and Rus, Sogdians and Jews and sun-blacked sailors, all talking at once in a dozen tongues. Behind the counter, <b>Quraq</b> \u2014 a small, sharp, big-eared man who has never once been seen to sleep \u2014 polishes a cup he has polished a thousand times, and misses nothing.</p>";
   let menu='<div style="margin:10px 0">'+
@@ -6744,7 +6777,7 @@ function desertPeril(terr){ if(!S||S.dead||S.pendingEvent||S.seaMode)return; if(
     var hit=function(d){ if(f.you){ S.hp=clamp(S.hp-d,0,100); if(S.hp<=0)S.cause='the desert'; } else if(f.ref){ f.ref.hp=Math.max(0,(f.ref.hp==null?100:f.ref.hp)-d); } };
     var r=rnd();
     if(r<0.34){ hit(harsh?9:6); log('<span class="red">'+f.name+' goes down with heat-sickness under the desert sun \u2014 a hard day.</span>'); }
-    else if(r<0.62){ hit(harsh?8:5); log('<span class="red">The night cold bites '+f.name+' hard \u2014 the desert\u2019s other face, and a lesson felt by morning.</span>'); }
+    else if(r<0.62){ var _fur=f.you?(youGear().cloak==='fur'):(f.ref&&f.ref.gear&&f.ref.gear.cloak==='fur'); if(_fur){ log('<span class="sub">The night cold comes down hard \u2014 the desert\u2019s other face \u2014 but '+f.name+' huddles in their fur coat against the cold.</span>'); } else { hit(harsh?8:5); log('<span class="red">The night cold bites '+f.name+' hard \u2014 the desert\u2019s other face, and a lesson felt by morning.</span>'); } }
     else if(r<0.85){ hit(5); log('<span class="red">'+f.name+' drinks at a brackish seep against better sense and is sick with the salt for a day.</span>'); }
     else { if(harsh && !guide && !f.you && f.ds<=6 && f.ref && rnd()<0.55){ f.ref.alive=false; if(typeof noteDeath==='function')noteDeath(f.ref,'the desert'); S.party=S.party.filter(function(x){return x.alive;}); log('<span class="red"><b>'+f.name+' strays from the column in a sandstorm and is never found.</b> The waste keeps them.</span>'); }
       else { hit(4); log('<span class="red">'+f.name+' drifts from the line in a duststorm \u2014 an hour lost and a bad fright before a shout brings them back.</span>'); } }
@@ -6899,7 +6932,7 @@ function battleStep(){
     pr.p._fought=true;
     var bEff=pr.b.fs/(bC[pr.b._id]||1), pEff=pr.p.fs/(pC[pr.p._id]||1);
     if(rnd()<bEff/(bEff+pEff)){ var d1=cbDie(pr.b.die); cbHit(pr.p,d1); pr.p._took=(pr.p._took||0)+d1; rl.push(pr.p.cHP<=0?'<span class="red">'+cbName(pr.p)+' is cut down</span>':cbName(pr.p)+' takes a hit <span class="sub">(HP '+Math.round(100*pr.p.cHP/pr.p.cMax)+'%)</span>'); }
-    else { var d2=cbDie(pr.p.die); cbHit(pr.b,d2); rl.push(pr.b.cHP<=0?'<span class="green">'+cbName(pr.p)+' cuts down a '+(c.sea?'pirate':'bandit')+'</span>':cbName(pr.p)+' wounds a '+(c.sea?'pirate':'bandit')+' <span class="sub">('+(c.sea?'pirate':'bandit')+' HP '+Math.round(100*pr.b.cHP/pr.b.cMax)+'%)</span>'); }
+    else { var d2=cbDie(pr.p.die); cbHit(pr.b,d2); if(pr.p.name==='Sohrab' && pr.b.bandit){ if(pr.b.cHP<=0){ if(!S.onceFlags.sohrabKill){ S.onceFlags.sohrabKill=true; S._sohrabKill=true; S._sohrabInjure=false; } } else if(!S.onceFlags.sohrabInjure && !S.onceFlags.sohrabKill){ S.onceFlags.sohrabInjure=true; S._sohrabInjure=true; } } rl.push(pr.b.cHP<=0?'<span class="green">'+cbName(pr.p)+' cuts down a '+(c.sea?'pirate':'bandit')+'</span>':cbName(pr.p)+' wounds a '+(c.sea?'pirate':'bandit')+' <span class="sub">('+(c.sea?'pirate':'bandit')+' HP '+Math.round(100*pr.b.cHP/pr.b.cMax)+'%)</span>'); }
   });
   if(rl.length) c.L.push('Round '+c.round+': '+rl.join('; ')+'.');
   var _you=c.stayers.find(function(f){return f.you;}); if(_you && _you.cHP<=0 && !c.youFell){ c.youFell=true; var _oth=c.stayers.filter(function(f){return !f.you && f.alive && f.cHP>0;}); if(_oth.length){ var _h=_oth.find(function(f){return f.ref&&f.ref.nephew;}); c.L.push('<span class="red">You are cut down. '+(_h?cbName(_h)+' takes up the fight':'Your people close ranks and fight on')+'.</span>'); } else { c.L.push('<span class="red">You are cut down, and the last of your people with you.</span>'); return battleFinish('loss'); } }
@@ -6974,6 +7007,14 @@ function battleFinish(outcome){
   c.phase='result'; c.outcome=outcome; c.head=head; c.resultText=cbResultText(outcome,sea);
   render();
 }
+function sohrabInjureDialog(){
+  return {h:'FIRST BLOOD', t:"When the fight is done and the arms are down, Yusuf's son cannot keep still. He shows you the notch his grandfather's saif took out of a bandit's guard, re-fights the whole exchange twice, and grins like the sun coming up over the drowned town. ‘Did you see it? Did you SEE?’ He is a boy who has just learned he is good at something, and for tonight the sea and the sinking port are a thousand miles behind him.",
+    ch:[{l:'Let him have his moment',f(){ log('Sohrab will not sleep for hours — he has drawn first blood, and he is proud of it.'); }}]};
+}
+function sohrabKillDialog(){
+  return {h:'A MAN DOWN', t:"Afterward Sohrab sits apart with the saif across his knees, not cleaning it, only looking at it. He has killed a man today — the first — and the bravado of the earlier fights has gone out of him. ‘He had a face,’ the boy says at last, to no one in particular. ‘I thought there would be more to it than that. Or less.’ He does not ask you to tell him it was right; he only wanted someone to know it happened, and that he felt the weight of it.",
+    ch:[{l:'Sit with him a while',f(){ log('You sit with Sohrab a while and say little. Something in him has aged a year in an afternoon.'); }}]};
+}
 function battleExit(){ var c=S.battle; if(!c){ S.screen='travel'; render(); return; }
   var L=c.L||[]; var fell=c.playerFell; S._inBattle=false; var prev=c.prevScreen||'travel'; S.battle=null; S.screen=prev;
   if(prev==='travel' && !fell){ S.journeying=false; if(typeof clearJourney==='function')clearJourney(); S._forceCamp=true; }  /* after a land fight, drop into camp so the player can rest to heal instead of marching straight on */
@@ -6981,6 +7022,7 @@ function battleExit(){ var c=S.battle; if(!c){ S.screen='travel'; render(); retu
   if(fell){ die(); render(); return; }
   if(S.deathQueue && S.deathQueue.length && typeof deathDialog==='function'){ S.pendingEvent=deathDialog(); }
   if(!S.pendingEvent && S._cbRespectPending && typeof cbRespectDialog==='function'){ S._cbRespectPending=false; S.cbRespectNoted=true; var _cr=cbRespectDialog(); if(_cr)S.pendingEvent=_cr; }
+  if(!S.pendingEvent && S._sohrabKill){ S._sohrabKill=false; S.pendingEvent=sohrabKillDialog(); } else if(!S.pendingEvent && S._sohrabInjure){ S._sohrabInjure=false; S.pendingEvent=sohrabInjureDialog(); }
   render();
 }
 function battleResultRender(m){
