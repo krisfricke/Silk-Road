@@ -4,3 +4,16 @@ COPILOT_ONBOARDING.md
 MAP_NOTES.md
 NOTES_1271_expansion.md
 NOTES_economy_radial.md
+
+# --- build & playtest artifacts — keep in the working folder, never publish (Fadak, repo-hygiene pass) ---
+Silk_Road_v*.html      # versioned DEV_1271=true playtest builds
+Maps/_*.png            # diagnostic / preview / _tmp renders (NOT the named game chart assets)
+Maps/__pycache__/
+__pycache__/
+*.pyc
+Maps/*.npy
+Maps/*.npz
+Maps/work/
+# Large baked master rasters (~220 MB of build intermediates). Uncomment if you don't want them in git:
+# Maps/master1271/
+# Maps/master_amber/

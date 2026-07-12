@@ -6,7 +6,7 @@ import numpy as np, json, math, re, glob, io, os
 from PIL import Image
 import tifffile, cv2
 from slice_master import slice_master
-from rebake_1271_fields import add_fields, SETTLE, dem_at
+from rebake_1271_fields import add_fields, fields_multi, anachronize, SEASONS, SETTLE, dem_at
 
 DUMP=json.load(open('setout_net_dump.json'))
 RM=json.load(open('routes_master.json'))['legs']
@@ -17,7 +17,7 @@ def canon(n): return RENAME.get(n,n)
 # ---------- city lonlats ----------
 LL=eval(re.search(r'LL=\{.*?\}',open('route_1271.py').read(),re.S).group(0)[3:])
 LL={canon(k):v for k,v in LL.items()}
-LL.update({'Varamin':(51.65,35.32),'Mangyshlak':(51.0,44.3),'Ispijab':(69.75,42.30),'Talas':(71.40,42.90),'Chach':(69.28,41.31),'Lop':(88.30,39.50),'Miran':(88.90,39.23),'Aksu':(80.26,41.17),'Kucha':(82.96,41.72),'Alexandria':(29.90,31.20),'Kauthara':(109.20,12.25),'Kollam':(76.60,8.90),'Andijan':(72.34,40.78),'Abaskun':(54.00,36.90),'Damghan':(54.34,36.17)})
+LL.update({'Varamin':(51.65,35.32),'Mangyshlak':(51.0,44.3),'Ispijab':(69.75,42.30),'Talas':(71.40,42.90),'Chach':(69.28,41.31),'Lop':(88.30,39.50),'Miran':(88.90,39.23),'Aksu':(80.26,41.17),'Kucha':(82.96,41.72),'Alexandria':(29.90,31.20),'Kauthara':(109.20,12.25),'Kollam':(76.60,8.90),'Andijan':(72.34,40.78),'Abaskun':(54.00,36.90),'Damghan':(54.34,36.17),'Kabul':(69.18,34.53),'Kashmir':(74.80,34.08),'Baku':(49.87,40.37)})
 
 # ---------- geometry registry (lonlat) ----------
 GEO={}
@@ -156,8 +156,22 @@ for C in cities:
     if E-W<4: c0=(E+W)/2; W,E=c0-2,c0+2
     if N-S0<3: c0=(N+S0)/2; S0,N=c0-1.5,c0+1.5
     OW=1400
-    OH=int(OW*(N-S0)/((E-W)*math.cos(math.radians((S0+N)/2))))
-    OH=max(500,min(2100,OH))
+    _latm=math.cos(math.radians((S0+N)/2))
+    OH=int(OW*(N-S0)/((E-W)*_latm))
+    # ASPECT IS SACRED (Kris caught so_almaliq squashed 2.1x): never clamp pixels - EXPAND THE RECT.
+    if OH<500:
+        _span=500.0*(E-W)*_latm/OW
+        _ext=(_span-(N-S0))/2
+        S0-=_ext; N+=_ext
+    elif OH>2100:
+        _spanl=OW*(N-S0)/(2100.0*_latm)
+        _extl=(_spanl-(E-W))/2
+        W-=_extl; E+=_extl
+        if W<MW: E+=(MW-W); W=MW
+        if E>ME: W-=(E-ME); E=ME
+    _latm=math.cos(math.radians((S0+N)/2))
+    OH=int(OW*(N-S0)/((E-W)*_latm))
+    OH=max(60,min(2400,OH))
     fn='so1271_%s.jpg'%slug(C)
     if S0>=MS and W>=MW and E<=ME and N<=MN:
         slice_master(max(W,MW),min(E,ME),max(S0,MS),min(N,MN),OW,OH,'_tmp_so.png')
@@ -166,11 +180,24 @@ for C in cities:
         img=gebco_relief(W,E,S0,N,OW,OH)
     from rebake_1271_fields import relief_boost
     img=relief_boost(img,(W,E,S0,N),OW,OH)
-    img=add_fields(img,(W,E,S0,N),SETTLE)
-    Image.fromarray(img).save(fn,quality=87)
+    img,_eph,_forbid=anachronize(img,(W,E,S0,N))
     geo=(round(W,2),round(E,2),round(S0,2),round(N,2))
     def px(lon,lat): return (round((lon-geo[0])/(geo[1]-geo[0])*OW,1),round((geo[3]-lat)/(geo[3]-geo[2])*OH,1))
-    centry={'img':'Maps/'+fn,'era':'1271','vbw':OW,'vbh':OH,'geo':list(geo),'title':C+' — set out','cities':{},'legs':{},'sealegs':{},'open':[C]}
+    # roads for field-hugging: every leg touching any town in frame (px space)
+    _roadpx=[]
+    _towns=set([C])|set(NBR[C])
+    for _a in list(_towns):
+        for _b in NBR.get(_a,[]):
+            _g=geom(_a,_b)
+            if _g: _roadpx.append([px(_lo,_la) for _lo,_la in _g[::3]])
+    _sea=fields_multi(img,(W,E,S0,N),SETTLE,seasons=SEASONS,roads=_roadpx,forbid=_forbid)
+    for _sn,_img in _sea.items():
+        for _m,_col,_ss in _eph:
+            if _sn in _ss:
+                _img=_img.copy(); _img[_m]=np.array(_col,np.uint8)
+        Image.fromarray(_img).save('so1271_%s_%s.jpg'%(slug(C),_sn),quality=87)
+    Image.fromarray(_sea['summer']).save(fn,quality=87)
+    centry={'img':'Maps/'+fn,'era':'1271','vbw':OW,'vbh':OH,'geo':list(geo),'title':C+' — set out','cities':{},'legs':{},'sealegs':{},'open':[C],'seasonal':True}
     for n in nodes:
         if n not in LL: continue
         x,y=px(*LL[n])
@@ -214,6 +241,35 @@ for C in cities:
                 if -40<=mx<=OW+40 and -40<=my<=OH+40:
                     centry['cities'][m]={'x':int(mx),'y':int(my),'r':6,'ldx':12,'ldy':-10,'faint':True}
     if not centry['sealegs']: del centry['sealegs']
+    # RUIN SITES (Kris): dead cities marked with the three-dots-in-a-triangle, not a live dot
+    RUINS_1271={'Merv':(61.83,37.66)}
+    for _rn,(_rlo,_rla) in RUINS_1271.items():
+        if _rn in centry['cities']: continue
+        _rx,_ry=px(_rlo,_rla)
+        if 20<=_rx<=OW-20 and 20<=_ry<=OH-20:
+            centry['cities'][_rn]={'x':int(_rx),'y':int(_ry),'ruin':True}
+    # WIDER-WORLD STUBS (Kris + Fadak): permanently grey stumps aimed at off-chart destinations,
+    # full routed geometry so the exit bearing is true; hover hint handled game-side by key.
+    STUBW={'Balkh':[('Balkh|Kabul','india_kabul')],'Yarkand':[('Kashmir|Yarkand','india_kashmir')]}
+    for srcC,stl in STUBW.items():
+        if srcC not in centry['cities']: continue
+        for gkey,hint in stl:
+            gg=GEO.get(gkey) or RM.get(gkey)
+            if not gg: continue
+            gp=list(gg)
+            if abs(gp[0][0]-LL[srcC][0])+abs(gp[0][1]-LL[srcC][1])>abs(gp[-1][0]-LL[srcC][0])+abs(gp[-1][1]-LL[srcC][1]): gp=gp[::-1]
+            p3=np.array([[px(lon,la)[0],px(lon,la)[1]] for lon,la in gp],float)
+            dd3=np.r_[0,np.cumsum(np.hypot(np.diff(p3[:,0]),np.diff(p3[:,1])))]
+            t3=np.linspace(0,dd3[-1],60)
+            p3=np.c_[np.interp(t3,dd3,p3[:,0]),np.interp(t3,dd3,p3[:,1])]
+            # STUMP, not road-to-nowhere: stop where it leaves the frame, or at 45% of the way
+            # if the (unmarked) destination happens to fall inside this chart's rect.
+            cut=len(p3)
+            for i3 in range(1,len(p3)):
+                if not(-8<=p3[i3][0]<=OW+8 and -8<=p3[i3][1]<=OH+8): cut=min(i3+2,len(p3)); break
+            cut=min(cut,max(6,int(len(p3)*0.45)))
+            p3=p3[:cut]
+            centry.setdefault('stubs',[]).append({'pts':' '.join('%.1f,%.1f'%(x,y) for x,y in p3),'hint':hint})
     CHARTS_OUT['so_'+slug(C)]=centry
     made.append(fn)
 json.dump(CHARTS_OUT,open('setout_charts_1271.json','w'))
