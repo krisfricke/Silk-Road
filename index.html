@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='3.1.32'; const BUILD='0713.1021'; /* build-stamp: version ghosts shall not pass */
+const VERSION='3.1.34'; const BUILD='0713.1021'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -3314,6 +3314,7 @@ function evAbaskunGift(){
 }
 function evTollPost(){
   if(!cooled('toll',16))return null; markEv('toll');
+  if(S.paiza){ S.tollRoads=S.day+30; return {h:"THE KHAN'S TAMGHA", t:"A toll-post where the road narrows: the stone khan, the pole across the way, the clerk with his ledger. Before he can name a figure you draw out the PAIZA — the tablet of gold. His manner changes as though a string were cut: he rises, bows to the tablet (not to you), and has the pole up and your bales stamped through before you have finished putting it away. No tamgha is taken from the Khan's own courier, and the swept roads and kept wells ahead are yours as if you had paid for them twice.", ch:[{l:'Ride on, unbled',f(){}}]}; }
   var v=0; for(var g in (S.goods||{})){ var gg=null; for(var i=0;i<GOODS.length;i++)if(GOODS[i].id===g){gg=GOODS[i];break;} if(gg&&S.goods[g]>0){ var c0=city(); v+=S.goods[g]*(c0?price(gg,c0):10); } }
   var due=Math.max(3,Math.min(28,Math.round(v*0.02)));
   return {h:"THE KHAN'S TAMGHA", t:"A toll-post where the road narrows: a stone khan, a pole across the way, and "+((city()&&city().frac<0.35)?"a clerk of the Great Khan\u2019s revenue":(city()&&city().frac<0.62)?"a Chagatai tax-farmer":"an Ilkhanid clerk")+" with a ledger longer than his sword. Behind him the road is swept, the wells are kept, and the yam-riders change horses without dismounting. The tamgha on your loads: "+due+" silver.",
@@ -3530,9 +3531,47 @@ function marcoVecchioTavern(scene){
 }
 
 /* ---- admire the city ---- */
+/* ---- the Polos, the legate who became Pope, the oil of the Sepulchre, and the Khan's paiza (Kris) ---- */
+function admireAcre(){
+  var POPE_DAY=70, GONE_DAY=135;
+  if(S.day>GONE_DAY) return null;   /* the new Pope has left for Rome; the Polos are long east — a normal Acre */
+  var poloHere=(typeof poloAt==='function')&&poloAt(S.day)&&poloAt(S.day).p==='Acre';
+  if(S.day>=POPE_DAY){
+    if(!S.onceFlags.popeNews){ S.onceFlags.popeNews=true;
+      var t=S.onceFlags.metTeobaldo
+        ? "The bells of Acre are all ringing at once, and the word runs the harbour before you reach the mole: the legate — Teobaldo Visconti, the grave, courteous Lombard you were made known to not a season past — has been ELECTED POPE, drawn at last out of a conclave that sat deadlocked at Viterbo for near three years. He will take the name Gregory the Tenth. The man who poured you wine and asked, so precisely, about the roads east is now the Vicar of Christ — and looks, they say, faintly appalled by the whole business. So THAT was where he was going."
+        : "The bells of Acre are all ringing at once. The papal legate of this dusty crusader port — one Teobaldo Visconti — has been ELECTED POPE, hauled out of the conclave that sat deadlocked at Viterbo for near three years; he will take the name Gregory the Tenth. The whole city is drunk on the strangeness of it, that their own legate should go from here to the throne of Saint Peter.";
+      return {h:'— ACRE —', t:t, ch:[{l:'Join the ringing, and the wine',f(){}}]};
+    }
+    return null;
+  }
+  if(!S.onceFlags.metTeobaldo){ S.onceFlags.metTeobaldo=true;
+    if(poloHere){
+      return {h:'— ACRE —', t:"Up toward the legate's palace above the harbour you fall in with the POLOS, camped in its shadow, and the elder — pleased to show a fellow traveller his connections — sweeps you in with them to wait upon the legate himself. Teobaldo Visconti receives you courteously: a lean, unhurried Lombard with a clerk's memory and a soldier's stillness, archdeacon of Liège and the Pope's man in a Holy Land that has, at present, no Pope at all. He asks the Polos, and then you, careful questions about the roads to the Tartars — the distances, the safe-conducts, the temper of the Ilkhan — and files the answers somewhere behind his eyes. You come away with the odd, strong impression of a man who is going somewhere, though he has not yet said where.", ch:[{l:'Take your leave of the legate',f(){}}]};
+    }
+    return {h:'— ACRE —', t:"You climb to the legate's palace above the harbour — the seat of Teobaldo Visconti, archdeacon and the Pope's man in the Holy Land, in these strange years when there is no Pope at all for him to be man to. He gives a stranger merchant a courteous quarter-hour: a lean, unhurried Lombard with a clerk's memory, who asks you — precisely, as though it mattered a great deal — what you know of the roads east, the Ilkhan's peace, the true distance to the court of the Tartars. You answer as best you can. You come away oddly certain you have just met a man who is going places, though you could not for your life say WHERE.", ch:[{l:'Bow yourself out',f(){}}]};
+  }
+  return null;
+}
+function admireJerusalem(){
+  if(S.holyOil) return null;
+  S.holyOil=true;
+  var polo=(typeof poloAt==='function')&&poloAt(S.day)&&poloAt(S.day).p==='Jerusalem';
+  var t="You come to the Church of the Holy Sepulchre, and to the lamp that burns above the stone of the tomb — whose oil pilgrims have carried to the ends of the earth for a thousand years as the holiest thing a flask can hold."
+    + (polo ? " You are not the only Latins at the lamp: the POLOS are drawing the same oil into a silver-mounted flask, bound (the elder says, as if it were an errand to the next parish) for the GREAT KHAN of the Tartars, who asked it of them by name. A well-paid priest supervises everyone with strict impartiality."
+            : " A well-paid priest lets you draw a little into a stoppered flask, wrapped like the relic it is.")
+    + " What use a merchant will ever find for holy oil you cannot say — but a road this long has turned up stranger keys than a flask of light.";
+  return {h:'— JERUSALEM —', t:t, ch:[{l:'Bear the oil away',f(){}}]};
+}
+function admireKhanbaliq(){
+  if(!S.holyOil || S.paiza) return null;
+  S.paiza=true; S.tollRoads=S.day+30;   /* the golden tablet: from now every Khanate official waves you through as if paid, refreshing the kept-roads effect (30 d) each time (Kris) */
+  return {h:'— KHANBALIQ —', t:"You had meant only to walk the new-built Tartar city and gape at the Khan's walls — but a chamberlain's eye falls on the silver-mounted flask a servant carries at your side, the questions begin, and somehow by dusk you are kneeling on scrubbed boards in a hall the size of a town, presenting to KUBLAI KHAN himself a little oil from the lamp of the Holy Sepulchre in far Jerusalem. The Khan of Khans — lord of the widest empire the earth has ever carried — takes the flask in two hands as gravely as a boy takes a bird's egg. It is the very thing three Venetians were sent across the world to fetch him; and here it is, arrived early, in a stranger's baggage. He is pleased. An emperor's pleasure has a currency: they press upon you a PAIZA — a tablet of gold, the Khan's own safe-conduct — and from this hour the yam-roads are yours. Wherever the writ of the Great Khan runs, officials will read that gold, bow, and speed you on with fresh horses, swept roads, and a staging-post kept at every stage, as though you rode as the Khan's own courier.", ch:[{l:'Bow to the earth, and rise a made man',f(){}}]};
+}
 function admireCity(){
   const c=city();
   if(c && (!S||S.era!=='1271') && (c.name==='Constantinople'||c.name==="Chang'an")){ S.screen='monuments'; S.monCity=c.name; S.monView=null; render(); return; }
+  if(S && S.era==='1271' && c){ var _spf=(c.name==='Acre')?admireAcre():(c.name==='Jerusalem')?admireJerusalem():(c.name==='Khanbaliq')?admireKhanbaliq():null; if(_spf){ S.pendingEvent=_spf; render(); return; } }
   var txt; if(c.name==='Konya' && typeof karamanKonya==='function' && karamanKonya()){ txt="Konya has changed masters. The Turkmen of the Karaman have come down out of the Taurus and taken the old capital: where Seljuk sultans and their Mongol overlords ruled, a Karamanid beg sits now, and it is cried in the streets that the business of state be done in Turkish and no longer in the Persian of the clerks. The tiled tombs and the medreses stand as before, and Rumi's dervishes still turn in the dusk — but the tax is gathered by hillmen, the Mongol writ stops at the walls, and a wise merchant reads the temper of the bazaar before he unrolls his best cloth."; } else if(S&&S.era==='1271'&&typeof ADM1271!=='undefined'&&ADM1271[c.name]){ txt=ADM1271[c.name]; } else if(c.name==='Baghdad' && typeof baghdadVillage==='function' && baghdadVillage()){ txt="You walk the west bank of the Tigris where it runs nearest the Euphrates, past the mud-brick village they call Baghdad, the broken vaults of Ctesiphon \u2014 al-Mada\u02bcin, the old Persian capital \u2014 looming just downstream. But the village is the least of it: for miles the ground is staked with rope and lime, and surveyors, astrologers, brick-burners and labourers gather by the tens of thousand. The Caliph al-Mansur, they say, will raise a perfectly round city on this very spot \u2014 four gates to the quarters, a green-domed palace at its heart, Madinat al-Salam, the City of Peace. For now there is only dust, and rope, and the largest rumour you have ever stood inside of. You have come a little early to history."; } else { txt=CITY_ADMIRE[c.name]||c.adm||c.note||"You walk the walls and the bazaars a while. The town is much like its neighbours, and keeps its history to itself."; }
   let extra='';
   if(S.party.some(p=>p.name==='Halfdan'&&p.alive)){ S.halfdanCarved=S.halfdanCarved||{}; if(!S.halfdanCarved[c.name]){ S.halfdanCarved[c.name]=true; extra="</p><p>As you turn to go you catch Halfdan crouched at a quiet stretch of wall, scratching angular marks into the stone with his knife-point. he sees you squinting at the angular scratches and grins. 'Ah \u2014 an illiterate,' he says cheerfully. 'It says: Halfdan was here. In runes.'"; } }
