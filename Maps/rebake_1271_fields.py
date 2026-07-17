@@ -37,6 +37,7 @@ LL.setdefault('Andijan',(72.34,40.78)); LL.setdefault('Damghan',(54.34,36.17))
 for _n,_p in {'Osh':(72.80,40.53),'Khujand':(69.63,40.28),'Marghinan':(71.72,40.47),'Uzgend':(73.30,40.77)}.items():
     LL.setdefault(_n,_p)   # Fergana towns: quilt-only settlements (halts/known towns, not game nodes)
 HUB.add('Andijan')   # the Ferghana valley - one of the most fertile in Central Asia (Kris)
+LL.setdefault('Datong',(113.30,40.09)); HUB.add('Datong')   # Xijing, the old Western Capital - halt on the Tenduc-Khanbaliq post road (Kris): quilt-only, no chart of its own
 MEGA={'Khanbaliq':62,'Kinsay':62,'Kenjanfu':55,'Constantinople':55,'Tabriz':52,'Samarkand':48,'Zaiton':46,'Yangzhou':48,'Baghdad':45}
 SETTLE=[]
 for n,(lo,la) in LL.items():
