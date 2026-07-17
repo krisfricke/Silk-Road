@@ -17,7 +17,7 @@ def canon(n): return RENAME.get(n,n)
 # ---------- city lonlats ----------
 LL=eval(re.search(r'LL=\{.*?\}',open('route_1271.py').read(),re.S).group(0)[3:])
 LL={canon(k):v for k,v in LL.items()}
-LL.update({'Varamin':(51.65,35.32),'Mangyshlak':(51.0,44.3),'Ispijab':(69.75,42.30),'Talas':(71.40,42.90),'Chach':(69.28,41.31),'Lop':(88.30,39.50),'Miran':(88.90,39.23),'Aksu':(80.26,41.17),'Kucha':(82.96,41.72),'Alexandria':(29.90,31.20),'Kauthara':(109.20,12.25),'Kollam':(76.60,8.90),'Andijan':(72.34,40.78),'Abaskun':(54.00,36.90),'Damghan':(54.34,36.17),'Kabul':(69.18,34.53),'Kashmir':(74.80,34.08),'Baku':(49.87,40.37)})
+LL.update({'Varamin':(51.65,35.32),'Mangyshlak':(51.0,44.3),'Ispijab':(69.75,42.30),'Talas':(71.40,42.90),'Chach':(69.28,41.31),'Lop':(88.30,39.50),'Miran':(88.90,39.23),'Aksu':(80.26,41.17),'Kucha':(82.96,41.72),'Alexandria':(29.90,31.20),'Kauthara':(109.20,12.25),'Kollam':(76.60,8.90),'Andijan':(72.34,40.78),'Abaskun':(54.00,36.90),'Damghan':(54.34,36.17),'Kabul':(69.18,34.53),'Kashmir':(74.80,34.08),'Baku':(49.87,40.37),'Saraichik':(51.75,47.50),'the Perevoloka':(44.55,48.70),'the Don landing':(43.80,48.72)})
 
 # ---------- geometry registry (lonlat) ----------
 GEO={}

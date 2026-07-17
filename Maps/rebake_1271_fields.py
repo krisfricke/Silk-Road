@@ -28,6 +28,7 @@ def dem_at(lon,lat):
 
 # ---------------- settlements (1271) ----------------
 LL=eval(re.search(r'LL=\{.*?\}',open('route_1271.py').read(),re.S).group(0)[3:])
+LL.update({'Chach':(69.28,41.31)})   # QUILT v3.1b: the Stone City farms too (Kris) - route_1271's LL never listed it
 HUB={'Venice','Ragusa','Candia','Constantinople','Caffa','Tana','Sarai','Ayas','Acre','Sivas','Tabriz',
  'Kerman','Hormuz','Urgench','Almaliq','Herat','Alexandria','Trebizond','Bukhara','Samarkand','Kashgar',
  'Khotan','Turfan','Khanbaliq','Xanadu','Kinsay','Zaiton','Zhangye','Lanzhou',"Chang'an",'Yangzhou','Baghdad','Nishapur'}
@@ -347,6 +348,7 @@ def fields_multi(img,geo,settle,seed=7,seasons=None,roads=None,forbid=None):
                 lon=W+px/ppx; lat=N-py/ppy
                 ev,rel=dem_at(lon,lat)
                 if ev<=e0+140 and rel<=90: flat[gy,gx]=1
+                elif ((px-cx)**2+(py-cy)**2)<(rpx*0.55)**2 and ev<=e0+220 and rel<=170: flat[gy,gx]=1   # QUILT v3.1b (Kris, Chach): the garden disc is levelled ground even where the DEM smears foothills over the town
         flat=cv2.resize(flat,(bw,bh),interpolation=cv2.INTER_NEAREST)
         # ---- desirability: near town, near road, near river; must be flat and dry ----
         yy,xx=np.mgrid[y0:y1,x0:x1]
@@ -390,6 +392,36 @@ def fields_multi(img,geo,settle,seed=7,seasons=None,roads=None,forbid=None):
         mask=cv2.morphologyEx(mask,cv2.MORPH_CLOSE,np.ones((5,5),np.uint8))
         mask=cv2.morphologyEx(mask,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))
         mask&=(1-water_wide[y0:y1,x0:x1])
+        # ---- QUILT v3.1 (Kris, the Chach bug): the docstring promised CONTIGUOUS and the greedy
+        # top-K never enforced it - a far riverbank could outscore the town's own edge and the quilt
+        # spawned detached. Keep components touching the town; a large detached block is not dropped
+        # but JOINED by a canal-side strip (the arik that would water it).
+        _cxl=int(cx-x0); _cyl=int(cy-y0)
+        _n,_cl=cv2.connectedComponents(mask,connectivity=8)
+        _win=_cl[max(0,_cyl-4):_cyl+5,max(0,_cxl-4):_cxl+5]
+        _tl=set(int(v) for v in np.unique(_win) if v>0)
+        if not _tl and mask.any():
+            _ys,_xs=np.nonzero(mask)
+            _j=int(np.argmin((_xs-_cxl)**2+(_ys-_cyl)**2))
+            cv2.line(mask,(_cxl,_cyl),(int(_xs[_j]),int(_ys[_j])),1,3)
+            _n,_cl=cv2.connectedComponents(mask,connectivity=8)
+            _win=_cl[max(0,_cyl-4):_cyl+5,max(0,_cxl-4):_cxl+5]
+            _tl=set(int(v) for v in np.unique(_win) if v>0)
+        if _tl:
+            _keep=np.isin(_cl,list(_tl))
+            _det=(mask>0)&~_keep
+            if _det.sum()>0.30*max(1,int(mask.sum())):
+                _n2,_c2,_st2,_ce2=cv2.connectedComponentsWithStats(_det.astype(np.uint8),connectivity=8)
+                if _n2>1:
+                    _big=1+int(np.argmax(_st2[1:,cv2.CC_STAT_AREA]))
+                    _bx,_by=_ce2[_big]
+                    _m2=(_keep|(_c2==_big)).astype(np.uint8)
+                    cv2.line(_m2,(_cxl,_cyl),(int(_bx),int(_by)),1,3)
+                    mask=_m2&(1-water_wide[y0:y1,x0:x1])
+                else:
+                    mask=_keep.astype(np.uint8)
+            else:
+                mask=_keep.astype(np.uint8)
         # ---- voronoi tessellation inside the mask ----
         kmpp2=(E-W)*111.0*math.cos(math.radians((S+N)/2))/w
         cell=max(3.5,6.0/kmpp2)   # UNIFORM ~6 km patches for every settlement (Kris) - acreage varies by EXTENT, not patch size
