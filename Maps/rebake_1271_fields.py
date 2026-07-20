@@ -61,8 +61,9 @@ SEAFED={'Constantinople':.45,'Kinsay':.5,'Zaiton':.4,'Yangzhou':.55,'Khanbaliq':
 # marsh (steppe); where we know specifics, an EPHEMERAL spring lake returns briefly. [W,E,S,N] boxes;
 # blue raster inside is recoloured BEFORE fields, so nothing farms toward a lake that is not there.
 ANACHRON=[
- {'name':'Aydar/Arnasay (1969 Chardara overflow)','box':[65.6,68.45,40.35,41.25],'kind':'saltpan',
-  'ephemeral':{'box':[67.55,68.4,40.4,40.95],'seasons':['spring'],'col':(148,170,180)}},
+ {'name':'Aydar/Arnasay (1969 Chardara overflow)','box':[65.6,68.1,40.35,41.08],'kind':'saltpan',   # box TRIMMED (Kris): it over-reached NE and salt-panned the Syr at Shardara
+  'ephemeral':{'box':[67.55,68.1,40.4,40.95],'seasons':['spring'],'col':(148,170,180)}},
+ {'name':'Shardara reservoir (1965, Syr)','box':[67.88,68.52,41.0,41.28],'kind':'marsh'},
  {'name':'Kayrakkum reservoir (1956)','box':[69.25,70.05,40.22,40.42],'kind':'marsh'},
  {'name':'Keban+Karakaya reservoirs (1970s, Euphrates)','box':[38.3,41.3,38.2,39.3],'kind':'marsh'},
  {'name':'Lake Assad (1970s, Euphrates)','box':[37.85,38.65,35.75,36.15],'kind':'saltpan'},
@@ -394,36 +395,9 @@ def fields_multi(img,geo,settle,seed=7,seasons=None,roads=None,forbid=None):
         mask=cv2.morphologyEx(mask,cv2.MORPH_CLOSE,np.ones((5,5),np.uint8))
         mask=cv2.morphologyEx(mask,cv2.MORPH_OPEN,np.ones((3,3),np.uint8))
         mask&=(1-water_wide[y0:y1,x0:x1])
-        # ---- QUILT v3.1 (Kris, the Chach bug): the docstring promised CONTIGUOUS and the greedy
-        # top-K never enforced it - a far riverbank could outscore the town's own edge and the quilt
-        # spawned detached. Keep components touching the town; a large detached block is not dropped
-        # but JOINED by a canal-side strip (the arik that would water it).
-        _cxl=int(cx-x0); _cyl=int(cy-y0)
-        _n,_cl=cv2.connectedComponents(mask,connectivity=8)
-        _win=_cl[max(0,_cyl-4):_cyl+5,max(0,_cxl-4):_cxl+5]
-        _tl=set(int(v) for v in np.unique(_win) if v>0)
-        if not _tl and mask.any():
-            _ys,_xs=np.nonzero(mask)
-            _j=int(np.argmin((_xs-_cxl)**2+(_ys-_cyl)**2))
-            cv2.line(mask,(_cxl,_cyl),(int(_xs[_j]),int(_ys[_j])),1,3)
-            _n,_cl=cv2.connectedComponents(mask,connectivity=8)
-            _win=_cl[max(0,_cyl-4):_cyl+5,max(0,_cxl-4):_cxl+5]
-            _tl=set(int(v) for v in np.unique(_win) if v>0)
-        if _tl:
-            _keep=np.isin(_cl,list(_tl))
-            _det=(mask>0)&~_keep
-            if _det.sum()>0.30*max(1,int(mask.sum())):
-                _n2,_c2,_st2,_ce2=cv2.connectedComponentsWithStats(_det.astype(np.uint8),connectivity=8)
-                if _n2>1:
-                    _big=1+int(np.argmax(_st2[1:,cv2.CC_STAT_AREA]))
-                    _bx,_by=_ce2[_big]
-                    _m2=(_keep|(_c2==_big)).astype(np.uint8)
-                    cv2.line(_m2,(_cxl,_cyl),(int(_bx),int(_by)),1,3)
-                    mask=_m2&(1-water_wide[y0:y1,x0:x1])
-                else:
-                    mask=_keep.astype(np.uint8)
-            else:
-                mask=_keep.astype(np.uint8)
+        # ---- QUILT v3.2 (Kris's ruling, 7/19): fields need NOT be contiguous - a town may farm
+        # several nearby flats, disconnected as the land dictates. The v3.1 town-join machinery and
+        # its arik connector are retired; every component the flat-ground search found is kept.
         # ---- voronoi tessellation inside the mask ----
         kmpp2=(E-W)*111.0*math.cos(math.radians((S+N)/2))/w
         cell=max(3.5,6.0/kmpp2)   # UNIFORM ~6 km patches for every settlement (Kris) - acreage varies by EXTENT, not patch size
