@@ -135,7 +135,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='3.2.1'; const BUILD='0721.0005'; /* build-stamp: version ghosts shall not pass */
+const VERSION='3.2.2'; const BUILD='0721.0035'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -3161,15 +3161,23 @@ function recordRun(outcome){
 const BOARD_VIEWS=[['all','All-time'],['caravan','Caravan'],['humble','Humble'],['fastest','Fastest return'],['recent','Most recent'],['era1271','1271']];
 let BOARD_VIEW='all';
 function setBoardView(v){ BOARD_VIEW=v; if($('board'))renderBoardInto($('board')); }
+function fairTop(list,n,cmp){ /* Kris: one player's flood may push others DOWN the plaques, never OFF them - every merchant's best line is guaranteed a nail in the wall */
+  cmp=cmp||function(a,b){return (b.score||0)-(a.score||0);};
+  var sorted=list.slice().sort(cmp);
+  var seen={},first=[],rest=[];
+  sorted.forEach(function(e){ var k=(e&&e.name)||'?'; if(!seen[k]){ seen[k]=1; first.push(e); } else rest.push(e); });
+  var out=first.slice(0,n);
+  for(var i=0;i<rest.length&&out.length<n;i++) out.push(rest[i]);
+  return out.sort(cmp); }
 function renderBoardInto(el){
   const all=(LEADERBOARD||[]).slice();
   const tabs='<div style="margin-bottom:8px">'+BOARD_VIEWS.map(function(t){ return '<button class="tiny'+(BOARD_VIEW===t[0]?' seal':'')+'" onclick="setBoardView(\''+t[0]+'\')">'+t[1]+'</button>'; }).join(' ')+'</div>';
   const estHead='<tr><th>#</th><th>Merchant</th><th style="text-align:right">Estate</th><th style="text-align:right">Days</th><th class="sub">Ver</th><th>Fate</th></tr>';
   const fastHead='<tr><th>#</th><th>Merchant</th><th style="text-align:right">Days</th><th style="text-align:right">Estate</th><th>Route</th></tr>';
   let head=estHead, list, fast=false;
-  if(BOARD_VIEW==='fastest'){ fast=true; head=fastHead; list=all.filter(function(e){return e.roundtrip&&e.days;}).sort(function(a,b){return a.days-b.days;}).slice(0,3); }
+  if(BOARD_VIEW==='fastest'){ fast=true; head=fastHead; list=fairTop(all.filter(function(e){return e.roundtrip&&e.days;}),3,function(a,b){return a.days-b.days;}); }
   else if(BOARD_VIEW==='recent'){ list=all.slice().sort(function(a,b){return (b.when||0)-(a.when||0);}).slice(0,3); }
-  else { list=all.slice(); if(BOARD_VIEW==='caravan')list=list.filter(function(e){return e.mode!=='donkey'&&!/\[1271\]/.test(e.outcome||'');}); else if(BOARD_VIEW==='humble')list=list.filter(function(e){return e.mode==='donkey'&&!/\[1271\]/.test(e.outcome||'');}); else if(BOARD_VIEW==='era1271')list=list.filter(function(e){return /\[1271\]/.test(e.outcome||'');}); list.sort(function(a,b){return b.score-a.score;}); list=list.slice(0,10); }
+  else { list=all.slice(); if(BOARD_VIEW==='caravan')list=list.filter(function(e){return e.mode!=='donkey'&&!/\[1271\]/.test(e.outcome||'');}); else if(BOARD_VIEW==='humble')list=list.filter(function(e){return e.mode==='donkey'&&!/\[1271\]/.test(e.outcome||'');}); else if(BOARD_VIEW==='era1271')list=list.filter(function(e){return /\[1271\]/.test(e.outcome||'');}); list=fairTop(list,10); }
   let body;
   if(!list.length){ body='<p class="sub">No ventures of this kind recorded yet.</p>'; }
   else if(fast){ body='<table>'+head+list.map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td class="num gold">'+e.days+'</td><td class="num">'+e.score+'</td><td class="sub">'+(e.route&&e.route!=='-'?(e.route==='N'?'northern':'southern'):'—')+'</td></tr>'; }).join('')+'</table>'; }
