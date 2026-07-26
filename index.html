@@ -137,7 +137,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='3.2.68'; const BUILD='0726.2132'; /* build-stamp: version ghosts shall not pass */
+const VERSION='3.2.78'; const BUILD='0726.2304'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -1497,8 +1497,8 @@ function feverStrike(p){
     if(!S.pendingEvent) S.pendingEvent={h:'THE COAST FEVER', t:t1, ch:[{l:'Rise, carefully',f:function(){}}]};
     log('You take the coast fever, and survive it \u2014 seasoned now.'); return;
   }
-  var lethal=(rnd()<0.62);
-  var dmg2=35+ri(30); p.hp=clamp((p.hp!=null?p.hp:100)-dmg2,0,100);
+  var lethal=(rnd()<0.45);
+  var dmg2=30+ri(26); p.hp=clamp((p.hp!=null?p.hp:100)-dmg2,0,100);
   if(lethal || p.hp<=0){
     p.alive=false; noteDeath(p,'the coast fever');
     var t2=p.name+", "+p.role+", takes the fever of the coast \u2014 the burning, the shaking, the sweats that soak a bedroll through. For two days the company takes turns at the wet cloths. On the third morning "+p.name+" does not wake. The harbour-folk are kind about it, in the way of people with a full burying-ground: strangers, they say, should not linger on this shore.";
@@ -1512,6 +1512,7 @@ function feverStrike(p){
 }
 function tropicFeverTick(){
   if(!S || !S.seaMode || !S.portName || !TROPICAL_PORTS.has(S.portName)) return;
+  if(S.voy||S.sail||S.voyaging||S.sailing) return; /* Fadak: fever comes of LINGERING at the tropical shore, not of sailing toward it — a passage booked for Kollam must not fever the ship while it still lies in the Gulf off Basra */
   var dh=S.day-(S.hereSince!=null?S.hereSince:S.day);
   if(dh===3){ var wk='_tropWarn'+S.portName; if(!S.onceFlags[wk]){ S.onceFlags[wk]=true; if(!S.pendingEvent){ S.pendingEvent=evTropicWarn(); } return; } }
   if(dh<4) return;
@@ -3145,9 +3146,24 @@ function foodShortageEvent(c){ var m=monthNum(); var rodent=(m>=9||m<=2);
     ch:[{l:'See what the bazaar will bear',f(){}}] }; }
 function maybeFoodShortage(c){ if(!c||S.seaMode||c.silent)return; if(!S.shortage)S.shortage={}; var nm=c.name; var prev=S.shortage[nm];
   if(prev!=null && (S.day-prev)<330) return; if(rnd()<0.05){ S.shortage[nm]=S.day; S.pendingEvent=foodShortageEvent(c); } }
+function provisionLine(nm){
+  var RICE=new Set(['Kinsay','Zaiton','Yangzhou','Guangzhou','Kauthara','Palembang','Mantai','Kollam']);
+  var NCHINA=new Set(['Khanbaliq','Xanadu','Tenduc',"Chang'an",'Luoyang','Taiyuan','Ningxia','Lanzhou','Wuwei','Zhangye','Jiuquan','Etzina','Karakorum']);
+  var OASIS=new Set(['Dunhuang','Hami','Turfan','Kucha','Aksu','Kashgar','Yarkand','Khotan','Miran','Lop','Charchan','Beshbalik','Suyab','Talas','Ispijab']);
+  var ARABIA=new Set(['Mecca','Medina','Yamama','Aden','Dhofar','Hormuz','Basra','Qulzum','Aylah','Najran','Shibam','Fustat','Socotra','Zanzibar','Gaza']);
+  var MED=new Set(['Venice','Ragusa','Candia','Gortyn','Constantinople','Acre','Jerusalem','Alexandria','Ayas','Sivas','Aleppo','Damascus','Iconium','Ephesus','Trebizond','Antioch']);
+  var STEPPE=new Set(['Sarai','Tana','Soldaia','Otrar','Almaliq','Urgench','Mangyshlak','Saraichik','Ukek','Bolghar','Oleshye','Kiev','Chach']);
+  if(RICE.has(nm))   return 'rice, salt fish, dried greens, and the cook’s optimism';
+  if(NCHINA.has(nm)) return 'millet and wheat-flour, dried mutton, and the cook’s optimism';
+  if(OASIS.has(nm))  return 'flat bread, dried mutton, raisins and dried melon, and the cook’s optimism';
+  if(ARABIA.has(nm)) return 'dates, dried fish, flatbread, and the cook’s optimism';
+  if(MED.has(nm))    return 'wheat bread, olives, hard cheese, salt fish, and the cook’s optimism';
+  if(STEPPE.has(nm)) return 'millet, dried curd, strips of wind-dried meat, and the cook’s optimism';
+  return 'flat wheat-bread, dried mutton, and the cook’s optimism'; /* Persia & the Silk Road heartland */
+}
 function buyFood(){ if(typeof foodShort==='function' && foodShort()!=null){ log('Famine grips '+((city()||{}).name||'the town')+' — there are no cheap provisions to be had; what grain there is comes dear, through the bazaar.'); render(); return; }
   if(S.silver<10){log("Not enough silver for provisions.");render();return;}
-  S.silver-=10;S.food+=30;townCredit(city(),10);log("Provisions laid in: a month of grain, dried mutton, and the cook's optimism."); render();
+  S.silver-=10;S.food+=30;townCredit(city(),10);log("Provisions laid in: a month of "+provisionLine((city()||{}).name||'')+"."); render();
 }
 function donateFood(){ if(!S)return; if(cargoW()<=cargoCap()){ render(); return; } var d=0; while(S.food>0 && cargoW()>cargoCap()){ S.food--; d++; } log("You give "+d+" unit"+(d!==1?'s':'')+" of food to the poor of "+((city()||{}).name||'the town')+" \u2014 more than the beasts can bear, and a kindness besides."); render(); }
 function waitDays(n){ // pass days in a city; stop early if provisions run out so no one starves unseen
@@ -4017,6 +4033,7 @@ function tavernEvent(){
   const flavour=(c.name==='Akhsikath')?"A communal cauldron of osh — rice, mutton, carrots, and onions — goes round, and is not refused.":(c.name==='Dhofar')?"An old camel-master, asked why no caravan strikes north across the sands for the Yamama, laughs without mirth: 'That is the Rub' al-Khali, boy \u2014 the Empty Quarter. No man crosses it and returns; the sands there drink whole tribes. We go around \u2014 west by the incense road, or by sea \u2014 as God intended.'":(c.name==='Rey')?"A farmer in from the nearby village of Tehran nurses one cup all evening, grumbling that the city's prices are robbery and its people worse.":(c.name==='Constantinople'||c.name==='Iconium')?"In a corner two men argue in low voices over whether the holy images are idols to be smashed or windows onto heaven — the Emperor's quarrel, and not a safe one to be overheard taking a side in.":pick(["Dice rattle in the corner.","Someone is singing, badly, in a language no one admits to knowing.","A communal pot of something goes round, and is not refused.","Two traders argue over a price that concerns neither of them."]);
   const scene=(c.name==='Qulzum')?("Asking around for the local place to hear the news, a man in tan desert robes reluctantly recommends a tavern called Mos Eisley \u2014 though he cautions it is, in his estimation, a wretched hive of scum and villainy. "+cup+monsoonTavernGossip()):(c.name==='Samarkand')?(cup+"The caravanserai in Samarkand is the Qlodserai \u2014 adobe walls the colour of dried honey, a fountain in the courtyard long since gone to a still green pool, and travellers beneath the colonnade who seem unsure what year it is, or whether that matters. "+flavour+monsoonTavernGossip()):(cup+"The tavern in "+cityLabel(c)+" is "+tav+". "+flavour+monsoonTavernGossip());
   const rumor=pickRumor();
+  if(c.name==='Soldaia' && (S&&S.era)==='1271' && !S.onceFlags.marcoVecchio && typeof marcoVecchioTavern==='function'){ S.onceFlags.marcoVecchio=true; return marcoVecchioTavern(scene); }
   let recruit;
   if(S.job){ recruit=rollRecruit(c.name); if(recruit&&((S.fallen&&S.fallen.indexOf(recruit.name)>=0)||S.party.some(function(p){return p.name===recruit.name;}))) recruit=null; }
   else if(S.lucky && c.name===homeName() && !S.onceFlags.nephewMet && !S.party.some(p=>p.nephew&&p.alive)){
@@ -4030,8 +4047,6 @@ function tavernEvent(){
     return conanTavern(scene);
   } else if(c.name==='Andijan' && (S&&S.era)==='1271' && !S.party.some(p=>p.name==='Roshanak'&&p.alive) && !S.onceFlags.andijanHerb && (livingParty().some(p=>p.id==='abaskunson') || livingParty().some(p=>p.nephew&&p.alive))){
     S.onceFlags.andijanHerb=true; return andijanHerbTavern(scene, livingParty().some(p=>p.id==='abaskunson')?'sohrab':'nephew');
-  } else if(c.name==='Soldaia' && (S&&S.era)==='1271' && !S.onceFlags.marcoVecchio){
-    S.onceFlags.marcoVecchio=true; return marcoVecchioTavern(scene);
   } else if(c.name==='Ragusa' && (S&&S.era)==='1271' && !S.onceFlags.beeMet && !S.party.some(function(p){return p.name==='Mira'&&p.alive;}) && !(S.fallen&&S.fallen.indexOf('Mira')>=0) && (S.wasBeekeeper || rnd() < (function(){var n=livingParty().filter(function(p){return p.kind!=='guard';}).length; return n>=4?0.10:n===3?0.33:n===2?0.50:n===1?0.65:0.90;})())){
     S.onceFlags.beeMet=true; return beekeeperTavern(scene, !!S.wasBeekeeper);
   } else {
@@ -4172,17 +4187,18 @@ function pirateVessel(){
 function hullMult(){ return (S&&S.era==='1271')?1:2; }  /* boat-building improves: sewn hulls and square rigs of 762 wreck at twice the rate of the 1271 nave/junk (Kris) */
 function winterStormMult(terr){ const m=gameDate().m; let w=1; if([12,1,2].indexOf(m)>=0)w=2.4; else if([11,3].indexOf(m)>=0)w=1.6; if(terr==='med'&&w>1)w*=1.3; return w; }
 function captainTongue(){ const nm=(S.voy?S.voy.to:S.portName); const o=(typeof SEA_ORDER!=='undefined')?SEA_ORDER[nm]:null; if(o==null||o>=11)return 'Greek'; if(o<=4)return 'Malay'; if(o<=5)return 'Tamil'; return 'Arabic'; }
+function seaHeatMult(){ if(!S)return 1; var m=1; if(S.tollDodge && S.day<=S.tollDodge)m*=2; if(S.banditVengeance && S.day<=S.banditVengeance)m*=1.2; if(S.saleHeatUntil && S.day<=S.saleHeatUntil)m*=(1+(S.saleHeatBonus||0)); return m; }
 function evPirates(){
   const reg = S.sail ? seaLeg((S.sail.total-S.sail.daysLeft)/S.sail.total, S.sail.target) : 'the Eastern Mediterranean';
   const marmara=/Marmara/.test(reg);
   const demand=Math.max(20,Math.min(Math.round((typeof estateWorth==='function'?estateWorth():S.silver)*.10),800));
   let pirates=6+ri(5)+(S.banditMod||0); pirates=Math.max(1,pirates); // 1d5+5, then reputation: won fights swell the muster, surrenders draw it down
-  var crew=(S.seaCrew==null?5:S.seaCrew); var mine=1+livingComps()+crew; const str=combatStrength()+crew; // you, your people, and the ship's crew
+  var crew=(S.seaCrew==null?5:S.seaCrew); var _dl=defendersLine(crew); var mine=_dl.mine; const str=combatStrength()+crew; // you, your people, and the ship's crew
   const odds = str>=pirates*2 ? 'You could scatter them' : str>=pirates ? 'It would be a near thing' : 'You are badly outmatched';
   const desc = pirates<=2
     ? ("An oared rowboat darts out from a cove, "+(pirates===1?"a lone sea-robber":"a pair of sea-robbers")+" in it with more confidence than sense")
     : (cap1(pirateVessel())+" runs out from a headland, perhaps "+pirates+" armed men crowding her rail");
-  return {h:'PIRATES', t:desc+". They lay alongside \u2014 perhaps "+pirates+" of them against the "+mine+" aboard your ship (you, "+livingComps()+" of your company, and "+crew+" of the ship\u2019s crew). There is no hailing them and no toll to buy them off \u2014 they mean to have the ship and all in it. "+odds+".",
+  return {h:'PIRATES', t:desc+". They lay alongside \u2014 perhaps "+pirates+" of them against the "+mine+" aboard your ship ("+_dl.txt+"). There is no hailing them and no toll to buy them off \u2014 they mean to have the ship and all in it. "+odds+".",
    ch:[
     {l:'Surrender the cargo',f(){ const mine=S.silver>0||GOODS.some(g=>S.goods[g.id]>0); if(!mine){ S.pendingEvent=piratesJoinOffer(); return; } for(const g of GOODS){ S.goods[g.id]=Math.round((S.goods[g.id]||0)*0.10); if(S.goods[g.id]<=0)S.basis[g.id]=0; } S.silver=Math.round(S.silver*0.10); var _lost=stripGear(); banditRep(1.05,-1); log("You give up the hold without a fight. The pirates strip the ship and take the arms from your people\u2019s hands"+(_lost.length?" ("+_lost.join(', ')+" gone)":"")+", leaving only the tenth you hid in the bilges. Poorer, lighter, and alive."); }},
     {l:'Fight them off',f(){ const _cacheS=Math.round(S.silver), _cacheG=Object.assign({},S.goods); enterBattle({n:pirates, sea:true, cache:{silver:_cacheS,goods:_cacheG}}); }},
@@ -4194,12 +4210,12 @@ function isCaspianVoy(){ return !!(S&&S.voy&&CASPIAN_PORTS.has(S.voy.from)&&CASP
 function evCaspianRus(){
   const demand=Math.max(20,Math.min(Math.round((typeof estateWorth==='function'?estateWorth():S.silver)*.10),800));
   let raiders=6+ri(5)+(S.banditMod||0); raiders=Math.max(1,raiders);
-  var crew=(S.seaCrew==null?5:S.seaCrew); var mine=1+livingComps()+crew; const str=combatStrength()+crew;
+  var crew=(S.seaCrew==null?5:S.seaCrew); var _dl=defendersLine(crew); var mine=_dl.mine; const str=combatStrength()+crew;
   const odds = str>=raiders*2 ? 'You could scatter them' : str>=raiders ? 'It would be a near thing' : 'You are badly outmatched';
   const desc = raiders<=2
     ? ("A single lean longship slips out of a reed-choked inlet, "+(raiders===1?"one fair-haired northman":"a pair of fair-haired northmen")+" at the oars with more daring than sense")
     : ("A long, low ship runs out from behind a spit of reed and sand — a striped sail coming down, oars biting the water in time. Rus, off the Volga, shields ranked along her rail and perhaps "+raiders+" fair-haired northmen crowding her; they have rowed the length of the river to plunder this sea, and the walled strand-towns of the coast keep their beacons lit for exactly this");
-  return {h:'<span class="red">RUS LONGSHIPS</span>', t:desc+". They lay alongside — perhaps "+raiders+" of them against the "+mine+" aboard your ship (you, "+livingComps()+" of your company, and "+crew+" of the ship’s crew). There is no parley across that water \u2014 they have come to take the ship and all in it. "+odds+".",
+  return {h:'<span class="red">RUS LONGSHIPS</span>', t:desc+". They lay alongside — perhaps "+raiders+" of them against the "+mine+" aboard your ship ("+_dl.txt+"). There is no parley across that water \u2014 they have come to take the ship and all in it. "+odds+".",
    ch:[
     {l:'Surrender the cargo',f(){ const has=S.silver>0||GOODS.some(g=>S.goods[g.id]>0); if(!has){ S.pendingEvent=piratesJoinOffer(); return; } for(const g of GOODS){ S.goods[g.id]=Math.round((S.goods[g.id]||0)*0.10); if(S.goods[g.id]<=0)S.basis[g.id]=0; } S.silver=Math.round(S.silver*0.10); var _lost=stripGear(); banditRep(1.05,-1); log("You give up the hold without a fight. The Rus strip the ship and take the iron from your people’s hands"+(_lost.length?" ("+_lost.join(', ')+" gone)":"")+", leaving only the tenth hidden in the bilges. Poorer, lighter, and alive."); }},
     {l:'Fight them off',f(){ const _cS=Math.round(S.silver), _cG=Object.assign({},S.goods); enterBattle({n:raiders, sea:true, cache:{silver:_cS,goods:_cG}}); }},
@@ -4232,6 +4248,7 @@ function ssIn(p,ports){ var v=ssOf(p); if(p&&p.pilotOf&&ports&&ports.length&&por
 function bestSS(){ var ports=voyPorts(); var b=youSSv(); livingParty().forEach(function(p){ var v=ssIn(p,ports); if(v>b)b=v; }); return b; }
 function hasPilot(){ return !!(S && (youSSv()>=12 || livingParty().some(function(p){return ssOf(p)>=12;}))); }
 function seaSalts(){ return (S&&S.party)?livingParty().filter(function(p){return ssOf(p)>=12;}).length:0; }
+function defendersLine(crew){ if(crew==null)crew=(S&&S.seaCrew!=null)?S.seaCrew:5; var comps=(typeof livingComps==='function')?livingComps():0; if(S&&S.voy&&S.voy.crewJob){ var mates=Math.max(0,crew-1); return {mine:comps+crew, txt:'you and your '+mates+' crewmate'+(mates===1?'':'s')+(comps?' and '+comps+' of your company':'')}; } return {mine:1+comps+crew, txt:'you, '+comps+' of your company, and '+crew+' of the ship’s crew'}; }
 function sailorsAboard(){ var crew=(S&&S.seaCrew!=null)?S.seaCrew:5; return crew+seaSalts()+((youSSv()>=12)?1:0); }
 /* SS TRAINING (Kris's calibration): a passenger at SS4 makes ~1 point in 30 days at sea; if the ship is
    SHORTHANDED (fewer than 5 sailors = crew + SS>=12 souls) it's all hands to the sheets: ~1 point in 14
@@ -5873,7 +5890,7 @@ function stepSail(){
   const wreckP=(S.sail.winter?0.035:0.009)*hullMult()*crewWreckMult();  /* era hull tech: x2 in 762, x1 in 1271 — consistent with the voyage system */
   if(rnd()<wreckP){ S.sailing=false; clearSail(); S.pendingEvent=evShipwreck(); render(); return; }
   if(rnd()<(hasPilot()?0.054:0.06)){ S.sailing=false; clearSail(); S.pendingEvent=evSeaWinds(); render(); return; }
-  { const _r=seaLeg(_p,S.sail.target); let _pp=(/Eastern Med/.test(_r)?0.016:/Aegean/.test(_r)?0.009:0.004)*(S.banditFreq||1) /* recalibrated (Kris): pirates are bad LUCK, not a toll */; _pp*=wealthLure();  if(rnd()<_pp){ S.sailing=false; clearSail(); S.pendingEvent=evPirates(); render(); return; } }
+  { const _r=seaLeg(_p,S.sail.target); let _pp=(/Eastern Med/.test(_r)?0.016:/Aegean/.test(_r)?0.009:0.004)*(S.banditFreq||1) /* recalibrated (Kris): pirates are bad LUCK, not a toll */; _pp*=wealthLure(); _pp*=seaHeatMult();  if(rnd()<_pp){ S.sailing=false; clearSail(); S.pendingEvent=evPirates(); render(); return; } }
   updateSail();
 }
 function updateSail(){ if(!S||!S.sail)return; renderStats(); renderLog();
@@ -5908,7 +5925,7 @@ function skipSail(){
     const wreckP=(S.sail.winter?0.035:0.009)*hullMult()*crewWreckMult();  /* era hull tech: x2 in 762, x1 in 1271 — consistent with the voyage system */
     if(rnd()<wreckP){ S.pendingEvent=evShipwreck(); render(); return; }
     if(rnd()<(hasPilot()?0.054:0.06)){ S.pendingEvent=evSeaWinds(); render(); return; }
-    { const _r=seaLeg(_p,S.sail.target); let _pp=(/Eastern Med/.test(_r)?0.016:/Aegean/.test(_r)?0.009:0.004)*(S.banditFreq||1) /* recalibrated (Kris): pirates are bad LUCK, not a toll */; _pp*=wealthLure();  if(rnd()<_pp){ S.pendingEvent=evPirates(); render(); return; } }
+    { const _r=seaLeg(_p,S.sail.target); let _pp=(/Eastern Med/.test(_r)?0.016:/Aegean/.test(_r)?0.009:0.004)*(S.banditFreq||1) /* recalibrated (Kris): pirates are bad LUCK, not a toll */; _pp*=wealthLure(); _pp*=seaHeatMult();  if(rnd()<_pp){ S.pendingEvent=evPirates(); render(); return; } }
   }
   render();
 }
@@ -6810,7 +6827,8 @@ const POLO_TXT={
  'Erzurum':"You catch the Polos at the Erzurum customs-house, snow on the walls, paying the Ilkhan's dues with the ease of men who have paid stranger taxes farther east. The two friars who set out with them are GONE, Niccol\u00f2 tells you \u2014 fled home at the first hard weather, just as the caravan-masters foretold. The Pope's letters ride on without them, and no turning back in that family.",
  'Tabriz':"You find the Polos have made a season of Tabriz, lodged by the great bazaar. Maffeo pulls you to his table and holds forth half the night on the pearl trade \u2014 and, you are annoyed to concede, is not wrong. Young Marco is out: sent daily into the roofed miles of the market to learn prices, tongues and faces, his father says \u2014 the boy is taking a merchant's degree in it. They want the road ahead off you, and name it \u2014 Yazd, Kerman, perhaps the sea from Hormuz \u2014 with the calm of men who have done it before.",
  'Yazd':"The Polos pass through Yazd as you do \u2014 a courtyard serai, a night among the wind-towers. Marco asks the master of the house why the towers moan; the master says djinn; his father says draughts; Marco files both away, side by side, which is where he keeps everything.",
- 'Kerman':"You come on the Polos at Kerman, weighing the sea against the land with the seriousness of men who will wager their lives on the answer \u2014 and they want your read of it too. Young Marco you find in the saddlery quarter, learning what a proper girth is worth; the smiths have taken to him, for he asks the right questions.",
+ 'Kerman':"In the turquoise-dealers’ caravanserai at Kerman, among the camel-lines and the dust blown off the Lut, you are surprised to find the Polos — and they you. You fall to trading the tales of your two roads late into the evening, the grey brothers measuring your journey against their own with a shrewd, unhurried courtesy, and young Marco filling every silence with questions until you feel yourself quietly examined. Then Niccolò lays the real matter before you, for they have chewed on it for days and are honestly split: from Kerman the road to the Great Khan forks. South runs the track to Hormuz and the open sea — a monsoon passage to Cathay, swift beyond any caravan’s dreams if the winds and God allow, and a wager on stitched hulls, pirates and fever if they do not. Against it stands the whole width of the land — north and east through Khorasan, ruined Balkh, Badakhshan of the rubies, and over the Roof of the World by the Pamir, a year and more of mountain, waste and cold, but every mile of it on ground a man can stand on. ‘You have come a long way to be sitting at this fire,’ Maffeo says, and pushes the cup at you. ‘So say on — which would you trust?’",
+ '_kerman_return':"You cross the Polos at Kerman a second time — and a changed party. They have been down to Hormuz and back, and Niccolò’s verdict on the sea road is written in the set of his jaw: the ships there are stitched together with coconut-cord and a prayer, not a nail in the whole hull, and he would sooner walk to Cathay than hand the Pope’s letters to the monsoon in one. So walk they will — north for Khorasan and the passes, the long way, the sure way. Young Marco is oddly cheerful about it: the mountains, he has heard, are full of things worth the seeing.",
  'Hormuz':"You find the Polos on the blazing mole of Hormuz, staring at the sewn ships \u2014 planks stitched with coconut-cord, not a nail in them \u2014 and Niccol\u00f2 shakes his head once, slowly, like a magistrate passing sentence. They will NOT trust the Pope's letters to the monsoon in a boat held together with string. It is the long road north for them \u2014 Kerman again, Khorasan, the Roof of the World. History will turn on that head-shake, though none of you know it yet.",
  'Herat':"You rest with the Polos in the gardens of Herat, where Maffeo has opinions about the melons and shares them with you and the whole serai. The talk at their fire turns to the roads north \u2014 Balkh in its ruins, Badakhshan of the rubies, and the high cold country beyond, which even the caravan-masters discuss in a different voice.",
  'Balkh':"You come upon the Polos in broken Balkh, the boy standing in the ruined colonnades asking the names of fallen things \u2014 'and this? and this?' \u2014 while a delighted local greybeard resurrects the Mother of Cities one building at a time. His father lets him linger an hour. Then the road.",
@@ -6837,10 +6855,16 @@ function poloMeeting(nm){
     if(nm==='Yangzhou'&&gd.y>=1282&&gd.y<=1287) key='_yangzhou';
     else key=(gd.y<=1277)?'_court1':'_court2'; }
   var t=POLO_TXT[key]||POLO_TXT['_court1'];
+  if(key==='Kerman'){ var _postH=false; try{ for(var _ki=0;_ki<POLO_ITIN.length;_ki++){ if(POLO_ITIN[_ki][2]==='Hormuz' && S.day>POLO_ITIN[_ki][1]){ _postH=true; break; } } }catch(e){} if(_postH){ return {h:'THE POLOS', t:POLO_TXT['_kerman_return']||t, ch:[{l:'The road is long \u2014 good speed to us all',f:function(){}}]}; } return {h:'THE POLOS', t:t, ch:[
+    {l:'Urge them to the sea — Hormuz and the monsoon',f:function(){ log("You make the case for the water: a few weeks under sail against a year and more of marching. Niccolò hears you out, then allows only that they will go down and look the ships over. (Look he will — and shake his head at hulls sewn with coconut-cord — and take the long land road regardless; but that is not yours to know tonight.)"); }},
+    {l:'Urge them to the land — the passes and the Roof of the World',f:function(){ log("You make the case for solid ground and no monsoon to wait upon. Niccolò grunts agreement; young Marco is already at you for the particulars — which pass, how high, whether the air truly starves a man near the top. It is, though none of you say it aloud, the road they will take."); }},
+    {l:'Say you would not choose another man’s road for him',f:function(){ log("You will not weigh other men’s lives for them, you say, and they respect it. Maffeo laughs and fills your cup anyway. ‘A merchant’s answer,’ he says. ‘We shall have to be our own oracle.’"); }},
+  ]}; }
   return {h:'THE POLOS', t:t, ch:[{l:'The road is long \u2014 good speed to us all',f:function(){}}]};
 }
 function evPoloMissed(nm,daysAgo){
   var when=(daysAgo<=3)?'days ago':(daysAgo<=14)?'a week or two back':('some '+Math.round(daysAgo/7)+' weeks back');
+  if(nm==='Hormuz'){ return {h:'THE THREE VENETIANS', t:"You have missed them"+((daysAgo<=3)?' by a whisker':'')+" — the Hormuz mole still talks of it. The three Latins came down to take ship for Cathay "+when+", the harbour-men say, and stood a long while on the wharf staring at the stitched ships — planks sewn with coconut-cord, not a nail in the whole hull — and the elder of them shook his head, once, and would not set a foot aboard. They have turned back NORTH, for Kerman again and the long land road over the passes; they would sooner walk to the Great Khan than hand the Pope's letters to the monsoon in a boat held together with string. The chandlers here think them mad. History, though no one on this mole can know it, will think otherwise.", ch:[{l:'Onward',f:function(){}}]}; }
   var _wsea=(nm==='Candia'||nm==='Ragusa'||nm==='Constantinople'||nm==='Venice'||nm==='Acre');
   var _place=_wsea?"the waterfront":"the serai";
   var _tok=_wsea?"carrying a golden Tartar tablet whose worth none here can read":"under a golden paiza";
@@ -7021,7 +7045,7 @@ function stepVoy(){
     const wreckP=(S.voy.terr==='deep'?0.006:0.009)*hullMult()*crewWreckMult()*winterStormMult(S.voy.terr)*(S.voy.storm||1)*((typeof isAmberWaterLeg==='function'&&S.voy&&isAmberPlace(S.voy.from))?boatQualityMult():1);
     if(rnd()<wreckP){ S.voyaging=false; clearVoy(); S.pendingEvent=((typeof fleet==='function'&&fleet().length)?voyStormFleet():voyStorm()); render(); return; }
     if(rnd()<0.05){ S.voyaging=false; clearVoy(); S.pendingEvent=evSeaWinds(); render(); return; }
-    let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); if(S.voy.strait)pp*=2.8; pp*=wealthLure();
+    let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); if(S.voy.strait)pp*=2.8; pp*=wealthLure(); pp*=seaHeatMult(); if(typeof isCaspianVoy==='function'&&isCaspianVoy()&&((S&&S.era)==='1271'))pp*=1.6;
     if(rnd()<pp){ S.voyaging=false; clearVoy(); S.pendingEvent=(isCaspianVoy()?evCaspianRus():evPirates()); render(); return; }
   }
   updateVoy();
@@ -7572,7 +7596,7 @@ function skipVoy(){
       const wreckP=(S.voy.terr==='deep'?0.006:0.009)*hullMult()*crewWreckMult()*winterStormMult(S.voy.terr)*(S.voy.storm||1)*((typeof isAmberWaterLeg==='function'&&S.voy&&isAmberPlace(S.voy.from))?boatQualityMult():1);
       if(rnd()<wreckP){ S.pendingEvent=((typeof fleet==='function'&&fleet().length)?voyStormFleet():voyStorm()); render(); return; }
       if(rnd()<0.05){ S.pendingEvent=evSeaWinds(); render(); return; }
-      let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); if(S.voy.strait)pp*=2.8; pp*=wealthLure();
+      let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); if(S.voy.strait)pp*=2.8; pp*=wealthLure(); pp*=seaHeatMult(); if(typeof isCaspianVoy==='function'&&isCaspianVoy()&&((S&&S.era)==='1271'))pp*=1.6;
       if(rnd()<pp){ S.pendingEvent=evPirates(); render(); return; }
     }
   }
@@ -9204,7 +9228,7 @@ function cbSkillWord(s){ return s<=4?'unskilled':s<=7?'inexperienced':s<=10?'exp
 function cbQuarter(f){ var q=f.cHP/f.cMax; return q<=0?'down':q<=0.25?'failing':q<=0.5?'ailing':q<=0.75?'weary':'hale'; }
 
 function enterBattle(opts){
-  var sea=!!opts.sea; if(sea&&opts.n)opts.n+=5; /* pirate galleys crew heavy (Kris) */
+  var sea=!!opts.sea; /* the pirate/raider count already includes the galley crew (the +5 in the event roll); no hidden second +5 — what the event shows is what you fight (Fadak) */
   S.pendingEvent=null; S._inBattle=true; S._rt=null; /* the battle snapshot owns the road (v3.1.111); the resume-guard must not fight it */
   S.battle={ phase:'prep', sea:sea, n:opts.n, cache:opts.cache||null, grave:opts.grave||null,
     trav:{idx:S.idx, dir:S.dir, legKm:S.legKm, dashFrom:(S.dash&&S.dash.from)||null, dashTo:(S.dash&&S.dash.to)||null, itinRef:S.itin, dashRef:S.dash}, /* Kris's perennial post-battle teleport (Miran; the road to Rey): snapshot the road when steel is drawn, restore it when sheathed - whatever mangles it in between loses */
