@@ -39,7 +39,7 @@ SRC={
  'tea':(26,{'Kinsay':4,"Chang'an":5}),
  'musk':(150,{'Ningxia':22,'Khotan':26}),
  'jade':(55,{'Khotan':12}),
- 'pepper':(72,{'Kollam':40,'Zaiton':50,'Yarkand':52,'Balkh':60}),   # Fadak: +Yarkand (Karakoram/Leh tap) +Balkh (Kabul tap). On re-bake add a Med pepper route (e.g. Alexandria) or the overland tap over-reaches to Venice; Fadak hand-capped that in live RADIAL1271.
+ 'pepper':(72,{'Kollam':40,'Zaiton':50,'Yarkand':52,'Alexandria':58,'Balkh':60}),  # +Alexandria (the Karimi/Red Sea route) per the re-bake note - replaces Fadak's live hand-cap at Venice   # Fadak: +Yarkand (Karakoram/Leh tap) +Balkh (Kabul tap). On re-bake add a Med pepper route (e.g. Alexandria) or the overland tap over-reaches to Venice; Fadak hand-capped that in live RADIAL1271.
  'lapis':(55,{'Badakhshan':9}),
  'ruby':(200,{'Badakhshan':95}),   # Fadak: balas rubies (Kuh-i-Lal spinels, Polo's 'Balascia')
  'turq':(46,{'Nishapur':28}),
@@ -47,13 +47,13 @@ SRC={
  'coral':(135,{'Venice':30,'Candia':36}),
  'amber':(120,{'Venice':40,'Tana':42,'Sarai':46,'Caffa':48}),
  'wine':(78,{'Venice':12,'Candia':14,'Turfan':15,'Taiyuan':16}),
- 'pearls':(120,{'Hormuz':24,'Kollam':30}),
+ 'pearls':(120,{'Kish':18,'Hormuz':24,'Puttalam':24,'Kollam':30}),  # the Mannar banks - the other great fishery  # Kris/Oxus: Kish IS the pearl-banks - cheapest on earth at the source
  'ivory':(150,{'Kollam':62,'Hormuz':66}),   # steepened (Fadak C): flat fields let remote marts stock tropical luxuries
  'frank':(66,{'Hormuz':20,'Alexandria':22}),
  'indigo':(62,{'Kollam':44,'Hormuz':50}),
- 'cinn':(98,{'Kollam':56,'Zaiton':60}),
+ 'cinn':(98,{'Puttalam':44,'Kollam':56,'Zaiton':60}),  # Ceylon IS the cinnamon isle
  'wax':(46,{'Ragusa':26,'Caffa':28,'Tana':28}),
- 'nutmeg':(135,{'Zaiton':58,'Kollam':66}),
+ 'nutmeg':(135,{'Tumasik':54,'Zaiton':58,'Kollam':66}),  # the Strait entrepot sits nearest the spice islands
  'pelts':(90,{'Alexandria':52,'Hormuz':60}),
  'conut':(14,{'Kollam':10,'Kauthara':10}),
  'linen':(30,{'Alexandria':12,'Venice':18}),
@@ -63,7 +63,7 @@ SRC={
  'felt':(32,{'Almaliq':10,'Karakorum':10,'Sarai':12}),
  'naphtha':(74,{'Baghdad':9}),
  'asbestos':(232,{'Turfan':55,'Khotan':60}),
- 'dates':(40,{'Baghdad':8,'Hormuz':8,'Kerman':10}),
+ 'dates':(40,{'Basra':6,'Baghdad':8,'Hormuz':8,'Kerman':10}),  # Basra dates: the world's standard
  'saffron':(144,{'Nishapur':118,'Yazd':122}),
  'cotton':(44,{'Kashgar':10,'Khotan':11,'Yazd':12,'Kollam':12}),
  'porc':(160,{'Zaiton':30,'Kinsay':34}),
@@ -99,13 +99,13 @@ TESTS=[
  ('slaves','Alexandria',('Caffa','Tana')),   # Black Sea slaves to the Mamluks -- THE trade of the age
  ('slaves','Venice',('Caffa','Tana')),
  ('furs','Constantinople',('Caffa','Tana')),
- ('amber','Sarai',('Tana',)),                # Baltic amber down the Rus rivers
+ ('amber','Sarai',('Tana','Sarai')),  # Sarai is itself an anchor since the steppe-amber fix                # Baltic amber down the Rus rivers
  ('silk','Venice',('Tabriz','Kinsay',"Chang'an")),  # Gilan/China silk via Tabriz-Ayas
- ('pepper','Venice',('Kollam',)),
+ ('pepper','Venice',('Kollam','Alexandria')),  # the Med route IS Kollam pepper via the Karimi
  ('pepper','Khanbaliq',('Zaiton','Kollam')),
  ('jade','Khanbaliq',('Khotan',)),
  ('lapis','Tabriz',('Badakhshan',)),
- ('pearls','Tabriz',('Hormuz',)),
+ ('pearls','Tabriz',('Hormuz','Kish')),  # Kish pearls up the Gulf to the Ilkhan court - the better provenance
  ('porc','Tabriz',('Zaiton','Kinsay')),
  ('wine','Khanbaliq',('Taiyuan',)),
  ('dates','Tabriz',('Baghdad',)),
