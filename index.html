@@ -137,7 +137,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='3.2.86'; const BUILD='0727.2145'; /* build-stamp: version ghosts shall not pass */
+const VERSION='3.2.88'; const BUILD='0728.2001'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -1886,6 +1886,7 @@ function stepDay(){
   if(!S || S.screen!=='travel'){clearJourney();return;}
   if(typeof ensureLandFrame==='function')ensureLandFrame();
   if(typeof checkBigNewsRoad==='function'&&checkBigNewsRoad())return;
+  try{ var _sd=(S.dash&&((S.dir||1)>0?S.dash.to:S.dash.from)); if(_sd&&typeof siegeAt==='function'&&siegeAt(_sd)&&!S._siegeWarned){ var _p=(S.legKm||0)/(legDist()||1); if(_p>=0.55){ S._siegeWarned=true; S.journeying=false; clearJourney(); S.pendingEvent={h:'SMOKE ON THE HORIZON', t:'Refugees on the road tell it before you can see it: '+_sd+' is UNDER SIEGE \u2014 lines dug, fleets in the roads, the gates shut on both sides of the war. There is nothing for a caravan there but confiscation.', ch:[{l:'Turn back',f:function(){ S._siegeWarned=false; if(typeof turnBack==='function')turnBack(true); }}]}; render(); return; } } }catch(e){}
   if(S.pendingEvent){ S.journeying=false; clearJourney(); render(); return; } /* self-healing (Kris's freeze): if ANY code arms a dialog without rendering, the next tick stops the journey and SHOWS it instead of deadlocking */
   if(!S.journeying){clearJourney();return;}
   if(S.food < foodNeed() && (S.foodGrace||0)<=S.day){ // provisions gone — stop and let the player deal with it
@@ -2341,6 +2342,7 @@ function checkCompanionArcs(){ if(!S||S.era!=='1271'||S.screen!=='city')return n
     if(here==='Trebizond' && !S._beeTreb){ S._beeTreb=true; return {h:'THE MAD HONEY OF PONTUS', t:"Mira spends her Trebizond morning in the honey-market and comes back round-eyed. The bees of this coast work the wild rhododendron that cloaks the Pontic hills, and their honey — deli bal, the locals call it, the mad honey — comes out faintly green and faintly dangerous: a spoonful sweetens a cup, but three will lay a strong man on his back with his head reeling and his heart gone slow and heavy. “They tell a tale here,” she says, turning a sealed pot in her hands like a live scorpion, “of a whole army of the old Greeks that camped in these hills and ate the wild combs, and fell down as though poisoned or drunk, every man of them, and could not stand again till the next day.” She buys a very little, and marks the pot with a cross so no one sweetens a cup by mistake.", ch:[{l:'Seal it well away',f:function(){}}]}; }
     if(here==='Badakhshan' && !S._beeBadak){ S._beeBadak=true; return {h:'THE GIANT BEES OF THE CLIFFS', t:"In Badakhshan Mira falls in with the honey-hunters who work the valleys running south toward the Indus lands, and what they tell her lights her up and frustrates her in the same breath. Down in the warm river-country and its foothills — not so very far south of here — there lives a giant bee, tawny and half again the size of any she has kept, that hangs a single great comb in the open from a high bough or a rock-face; and deeper still, in the wet gorges under the tallest snow-mountains on earth, a greater kind yet, that men take on swaying rope-ladders through the smoke, cutting the combs from sheer cliffs. The nearer giant, they say, creeps up the valleys almost to the foot of these very mountains — but not across them: here on the cold dry roof of the world Mira finds only the ordinary brown mountain bee. “One of them is a few days south of me,” she says, gazing down the valleys, “and it may as well be on the moon.”", ch:[{l:'Let her have her wondering',f:function(){}}]}; }
     if(here==='Dunhuang' && !S._beeCerana){ S._beeCerana=true; return {h:'AN EASTERN BEE', t:"Somewhere past the last oasis of the desert Mira notices it and then cannot stop noticing it: the bees here are not her bees. They are smaller, darker, quicker to sting and far quicker to abandon a nest and fly, and they will have nothing to do with the straw skeps she knows — they take to hollow trees and clefts in the rock, and the people gather their honey half by robbery, in the old wild way. “A cousin of mine, this bee,” she decides, watching a swarm pour into a crack in the cliff, “but a stranger for all its kinship — an eastern bee, for an eastern world.” It seems, oddly, to settle her: even here at the doorstep of Cathay, bees are still only bees.", ch:[{l:'Leave her to her wonder',f:function(){}}]}; }
+    if(here==='Taiyuan' && !S._beeMite){ S._beeMite=true; return {h:'A SMALL RED MITE', t:"A beekeeper of the Taiyuan hills, hearing there is a foreign bee-woman with the caravan, will not rest until Mira has come to see his hives — the small dark eastern bees she has met before, worked here in hollow logs and wicker skeps. She admires the combs, and the sting-toughened old man who keeps them; and then, turning a frame of capped brood up to the light, she stops. On some of the pale pupae, where the young bees sleep sealed in their cells, rides a little flat mite — red-brown, glossy, no bigger than a pinhead. The old keeper only shrugs: his bees have always carried the things, he says, and thrive well enough regardless. Mira frowns at it a while, turning the frame this way and that, then hands it back. “Huh,” she says. “But it’s probably nothing.”", ch:[{l:'Probably nothing',f:function(){}}]}; } /* Fadak: the small red mite is Varroa. Local A. cerana carry it benignly (co-evolved); it is A. mellifera — Mira's own bees — that it will one day destroy. Techer et al. 2021 (Sci Rep) Suppl. TableS1 site CHN03: a Korea-K1 lineage V. destructor at an apiary in Jinzhong/Yuci, Shanxi, 37.70N 112.71E — Taiyuan's doorstep. A quiet Easter egg; leave it un-explained. */
   }
   var haveR=has('Roshanak'), haveS=has('Sohrab');
   if(haveR&&haveS && (here===goalName()||here===homeName())) S.loveHubReached=true;
@@ -3026,6 +3028,15 @@ const BIGNEWS=[
  {id:'linan', src:'Kinsay', date:[1276,2,4],
   full:"LIN'AN HAS SURRENDERED. The greatest city in the world opened its gates without a fight; the Dowager Empress handed over the dynastic seal, and the boy emperor rides north in a cart to bow to the Khan. Bayan's soldiers walk the Imperial Way staring like farmhands. An empire of three centuries, ended with a seal and a signature.",
   headline:"Great news out of Cathay: the Song capital has surrendered to the Great Khan; the child emperor is taken. The war is all but done."},
+ {id:'yangzhoufall', src:'Khanbaliq', date:[1276,8,20],
+  full:"YANGZHOU HAS FALLEN \u2014 half a year after the capital itself gave up. Li Tingzhi held the walls past all reason and past all hope; they say he asked to die and was obliged. The river road between north and south is open for the first time in living memory.",
+  headline:"From Cathay: the last stronghold on the great river has fallen; the Khan's writ now runs from the steppe to the sea-ports of the south."},
+ {id:'zaitonsiege', src:'Zaiton', date:[1277,10,12],
+  full:"The loyalist fleet has broken off the SIEGE OF ZAITON \u2014 the harbour chains come down, the foreign quarter uncovers its warehouses, and Pu Shougeng, who bet the city on the Khan, collects his winnings. The wharves are open.",
+  headline:"Word from the China coast: the great spice port has stood its siege and trades again under the Khan."},
+ {id:'guangzhoufirm', src:'Guangzhou', date:[1278,4,25],
+  full:"GUANGZHOU IS QUIET AT LAST. Thrice taken and retaken through two years of war, the Pearl River port is firmly the Great Khan's; the boom is lifted, the war-fleets have gone hunting the last loyalists eastward, and the old sea-gate opens for trade.",
+  headline:"From the far south of Cathay: the old Canton sea-gate has ceased changing hands and lies open under the Khan."},
  {id:'yamen', src:'Guangzhou', date:[1279,3,19],
   full:"It is finished. The last Song fleet chained itself together in the bay at YAMEN \u2014 a floating city of loyalists with a seven-year-old emperor aboard \u2014 and the Yuan squadrons broke it in a single day. At the end the chancellor LU XIUFU took the boy ZHAO BING on his back and leapt into the sea, and the ministers and the palace women and the soldiers followed, thousands upon thousands, until the tide ran bodies for days. Three hundred and twenty years of Song, ended in the water off a nameless hill.",
   headline:"Word from the uttermost east, months on the road: the Great Khan has destroyed the last of the Song. All Cathay is his."}];
@@ -3092,7 +3103,7 @@ function waitYearOffer(t){ try{
   if(!S||S.era!=='1271')return null;
   if(t!=='Khanbaliq'&&t!=='Yangzhou')return null;
   if(t==='Khanbaliq'&&!isWest())return null; /* Kris: not for Khanbaliq-start players - it is their own city */
-  if(gameDate().y>=1276)return null;
+  if(typeof frontClosed==='function'&&!frontClosed('Khanbaliq','Yangzhou'))return null;
   return {h:'WAIT FOR THE WAR TO END?', t:"The south trade is shut: the Great Khan's war on the Song closes every road toward the Yangtse, and the factors say it cannot last \u2014 Bayan's armies press the river line year on year. A foreign merchant with capital could sit the wait out as a RESIDENT TRADE FACTOR: rooms, a sign, the year's troughs and crests \u2014 and let "+t+" pay for your patience. A year; less, if the war ends sooner.", ch:[
     {l:'Stay the year as a trade factor',f:function(){ waitYearFlow(); }},
     {l:'No \u2014 the road does not wait',f:function(){}}]};
@@ -3116,7 +3127,7 @@ function waitYearGo(){
   var keep=(S._wyHands!=='none'); S._wyHands=null; S._wyResume=false; S._wyKeep=keep;
   var here=(S.seaMode?S.portName:(city()&&city().name));
   var g0=gameDate();
-  var days=Math.max(1,Math.min(365,Math.round((Date.UTC(1276,0,1)-g0.t)/86400000)));
+  var days=Math.max(1,Math.min(365,Math.round((Date.UTC(1276,7,15)-g0.t)/86400000))); /* the border = Yangzhou's fall, Aug 1276 */
   var opened=(days<365);
   var est0=(typeof estateWorth==='function')?estateWorth():Math.round(S.silver);
   var gain=Math.round(est0*0.06*days/365); /* Kris: ~6% a year acting as a local trade factor; food and the daily business are inside the abstraction */
@@ -6732,16 +6743,16 @@ const SEA_EDGES=[
  {a:"Lanzhou",b:"Chang'an", d:14, terr:'land', hajj:true, era:'1271', water:"the road between Lanzhou and Chang'an"},
  {a:"Chang'an",b:"Taiyuan", d:12, terr:'land', hajj:true, era:'1271', water:"the road between Chang'an and Taiyuan"},
  {a:"Taiyuan",b:"Khanbaliq", d:12, terr:'land', hajj:true, era:'1271', water:"the road between Taiyuan and Khanbaliq"},
- {a:"Khanbaliq",b:"Yangzhou", d:14, opens:1276, terr:'land', hajj:true, era:'1271', water:"the road between Khanbaliq and Yangzhou"},
- {a:"Yangzhou",b:"Kinsay", d:8, opens:1276, terr:'land', hajj:true, era:'1271', water:"the road between Yangzhou and Kinsay"},
- {a:"Kinsay",b:"Zaiton", d:12, opens:1277, terr:'land', hajj:true, era:'1271', water:"the road between Kinsay and Zaiton"},
- {a:"Zaiton",b:"Kauthara", d:8, opens:1277, terr:'med', era:'1271', water:"the sea road between Zaiton and the Champa coast"},
+ {a:"Khanbaliq",b:"Yangzhou", d:14, front:1, terr:'land', hajj:true, era:'1271', water:"the road between Khanbaliq and Yangzhou"},
+ {a:"Yangzhou",b:"Kinsay", d:8, front:1, terr:'land', hajj:true, era:'1271', water:"the road between Yangzhou and Kinsay"},
+ {a:"Kinsay",b:"Zaiton", d:12, front:1, terr:'land', hajj:true, era:'1271', water:"the road between Kinsay and Zaiton"},
+ {a:"Zaiton",b:"Kauthara", d:8, terr:'med', era:'1271', water:"the sea road between Zaiton and the Champa coast"},
  {a:"Kollam",b:"Puttalam", d:4, terr:'med', era:'1271', water:"down the Malabar coast and around Comorin to the Ceylon lagoons"},
  {a:"Puttalam",b:"Kedah", d:11, terr:'med', era:'1271', water:"across the Bay of Bengal on the monsoon, the seamark mountain of Kedah rising to starboard"},
  {a:"Kedah",b:"Tumasik", d:4, terr:'med', era:'1271', water:"down the Strait between the green shores, every master watching the mangroves"},
  {a:"Tumasik",b:"Kauthara", d:7, terr:'med', era:'1271', water:"out past the Dragon's Teeth and up the China Sea to the Champa coast"},
- {a:"Kauthara",b:"Guangzhou", d:6, opens:1277, terr:'med', era:'1271', water:"up the China Sea to the Pearl River and the old southern gate"},
- {a:"Guangzhou",b:"Zaiton", d:5, opens:1277, terr:'med', era:'1271', water:"coasting northeast from the Pearl River to the bright new wharves of Zaiton"},
+ {a:"Kauthara",b:"Guangzhou", d:6, terr:'med', era:'1271', water:"up the China Sea to the Pearl River and the old southern gate"},
+ {a:"Guangzhou",b:"Zaiton", d:5, front:1, terr:'med', era:'1271', water:"coasting northeast from the Pearl River to the bright new wharves of Zaiton"},
  {a:"Kollam",b:"Hormuz", d:20, terr:'med', era:'1271', water:"the sea road between Kollam and Hormuz"},
  {a:"Baghdad",b:"Basra", d:9, terr:'land', hajj:true, era:'1271', water:"down the river road by Wasit and the date-country, the palms thickening as the Gulf draws near"},
  {a:"Basra",b:"Kish", d:5, terr:'med', era:'1271', water:"down the Shatt and along the Persian shore to the island of Kish"},
@@ -6815,17 +6826,30 @@ const SEA_EDGES=[
  {a:'Yamama',b:'Mecca', d:22, terr:'land', hajj:true, thirst:2.2, harsh:true, water:"west across the width of Arabia on the Basra pilgrim road"},
  {a:'Kollam',  b:'Zanzibar',d:20, terr:'deep', oneway:'Zanzibar', founder:0.15, coreMon:[5,6,7,8,9], water:'the open ocean, running east before the summer monsoon for the Malabar coast of India', sight:"Three weeks of empty blue \u2014 no land, no sail, only the wind hard at your back and the long swell of the open ocean \u2014 and then a low green smudge that is the coast of India."},
 ];
-function seaEdges(name){ const out=[]; for(const e of SEA_EDGES){ if(e.era&&e.era!==((S&&S.era)||'762')) continue; if(!e.era&&S&&S.era==='1271') continue; /* the 1271 net is self-contained: untagged 762 edges must not leak era-762 towns into a 1271 run */ if(e.until&&S&&gameDate().y>=e.until) continue; if(e.opens&&S&&gameDate().y<e.opens) continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed()) continue; if(e.oneway && e.oneway!==name) continue; if(e.a===name)out.push({to:e.b,d:e.d,terr:e.terr,water:e.water,sight:e.sight,lbl:e.lblA}); else if(e.b===name)out.push({to:e.a,d:e.d,terr:e.terr,water:e.water,sight:e.sight,lbl:e.lblB}); } return out; }
+function seaEdges(name){ const out=[]; for(const e of SEA_EDGES){ if(e.era&&e.era!==((S&&S.era)||'762')) continue; if(!e.era&&S&&S.era==='1271') continue; /* the 1271 net is self-contained: untagged 762 edges must not leak era-762 towns into a 1271 run */ if(e.until&&S&&gameDate().y>=e.until) continue; if(e.opens&&S&&gameDate().y<e.opens) continue; if(e.front&&typeof frontClosed==='function'&&frontClosed(e.a,e.b)) continue; if(typeof siegeAt==='function'&&(siegeAt(e.a)||siegeAt(e.b))) continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed()) continue; if(e.oneway && e.oneway!==name) continue; if(e.a===name)out.push({to:e.b,d:e.d,terr:e.terr,water:e.water,sight:e.sight,lbl:e.lblA}); else if(e.b===name)out.push({to:e.a,d:e.d,terr:e.terr,water:e.water,sight:e.sight,lbl:e.lblB}); } return out; }
+/* THE SONG FRONTIER (Kris's model): you cannot travel between Song-held and Yuan-held cities;
+   within each sphere (and to/from neutral ports) trade runs free. Cities flip on history's
+   calendar, sieges close a city to EVERYONE while they burn, and the flips travel as BIGNEWS. */
+const SONG_FALL={'Yangzhou':[1276,8],'Kinsay':[1276,2],'Zaiton':[1277,1],'Guangzhou':[1278,4]};
+const SIEGE_WIN={'Yangzhou':[[1275,7],[1276,8]],'Zaiton':[[1277,7],[1277,10]],'Guangzhou':[[1277,1],[1278,4]]};
+const YUAN_N=new Set(['Khanbaliq','Xanadu','Tenduc','Taiyuan',"Chang'an",'Luoyang','Ningxia','Lanzhou','Zhangye','Jiuquan','Dunhuang','Hami','Turfan','Karakorum','Kucha','Aksu']);
+function _ymNow(){ try{ var g=gameDate(); return g.y*12+(g.m-1); }catch(e){ return 0; } }
+function chinaSide(c){ var f=SONG_FALL[c]; if(f) return (_ymNow()>=f[0]*12+(f[1]-1))?'yuan':'song'; return YUAN_N.has(c)?'yuan':'neutral'; }
+function frontClosed(a,b){ if(((S&&S.era)||'762')!=='1271')return false; var A=chinaSide(a),B=chinaSide(b); return (A==='song'&&B==='yuan')||(A==='yuan'&&B==='song'); }
+function siegeAt(c){ if(((S&&S.era)||'762')!=='1271')return false; var w=SIEGE_WIN[c]; if(!w)return false; var n=_ymNow(); return n>=w[0][0]*12+(w[0][1]-1) && n<w[1][0]*12+(w[1][1]-1); }
 function gatedLink(a,b){ /* an edge that EXISTS but is shut right now - and why (Zaiton, for the chart UX) */
   for(const e of SEA_EDGES){ if(e.era&&e.era!==((S&&S.era)||'762')) continue; if(!e.era&&S&&S.era==='1271') continue;
     if((e.a===a&&e.b===b)||(e.a===b&&e.b===a)){
       if(e.opens&&S&&gameDate().y<e.opens) return {e:e,why:'war'};
+      if(e.front&&typeof frontClosed==='function'&&frontClosed(e.a,e.b)) return {e:e,why:'war'};
+      if(typeof siegeAt==='function'&&(siegeAt(e.a)||siegeAt(e.b))) return {e:e,why:'siege'};
       if(e.until&&S&&gameDate().y>=e.until) return {e:e,why:'gone'};
       if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed()) return {e:e,why:'kaidu'};
     } }
   return null; }
 function evRoadShut(here,name,g){
   var nm=eraName(name);
+  if(g.why==='siege') return {h:'THE CITY IS UNDER SIEGE', t:"The road to "+nm+" exists \u2014 but "+nm+" is a city at war with itself just now: siege-lines, war-fleets, fire in the suburbs. No caravan enters and none leaves. Wait for word that it is over \u2014 such news travels fast \u2014 and try again.", ch:[{l:'Keep clear of it',f:function(){}}]};
   if(g.why==='war') return {h:'THE ROAD IS SHUT \u2014 WAR', t:"There is a road to "+nm+" \u2014 every merchant in "+eraName(here)+" can describe it \u2014 but south of the great river the war with the Song still burns, and no caravan or barge crosses the lines. The clerks say it plainly: when the Khan's armies finish the matter, the south will open. Until then the road on your chart is a promise, not a passage."+(g.e.opens?" <span class='sub'>(The war in the south is expected to decide itself within a few years.)</span>":""), ch:[{l:'Wait for the war to end',f:function(){}}]};
   if(g.why==='kaidu') return (typeof evKaiduBlocked==='function')?evKaiduBlocked(here):{h:'THE ROAD IS CLOSED',t:'Kaidu is riding; the road to '+nm+' is no road until the grass fails.',ch:[{l:'So be it',f:function(){}}]};
   return {h:'THE ROAD IS GONE', t:"The road to "+nm+" is marked on older charts, but no ship will take you: "+nm+" has fallen, and the trade that ran there runs no more.", ch:[{l:'Strike it from the chart',f:function(){}}]};
@@ -6833,9 +6857,9 @@ function evRoadShut(here,name,g){
 function landLinkFor(a,b){ /* ONE LAND MODEL: resolve a land link even when only a bare era-less dupe exists (findLink skips those in 1271) */
  var lk=(typeof findLink==='function')?findLink(a,b):null; if(lk)return lk;
  if(((S&&S.era)||'762')!=='1271')return null;
- for(const e of SEA_EDGES){ if(e.terr!=='land')continue; if(e.until&&S&&gameDate().y>=e.until)continue; if(e.opens&&S&&gameDate().y<e.opens)continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed())continue; if((e.a===a&&e.b===b)||(e.a===b&&e.b===a))return e; }
+ for(const e of SEA_EDGES){ if(e.terr!=='land')continue; if(e.until&&S&&gameDate().y>=e.until)continue; if(e.opens&&S&&gameDate().y<e.opens)continue; if(e.front&&typeof frontClosed==='function'&&frontClosed(e.a,e.b)) continue; if(typeof siegeAt==='function'&&(siegeAt(e.a)||siegeAt(e.b))) continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed())continue; if((e.a===a&&e.b===b)||(e.a===b&&e.b===a))return e; }
  return null; }
-function findLink(a,b){ for(const e of SEA_EDGES){ if(e.era&&e.era!==((S&&S.era)||'762')) continue; if(!e.era&&S&&S.era==='1271') continue; if(e.until&&S&&gameDate().y>=e.until) continue; if(e.opens&&S&&gameDate().y<e.opens) continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed()) continue; if((e.a===a&&e.b===b)||(e.a===b&&e.b===a)) return e; } return null; }
+function findLink(a,b){ for(const e of SEA_EDGES){ if(e.era&&e.era!==((S&&S.era)||'762')) continue; if(!e.era&&S&&S.era==='1271') continue; if(e.until&&S&&gameDate().y>=e.until) continue; if(e.opens&&S&&gameDate().y<e.opens) continue; if(e.front&&typeof frontClosed==='function'&&frontClosed(e.a,e.b)) continue; if(typeof siegeAt==='function'&&(siegeAt(e.a)||siegeAt(e.b))) continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed()) continue; if((e.a===a&&e.b===b)||(e.a===b&&e.b===a)) return e; } return null; }
 const CITY_LL={Bukhara:[64.42,39.77],Samarkand:[66.97,39.65],Merv:[61.83,37.66],Andijan:[72.34,40.78],Urgench:[59.15,42.32],Damascus:[36.31,33.51],Jerusalem:[35.23,31.78],Aylah:[35.0,29.53],Venice:[12.34,45.43],Ragusa:[18.11,42.64],Candia:[25.13,35.34],Soldaia:[35.38,45.03],Tana:[39.32,47.27],Sarai:[47.47,47.18],Mangyshlak:[51.0,44.3],Varamin:[51.65,35.32],"Chang'an":[108.95,34.27],Luoyang:[112.45,34.62],Yangzhou:[119.42,32.39],Guangzhou:[113.26,23.13],Kauthara:[109.2,12.25],Palembang:[104.75,-2.95],Mantai:[79.98,8.95],Kollam:[76.6,8.9],Dhofar:[54.0,17.0],Socotra:[53.9,12.5],Aden:[45.03,12.8],Zanzibar:[39.2,-6.16],Basra:[47.81,30.4],Kish:[53.98,26.53],Puttalam:[79.83,8.03],Kedah:[100.37,6.12],Tumasik:[103.85,1.29],Baghdad:[44.36,33.31],Qulzum:[32.55,29.97],Fustat:[31.25,30.0],Alexandria:[29.9,31.2],Gortyn:[24.9,35.0],Constantinople:[28.97,41.01],Aleppo:[37.16,36.2],Ephesus:[27.34,37.94],Iconium:[32.49,37.87],Trebizond:[39.72,41.0],Medina:[39.61,24.47],Mecca:[39.83,21.42],Sanaa:[44.21,15.35],Yamama:[46.71,24.63],Shibam:[48.63,15.93]};
 const _WIND={deep:1.12,coast:1.28,med:1.16,canal:1.30,land:1.32};
 function legGCLi(a,b){ var pa=CITY_LL[a],pb=CITY_LL[b]; if(!pa||!pb)return 0; var toR=Math.PI/180; var la1=pa[1]*toR,la2=pb[1]*toR,dla=(pb[1]-pa[1])*toR,dlo=(pb[0]-pa[0])*toR; var h=Math.sin(dla/2)*Math.sin(dla/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)*Math.sin(dlo/2); var km=6371*2*Math.asin(Math.sqrt(h)); var lk=findLink(a,b); var w=(lk&&_WIND[lk.terr])||1.18; return Math.round(km/0.536*w); }
@@ -7252,6 +7276,7 @@ function stepVoy(){
     if(S.voy.sight2 && !S.voy.sight2Done && p>=0.55){ S.voy.sight2Done=true; log(S.voy.sight2); }
   if(S.voy.terr==='deep' || S.voy.terr==='coast' || S.voy.terr==='med'){
     if(!S.voy.sickRolled && p>=0.3){ S.voy.sickRolled=true; if(rnd()<0.4){ S.seasick=true; log("You are wretchedly seasick — green at the rail and certain you will die. It passes; the sea does this to nearly everyone once."); } }
+    try{ if(S.voy&&typeof siegeAt==='function'&&siegeAt(S.voy.to)&&!S.voy._siegeWarned){ var _vp=(S.voy.total-S.voy.daysLeft)/(S.voy.total||1); if(_vp>=0.55){ S.voy._siegeWarned=true; S.voyaging=false; clearVoy(); S.pendingEvent={h:'THE PORT IS CLOSED \u2014 SIEGE', t:'A fishing boat running out of '+S.voy.to+' gives the master the news across the water: the port is under siege \u2014 war-fleets in the roads, fire along the shore. He will not run a blockade for any freight.', ch:[{l:'Come about \u2014 back to '+S.voy.from,f:function(){ var v=S.voy; var t2=v.to; v.to=v.from; v.from=t2; v.daysLeft=Math.max(1,v.total-v.daysLeft); v._siegeWarned=false; S.screen='voyage'; S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS); }}]}; render(); return; } } }catch(e){}
     voyLostDay();
     const wreckP=(S.voy.terr==='deep'?0.006:0.009)*hullMult()*crewWreckMult()*winterStormMult(S.voy.terr)*(S.voy.storm||1)*((typeof isAmberWaterLeg==='function'&&S.voy&&isAmberPlace(S.voy.from))?boatQualityMult():1);
     if(rnd()<wreckP){ S.voyaging=false; clearVoy(); S.pendingEvent=((typeof fleet==='function'&&fleet().length)?voyStormFleet():voyStorm()); render(); return; }
@@ -7804,6 +7829,7 @@ function skipVoy(){
     const p=(S.voy.total-S.voy.daysLeft)/S.voy.total;
     if(S.voy.sight && !S.voy.sightDone && p>=(S.voy.phases?0.42:0.5)){ S.voy.sightDone=true; log(S.voy.sight); }
     if(S.voy.sight2 && !S.voy.sight2Done && p>=0.55){ S.voy.sight2Done=true; log(S.voy.sight2); }
+    try{ if(S.voy&&typeof siegeAt==='function'&&siegeAt(S.voy.to)&&!S.voy._siegeWarned){ var _vp=(S.voy.total-S.voy.daysLeft)/(S.voy.total||1); if(_vp>=0.55){ S.voy._siegeWarned=true; S.voyaging=false; clearVoy(); S.pendingEvent={h:'THE PORT IS CLOSED \u2014 SIEGE', t:'A fishing boat running out of '+S.voy.to+' gives the master the news across the water: the port is under siege \u2014 war-fleets in the roads, fire along the shore. He will not run a blockade for any freight.', ch:[{l:'Come about \u2014 back to '+S.voy.from,f:function(){ var v=S.voy; var t2=v.to; v.to=v.from; v.from=t2; v.daysLeft=Math.max(1,v.total-v.daysLeft); v._siegeWarned=false; S.screen='voyage'; S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS); }}]}; render(); return; } } }catch(e){}
     voyLostDay();
     if(S.voy.terr==='deep'||S.voy.terr==='coast'||S.voy.terr==='med'){
       const wreckP=(S.voy.terr==='deep'?0.006:0.009)*hullMult()*crewWreckMult()*winterStormMult(S.voy.terr)*(S.voy.storm||1)*((typeof isAmberWaterLeg==='function'&&S.voy&&isAmberPlace(S.voy.from))?boatQualityMult():1);
