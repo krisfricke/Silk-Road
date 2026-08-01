@@ -49,7 +49,7 @@ SRC={
  'wine':(78,{'Venice':12,'Candia':14,'Turfan':15,'Taiyuan':16}),
  'pearls':(120,{'Kish':18,'Hormuz':24,'Puttalam':24,'Kollam':30}),  # the Mannar banks - the other great fishery  # Kris/Oxus: Kish IS the pearl-banks - cheapest on earth at the source
  'ivory':(150,{'Kollam':62,'Hormuz':66}),   # steepened (Fadak C): flat fields let remote marts stock tropical luxuries
- 'frank':(66,{'Hormuz':20,'Alexandria':22}),
+ 'frank':(66,{'Dhofar':12,'Hormuz':20,'Alexandria':22}),  # Dhofar IS the incense coast - the trees themselves
  'indigo':(62,{'Kollam':44,'Hormuz':50}),
  'cinn':(98,{'Puttalam':44,'Kollam':56,'Zaiton':60}),  # Ceylon IS the cinnamon isle
  'wax':(46,{'Ragusa':26,'Caffa':28,'Tana':28}),
@@ -59,7 +59,7 @@ SRC={
  'linen':(30,{'Alexandria':12,'Venice':18}),
  'furs':(95,{'Tana':26,'Caffa':28,'Sarai':28,'Urgench':30,'Karakorum':34}),
  'slaves':(120,{'Caffa':60,'Tana':62,'Sarai':66,'Urgench':66,'Almaliq':70}),
- 'aloe':(46,{'Hormuz':20,'Kollam':22}),
+ 'aloe':(46,{'Aden':17,'Hormuz':20,'Kollam':22}),  # the Socotra aloes land at Aden
  'felt':(32,{'Almaliq':10,'Karakorum':10,'Sarai':12}),
  'naphtha':(74,{'Baghdad':9}),
  'asbestos':(232,{'Turfan':55,'Khotan':60}),
@@ -110,7 +110,7 @@ TESTS=[
  ('wine','Khanbaliq',('Taiyuan',)),
  ('dates','Tabriz',('Baghdad',)),
  ('glass','Tabriz',('Acre','Venice','Alexandria','Damascus')),
- ('frank','Tabriz',('Hormuz','Alexandria')),
+ ('frank','Tabriz',('Dhofar','Hormuz','Alexandria')),  # the trees themselves, up the Gulf - the truest provenance
  ('musk','Khanbaliq',('Ningxia',)),
  ('turq','Venice',('Nishapur',)),
  ('saffron','Tabriz',('Nishapur','Yazd')),

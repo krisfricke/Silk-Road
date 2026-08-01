@@ -17,7 +17,7 @@ def canon(n): return RENAME.get(n,n)
 # ---------- city lonlats ----------
 LL=eval(re.search(r'LL=\{.*?\}',open('route_1271.py').read(),re.S).group(0)[3:])
 LL={canon(k):v for k,v in LL.items()}
-LL.update({'Puttalam':(79.83,8.03),'Kedah':(100.37,6.12),'Tumasik':(103.85,1.29),'Guangzhou':(113.26,23.13),'Basra':(47.81,30.40),'Kish':(53.98,26.53),'Varamin':(51.65,35.32),'Mangyshlak':(51.0,44.3),'Ispijab':(69.75,42.30),'Talas':(71.40,42.90),'Chach':(69.28,41.31),'Lop':(88.30,39.50),'Miran':(88.90,39.23),'Aksu':(80.26,41.17),'Kucha':(82.96,41.72),'Alexandria':(29.90,31.20),'Kauthara':(109.20,12.25),'Kollam':(76.60,8.90),'Andijan':(72.34,40.78),'Abaskun':(54.00,36.90),'Damghan':(54.34,36.17),'Kabul':(69.18,34.53),'Kashmir':(74.80,34.08),'Baku':(49.87,40.37),'Saraichik':(51.75,47.50),'the Perevoloka':(44.55,48.70),'the Don landing':(43.80,48.72)})
+LL.update({'Luoyang':(112.45,34.62),'Aylah':(35.0,29.53),'Medina':(39.61,24.47),'Mecca':(39.83,21.42),'Sanaa':(44.21,15.35),'Fustat':(31.25,30.05),'Qus':(32.76,25.92),'Aydhab':(36.49,22.33),'Aden':(45.03,12.80),'Dhofar':(54.10,17.02),'Puttalam':(79.83,8.03),'Kedah':(100.37,6.12),'Tumasik':(103.85,1.29),'Guangzhou':(113.26,23.13),'Basra':(47.81,30.40),'Kish':(53.98,26.53),'Varamin':(51.65,35.32),'Mangyshlak':(51.0,44.3),'Ispijab':(69.75,42.30),'Talas':(71.40,42.90),'Chach':(69.28,41.31),'Lop':(88.30,39.50),'Miran':(88.90,39.23),'Aksu':(80.26,41.17),'Kucha':(82.96,41.72),'Alexandria':(29.90,31.20),'Kauthara':(109.20,12.25),'Kollam':(76.60,8.90),'Andijan':(72.34,40.78),'Abaskun':(54.00,36.90),'Damghan':(54.34,36.17),'Kabul':(69.18,34.53),'Kashmir':(74.80,34.08),'Baku':(49.87,40.37),'Saraichik':(51.75,47.50),'the Perevoloka':(44.55,48.70),'the Don landing':(43.80,48.72)})
 
 # ---------- geometry registry (lonlat) ----------
 GEO={}
@@ -74,7 +74,7 @@ def geom(a,b):
 
 # ---------- GEBCO renderer for rects dipping south of the master ----------
 TILES=[]
-for f in (glob.glob('/sessions/jolly-charming-gates/mnt/outputs/work/geb3/*.tif')
+for f in (glob.glob('gebco_local/*.tif')+glob.glob('/sessions/jolly-charming-gates/mnt/outputs/work/geb3/*.tif')
          +glob.glob('/sessions/jolly-charming-gates/mnt/outputs/work/geb4/*.tif')
          +glob.glob('/sessions/jolly-charming-gates/mnt/outputs/work/geb5/*.tif')
          +glob.glob('/sessions/jolly-charming-gates/mnt/outputs/work/geb6/*.tif')+[x for x in glob.glob('/sessions/jolly-charming-gates/mnt/outputs/work/geb/*.tif') if 'w24.246' not in x and 'w28.475' not in x]):
@@ -115,7 +115,7 @@ def gebco_relief(W,E,S0,N,OW,OH):
     # Tropical weight needs BOTH low latitude AND longitude east of ~62E (the monsoon lands:
     # India's west coast, Bengal, SE Asia). Arabia/Persia/Makran stay arid.
     TROP=[(0,(150,158,110)),(120,(136,150,96)),(400,(110,124,80)),(900,(93,96,71)),(1800,(140,132,100)),(2800,(182,171,131)),(4500,(210,205,185))]
-    ARID=[(0,(168,158,112)),(150,(160,152,104)),(500,(140,140,92)),(1200,(120,118,84)),(2200,(150,140,108)),(3200,(185,174,134)),(5000,(212,207,187))]
+    ARID=[(0,(180,166,120)),(150,(175,161,112)),(500,(164,151,102)),(1200,(150,138,96)),(2200,(168,154,118)),(3200,(193,181,141)),(5000,(214,208,188))]
     land=~sea
     lonpx=np.linspace(W,E,OW,dtype=np.float32)[None,:].repeat(OH,0)
     latpx=np.linspace(N,S0,OH,dtype=np.float32)[:,None].repeat(OW,1)
