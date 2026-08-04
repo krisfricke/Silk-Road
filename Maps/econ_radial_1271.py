@@ -46,11 +46,11 @@ SRC={
  'glass':(60,{'Venice':12,'Damascus':13,'Acre':14,'Alexandria':16}),   # Damascus glass: the pre-Timur ateliers
  'coral':(135,{'Venice':30,'Candia':36}),
  'amber':(120,{'Venice':40,'Tana':42,'Sarai':46,'Caffa':48}),
- 'wine':(78,{'Venice':12,'Candia':14,'Turfan':15,'Taiyuan':16}),
+ 'wine':(78,{'Venice':12,'Candia':14,'Shiraz':14,'Turfan':15,'Taiyuan':16}),  # Shirazi wine: the poets' own (Fadak 8/04)
  'pearls':(120,{'Kish':18,'Hormuz':24,'Puttalam':24,'Kollam':30}),  # the Mannar banks - the other great fishery  # Kris/Oxus: Kish IS the pearl-banks - cheapest on earth at the source
- 'ivory':(150,{'Kollam':62,'Hormuz':66}),   # steepened (Fadak C): flat fields let remote marts stock tropical luxuries
+ 'ivory':(150,{'Zanzibar':48,'Kollam':62,'Hormuz':66}),  # African ivory at the coast itself (Fadak 8/04)   # steepened (Fadak C): flat fields let remote marts stock tropical luxuries
  'frank':(66,{'Dhofar':12,'Hormuz':20,'Alexandria':22}),  # Dhofar IS the incense coast - the trees themselves
- 'indigo':(62,{'Kollam':44,'Hormuz':50}),
+ 'indigo':(62,{'Cambay':38,'Kollam':44,'Hormuz':50}),  # Gujarati indigo (Fadak 8/04)
  'cinn':(98,{'Puttalam':44,'Kollam':56,'Zaiton':60}),  # Ceylon IS the cinnamon isle
  'wax':(46,{'Ragusa':26,'Caffa':28,'Tana':28}),
  'nutmeg':(135,{'Tumasik':54,'Zaiton':58,'Kollam':66}),  # the Strait entrepot sits nearest the spice islands
@@ -58,14 +58,14 @@ SRC={
  'conut':(14,{'Kollam':10,'Kauthara':10}),
  'linen':(30,{'Alexandria':12,'Venice':18}),
  'furs':(95,{'Tana':26,'Caffa':28,'Sarai':28,'Urgench':30,'Karakorum':34}),
- 'slaves':(120,{'Caffa':60,'Tana':62,'Sarai':66,'Urgench':66,'Almaliq':70}),
- 'aloe':(46,{'Aden':17,'Hormuz':20,'Kollam':22}),  # the Socotra aloes land at Aden
+ 'slaves':(120,{'Zanzibar':55,'Caffa':60,'Tana':62,'Sarai':66,'Urgench':66,'Almaliq':70}),  # the Zanj coast gate (Fadak 8/04)
+ 'aloe':(46,{'Socotra':11,'Aden':17,'Hormuz':20,'Kollam':22}),  # Socotra IS the aloe isle; they land at Aden (Fadak 8/04)
  'felt':(32,{'Almaliq':10,'Karakorum':10,'Sarai':12}),
  'naphtha':(74,{'Baghdad':9}),
  'asbestos':(232,{'Turfan':55,'Khotan':60}),
  'dates':(40,{'Basra':6,'Baghdad':8,'Hormuz':8,'Kerman':10}),  # Basra dates: the world's standard
  'saffron':(144,{'Nishapur':118,'Yazd':122}),
- 'cotton':(44,{'Kashgar':10,'Khotan':11,'Yazd':12,'Kollam':12}),
+ 'cotton':(44,{'Cambay':9,'Kashgar':10,'Khotan':11,'Yazd':12,'Kollam':12}),  # Gujarat: the world's cloth-house (Fadak 8/04)
  'porc':(160,{'Zaiton':30,'Kinsay':34}),
 }
 BIG={'Kinsay':1.18,'Khanbaliq':1.15,'Tabriz':1.15,'Venice':1.12,'Sarai':1.08,'Zaiton':1.08,'Constantinople':1.06}

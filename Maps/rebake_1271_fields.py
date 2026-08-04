@@ -40,7 +40,7 @@ HUB.add('Andijan')   # the Ferghana valley - one of the most fertile in Central 
 LL.setdefault('Datong',(113.30,40.09)); HUB.add('Datong')
 LL.setdefault('Baku',(49.87,40.37))   # Kris 7/17: Baku farms too - the DEM clip will push the quilt off the dry Absheron toward the flats where the road enters, which is right   # Xijing, the old Western Capital - halt on the Tenduc-Khanbaliq post road (Kris): quilt-only, no chart of its own
 MEGA={'Khanbaliq':62,'Kinsay':62,'Kenjanfu':55,'Constantinople':55,'Tabriz':52,'Samarkand':48,'Zaiton':46,'Yangzhou':48,'Baghdad':45}
-SETTLE=[]
+SETTLE=[('Basra',47.81,30.40,44),('Shiraz',52.54,29.61,32),('Kabul',69.18,34.53,38),('Lahore',74.35,31.55,48),('Delhi',77.2,28.61,55),('Cambay',72.62,22.31,48),('Chittagong',91.8,22.33,42),('Butuan',125.53,8.95,30),('Hakata',130.4,33.6,38),('Kaesong',126.55,37.97,42),('Socotra',53.9,12.5,22),('Zanzibar',39.19,-6.16,26)]
 for n,(lo,la) in LL.items():
     if n in SKIP: continue
     r=MEGA.get(n, 42 if n in HUB else 26)

@@ -36,16 +36,42 @@ def build(bi):
     gy,gx=np.gradient(d,RES*111000.0); slope=np.hypot(gx,gy).astype(np.float32)
     k=np.ones((5,5),np.uint8)
     rr=(cv2.dilate(d,k)-cv2.erode(d,k)).astype(np.float32)   # local relief ~ valley narrowness/exposure
+    # RIVER PENALTY (Kris: roads were fording willy-nilly and running ON the Tigris): major NE
+    # rivers (scalerank<=4) rasterized; stepping on a river cell costs +16km-equiv - crossings
+    # happen where they must and nowhere else, and roads run BESIDE water, not in it.
+    riv=np.zeros((GY,GX),np.float32)
+    try:
+        import json as _j
+        _g=_j.load(open('ne_10m_rivers_lake_centerlines.geojson'))
+        _mask=np.zeros((GY,GX),np.uint8)
+        for _f in _g['features']:
+            _sr=_f['properties'].get('scalerank',9)
+            if _sr is None or _sr>4: continue
+            _geo=_f['geometry']
+            _ls=_geo['coordinates'] if _geo['type']=='MultiLineString' else [_geo['coordinates']]
+            for _l in _ls:
+                pts=[]
+                for pt in _l:
+                    lo,la=pt[0],pt[1]
+                    if BW-0.3<=lo<=BE+0.3 and MS-0.3<=la<=MN+0.3:
+                        pts.append((int((lo-BW)/RES),int((MN-la)/RES)))
+                    else:
+                        if len(pts)>1: cv2.polylines(_mask,[np.array(pts,np.int32)],False,1,1)
+                        pts=[]
+                if len(pts)>1: cv2.polylines(_mask,[np.array(pts,np.int32)],False,1,1)
+        riv=_mask.astype(np.float32)*16.0
+    except Exception as _e: print('  (river penalty off:',_e,')')
     print('block',bi,'ready',flush=True)
-    return BW,BE,GX,GY,d,ok,slope,rr
+    return BW,BE,GX,GY,d,ok,slope,rr,riv
 CUR={'bi':-1}
 def route(a,b):
     lo1,la1=LL[a]; lo2,la2=LL[b]
     for bi,(BW,BE) in enumerate(BLOCKS):
         if BW+0.3<=min(lo1,lo2) and max(lo1,lo2)<=BE-0.3: break
     if CUR['bi']!=bi:
-        CUR.update(dict(zip(('BW','BE','GX','GY','d','ok','slope','rr'),build(bi)))); CUR['bi']=bi
-    BW,GX,GY=CUR['BW'],CUR['GX'],CUR['GY']; d,ok,slope,rr=CUR['d'],CUR['ok'],CUR['slope'],CUR['rr']
+        CUR.update(dict(zip(('BW','BE','GX','GY','d','ok','slope','rr','riv'),build(bi)))); CUR['bi']=bi
+    BW,GX,GY=CUR['BW'],CUR['GX'],CUR['GY']; d,ok,slope,rr,riv=CUR['d'],CUR['ok'],CUR['slope'],CUR['rr'],CUR['riv']
+    pull=CUR.get('pull')  # ROAD-STICKINESS: optional cost discount near an existing road (set CUR['pull'])
     KM=RES*111.3
     def snap(lo,la):
         r0,c0=int((MN-la)/RES),int((lo-BW)/RES)
@@ -72,7 +98,9 @@ def route(a,b):
                 nr,nc=r+dr,c+dc
                 if not(0<=nr<GY and 0<=nc<GX) or not ok[nr,nc]: continue
                 km=math.hypot(dr*KM,dc*kmx)
-                nd=dist[cur]+km*(1.0+slope[nr,nc]*45.0+rr[nr,nc]/500.0+(0.35 if d[nr,nc]>2400 else 0))
+                base=km*(1.0+slope[nr,nc]*45.0+rr[nr,nc]/500.0+(0.35 if d[nr,nc]>2400 else 0))
+                if pull is not None and pull[nr,nc]: base*=0.55  # ride the existing road while it serves (Kris: no parallel twins)
+                nd=dist[cur]+base+riv[nr,nc]
                 if nd<dist.get((nr,nc),1e18): dist[(nr,nc)]=nd; prev[(nr,nc)]=cur; heapq.heappush(pq,(nd+hh((nr,nc)),(nr,nc)))
     p=[g]
     while p[-1]!=s0: p.append(prev[p[-1]])
