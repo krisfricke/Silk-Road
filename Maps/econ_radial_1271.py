@@ -67,6 +67,9 @@ SRC={
  'saffron':(144,{'Nishapur':118,'Yazd':122}),
  'cotton':(44,{'Cambay':9,'Kashgar':10,'Khotan':11,'Yazd':12,'Kollam':12}),  # Gujarat: the world's cloth-house (Fadak 8/04)
  'porc':(160,{'Zaiton':30,'Kinsay':34}),
+ 'feathers':(130,{'Asyut':30,'Zanzibar':26,'Aden':40}),   # Darb al-Arba'in ostrich plumes surface at Asyut; the Zanj coast the other tap (Fadak 8/05)
+ 'gum':(60,{'Asyut':14,'Aydhab':18,'Alexandria':24}),      # Kordofan gum arabic down the Forty Days Road + the Red Sea (Fadak 8/05)
+ 'tamarind':(55,{'Cambay':12,'Kollam':12,'Delhi':16,'Asyut':20}),  # tamr hindi - the Indian date; Sudan's via the desert road (Fadak 8/05)
 }
 BIG={'Kinsay':1.18,'Khanbaliq':1.15,'Tabriz':1.15,'Venice':1.12,'Sarai':1.08,'Zaiton':1.08,'Constantinople':1.06}
 LUX={'silk','musk','jade','coral','amber','pearls','saffron','asbestos','ivory','nutmeg','porc'}

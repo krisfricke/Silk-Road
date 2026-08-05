@@ -17,7 +17,7 @@ def canon(n): return RENAME.get(n,n)
 # ---------- city lonlats ----------
 LL=eval(re.search(r'LL=\{.*?\}',open('route_1271.py').read(),re.S).group(0)[3:])
 LL={canon(k):v for k,v in LL.items()}
-LL.update({'Luoyang':(112.45,34.62),'Aylah':(35.0,29.53),'Medina':(39.61,24.47),'Mecca':(39.83,21.42),'Sanaa':(44.21,15.35),'Fustat':(31.25,30.05),'Qus':(32.76,25.92),'Aydhab':(36.49,22.33),'Aden':(45.03,12.80),'Dhofar':(54.10,17.02),'Puttalam':(79.83,8.03),'Kedah':(100.37,6.12),'Tumasik':(103.85,1.29),'Guangzhou':(113.26,23.13),'Basra':(47.81,30.40),'Kish':(53.98,26.53),'Varamin':(51.65,35.32),'Mangyshlak':(51.0,44.3),'Ispijab':(69.75,42.30),'Talas':(71.40,42.90),'Chach':(69.28,41.31),'Lop':(88.30,39.50),'Miran':(88.90,39.23),'Aksu':(80.26,41.17),'Kucha':(82.96,41.72),'Alexandria':(29.90,31.20),'Socotra':(53.9,12.5),'Shiraz':(52.54,29.61),'Delhi':(77.2,28.61),'Lahore':(74.35,31.55),'Cambay':(72.62,22.31),'Chittagong':(91.8,22.33),'Butuan':(125.53,8.95),'Hakata':(130.4,33.6),'Kaesong':(126.55,37.97),'Kauthara':(109.20,12.25),'Kollam':(76.60,8.90),'Andijan':(72.34,40.78),'Abaskun':(54.00,36.90),'Damghan':(54.34,36.17),'Kabul':(69.18,34.53),'Kashmir':(74.80,34.08),'Baku':(49.87,40.37),'Saraichik':(51.75,47.50),'the Perevoloka':(44.55,48.70),'the Don landing':(43.80,48.72)})
+LL.update({'Luoyang':(112.45,34.62),'Aylah':(35.0,29.53),'Medina':(39.61,24.47),'Mecca':(39.83,21.42),'Sanaa':(44.21,15.35),'Fustat':(31.25,30.05),'Qus':(32.76,25.92),'Aydhab':(36.49,22.33),'Jeddah':(39.17,21.5),'Aden':(45.03,12.80),'Dhofar':(54.10,17.02),'Shibam':(48.63,15.93),'Puttalam':(79.83,8.03),'Kedah':(100.37,6.12),'Tumasik':(103.85,1.29),'Guangzhou':(113.26,23.13),'Basra':(47.81,30.40),'Kish':(53.98,26.53),'Varamin':(51.65,35.32),'Mangyshlak':(51.0,44.3),'Ispijab':(69.75,42.30),'Talas':(71.40,42.90),'Chach':(69.28,41.31),'Lop':(88.30,39.50),'Miran':(88.90,39.23),'Aksu':(80.26,41.17),'Kucha':(82.96,41.72),'Alexandria':(29.90,31.20),'Socotra':(53.9,12.5),'Shiraz':(52.54,29.61),'Delhi':(77.2,28.61),'Lahore':(74.35,31.55),'Cambay':(72.62,22.31),'Chittagong':(91.8,22.33),'Butuan':(125.53,8.95),'Hakata':(130.4,33.6),'Kaesong':(126.55,37.97),'Kauthara':(109.20,12.25),'Kollam':(76.60,8.90),'Andijan':(72.34,40.78),'Abaskun':(54.00,36.90),'Damghan':(54.34,36.17),'Kabul':(69.18,34.53),'Kashmir':(74.80,34.08),'Baku':(49.87,40.37),'Saraichik':(51.75,47.50),'the Perevoloka':(44.55,48.70),'the Don landing':(43.80,48.72),'Asyut':(31.19,27.18),'Kharga':(30.55,25.44)})
 
 # ---------- geometry registry (lonlat) ----------
 GEO={}
@@ -117,10 +117,22 @@ FOREST_SHARP=3.0         # forest EDGE sharpness: forest layer blurs climate at 
                          # (wetness/dune keep the full smooth _k - only the forest edge crispens)
 FOREST_GREENS=((52,106,60),(70,120,56),(54,94,70))  # jungle / broadleaf / conifer - true forest-green
 FOREST_ALPHA=0.85        # forest overlay opacity (was 0.75 - reads washy over pale ground)
-def gebco_relief(W,E,S0,N,OW,OH):
+def gebco_relief(W,E,S0,N,OW,OH,lakeclip=False):
     d=gebco_grid(W,E,S0,N,OW,OH)
     img=np.zeros((OH,OW,3),np.float32)
     sea=d<=0
+    if lakeclip:
+        _m=sea.astype(np.uint8); _nc,_lab=cv2.connectedComponents(_m,8)
+        _bord=set(np.unique(_lab[0])).union(set(np.unique(_lab[-1])),set(np.unique(_lab[:,0])),set(np.unique(_lab[:,-1]))); _bord.discard(0)
+        _ocean=np.isin(_lab,list(_bord)); _iso=sea&(~_ocean)
+        _k5=np.ones((5,5),np.uint8); _rr2=cv2.dilate(d,_k5)-cv2.erode(d,_k5)
+        _flat=(_iso&(_rr2<12)).astype(np.uint8); _fn,_flab=cv2.connectedComponents(_flat,8)
+        _keep=np.zeros(_flat.shape,bool)
+        for _ci in range(1,_fn):
+            _cm=(_flab==_ci)
+            if _cm.sum()>=140: _keep|=_cm   # only LARGE flat lakes (Sea of Galilee) - drop speckle patches
+        sea=_ocean|_keep|(_iso&(d<-380))  # ocean + real standing lakes + Dead Sea deep core; sloping Ghor stays land
+        d=np.where(sea,d,np.maximum(d,0.0))
     sd=np.clip(-d/2500.0,0,1)
     img[sea]=(np.array([132,175,208])+ (np.array([96,141,184])-np.array([132,175,208]))*sd[...,None])[sea]
     # per-pixel arid<->tropical blend (Kris: Arabia on the Hormuz chart must be sand, not
@@ -160,7 +172,7 @@ def gebco_relief(W,E,S0,N,OW,OH):
         _ppd=OW/max(1e-6,(E-W)); _k=int(max(3,round(_ppd*(1.0/6.0)))); _k+=(_k%2==0)
         _PRAW=P.copy()
         P=cv2.GaussianBlur(P,( _k,_k),0)  # smooth the 10-arcmin climate cells to the raster grid
-        wt=np.clip((P-120.0)/700.0,0,1).astype(np.float32)
+        wt=np.clip((P-95.0)/480.0,0,1).astype(np.float32)  # Oxus 8/04 (Kris): greens moderate-rainfall highlands (Yemen ~300-500mm) - the Sanaa terraces are not sand; true desert (P<95) still reads dead
     except Exception as _e:
         print('  (bio12 unavailable, falling back to lon/lat monsoon box:',_e,')')
     if wt is None:
@@ -235,6 +247,27 @@ def gebco_relief(W,E,S0,N,OW,OH):
             irr=np.clip((450.0-P)/250.0,0,1)*np.clip(valley,0,1)*np.where(d>0,1.0,0.0)*np.clip((900.0-d)/700.0,0,1)
             GREENV=np.array([150,178,118],np.float32)
             blend=blend*(1-(irr*0.55)[...,None])+GREENV*(irr*0.55)[...,None]
+            # NILE FLOODPLAIN FARMLAND (Kris 8/05): the Nile valley is cultivated, but NOT uniformly. The
+            # floodplain is widest at the Delta and TAPERS almost linearly upstream to no more than the
+            # river's own width by Aswan (1st cataract); south of Aswan (Nubia) only the banks are green,
+            # save local patches at the towns (Faras, Old Dongola). NILE ONLY - other desert rivers are
+            # not this fertile - so gate to the Egyptian/Nubian Nile corridor.
+            try:
+                if W<33.5 and E>29.5 and S0<30.0:   # Egypt-proper (excludes wide Med charts that only clip the delta coast)
+                    _dr=cv2.distanceTransform((1-rmask).astype(np.uint8),cv2.DIST_L2,3)
+                    _kf2=np.ones((5,5),np.uint8); _rel=cv2.dilate(d,_kf2)-cv2.erode(d,_kf2)
+                    _lat=np.linspace(N,S0,OH,dtype=np.float32)[:,None]                 # per-row latitude
+                    _taper=np.clip((_lat-24.0)/(30.0-24.0),0.0,1.0)                     # 0 at Aswan (24N) -> 1 at the Delta (30N)
+                    _wdeg=0.012+_taper*(0.130-0.012)                                    # river-width at Aswan, full at the Delta
+                    _wdeg=_wdeg+0.050*np.exp(-((_lat-22.20)/0.35)**2)                   # Faras patch
+                    _wdeg=_wdeg+0.065*np.exp(-((_lat-18.22)/0.40)**2)                   # Old Dongola patch
+                    _wpx=_wdeg*_ppdeg                                                   # (OH,1), broadcast over columns
+                    _flood=((_dr<_wpx)&(_rel<55)&(d>0)&(P<170)).astype(np.float32)
+                    _flood=cv2.GaussianBlur(_flood,(0,0),max(1.0,_ppdeg*0.015))
+                    FARM=np.array([120,150,82],np.float32)
+                    blend=blend*(1-(_flood*0.82)[...,None])+FARM*(_flood*0.82)[...,None]
+            except Exception as _fe2:
+                print('  (nile floodplain skipped:',_fe2,')')
             # THE GREAT MARSHES of lower Mesopotamia (al-Bata'ih): famous then, drained now - hand region
             if W<49.5 and E>45.5 and S0<32.2 and N>30.0:
                 # tint EVERY canonical marsh polygon (MARSH_POLYS_1271, defined below gebco_relief -
@@ -247,7 +280,28 @@ def gebco_relief(W,E,S0,N,OW,OH):
                 _mmf=cv2.GaussianBlur(_mm.astype(np.float32),(_mk,_mk),0)*np.where(d>0,1.0,0.0)*np.clip((45.0-d)/45.0,0,1)
                 MARSH=np.array([124,150,104],np.float32)
                 blend=blend*(1-(_mmf*0.6)[...,None])+MARSH*(_mmf*0.6)[...,None]
-            rk=max(1,int(_ppdeg*0.02))
+            # NILE DELTA (Kris 8/05): the hand polygon 'missed the delta'. Flood-fill the land that the two
+            # Nile distributaries + the Mediterranean coast enclose - real rivers/coast as the boundary.
+            try:
+                if W<32.4 and E>30.0 and N>30.2:  # any Egyptian chart showing the fork/delta
+                    _rivbar=cv2.dilate(rmask,np.ones((max(3,int(_ppdeg*0.03))|1,)*2,np.uint8))
+                    _free=(((d>0)&(_rivbar==0)).astype(np.uint8))
+                    _nl,_lab=cv2.connectedComponents(_free,8)
+                    _hull=np.zeros((OH,OW),np.uint8)
+                    _hpx=np.array([[int((lo-W)/(E-W)*OW),int((N-la)/(N-S0)*OH)] for (lo,la) in DELTA_POLY],np.int32)
+                    cv2.fillPoly(_hull,[_hpx],1)
+                    # SEEDLESS (Kris): the delta = river/sea-ENCLOSED land inside the hull. Desert is the OPEN
+                    # region reaching the L/R/bottom frame edge; enclosed land (the delta wedge, even where the
+                    # frame clips it at the top) never does - so green every enclosed component within the hull.
+                    _bord=set(np.unique(_lab[:,0]))|set(np.unique(_lab[:,-1]))|set(np.unique(_lab[-1,:]))
+                    _delta=(~np.isin(_lab,list(_bord)))&(_lab>0)&(_hull>0)
+                    if _delta.any():
+                        _dmf=cv2.GaussianBlur(_delta.astype(np.float32),(7,7),0)
+                        DELTAG=np.array([104,158,82],np.float32)
+                        blend=blend*(1-(_dmf*0.9)[...,None])+DELTAG*(_dmf*0.9)[...,None]
+            except Exception as _de:
+                print('  (delta flood-fill skipped:',_de,')')
+            rk=max(1,int(_ppdeg*0.01))  # Oxus 8/05 (Kris): halved - the fat ribbon looked silly
             rline=cv2.dilate(rmask,np.ones((rk*2+1,rk*2+1),np.uint8)).astype(bool)&(d>0)
             blend[rline]=np.array([84,126,158],np.float32)
             img[land]=blend[land]
@@ -283,6 +337,8 @@ MARSH_POLYS_1271=[
   [(48.0,30.45),(48.15,31.05),(48.75,31.15),(49.05,30.7),(48.6,30.3)],                             # Karun mouth, E of the Basra-Ahwaz road (Kris's purple circle - why the road bends)
 ]
 MARSH_STROKE=(56,138,150)   # OXUS: the tussock stroke colour - tweak HERE (Kris wants it cyan-ish); overlay-only, no rebake
+# NILE DELTA cultivation polygon (Kris 8/05): the delta is irrigation-fed, max lushness - forced green
+DELTA_POLY=[(31.35,29.90),(30.35,30.95),(30.05,31.50),(30.85,31.75),(31.55,31.72),(32.10,31.45),(31.85,30.80)]  # generous leak-guard hull around the delta
 def marsh_hatch(im,geo,polys=None,seed=7,col=None):
     col=col or MARSH_STROKE
     from PIL import Image as _I, ImageDraw as _D
@@ -311,7 +367,28 @@ def marsh_hatch(im,geo,polys=None,seed=7,col=None):
 
 def slug(n): return re.sub(r"[^a-z]","",n.lower())
 BBOX_OVERRIDE={'Hormuz':(51.5,73.5,15.5,33.0)}
-EXTRA_LEGS={'Hormuz':['Varamin|Yazd']}  # Oxus: force a 2nd-order onward stub the neighbour-walk misses  # Oxus 8/3: frame Dhofar+Cambay; Kollam/Baghdad/Varamin fall off-frame as stubs
+ARID_FORCE={'Jerusalem','Aylah','Medina','Mecca','Sanaa','Aden','Dhofar','Jeddah','Shibam','Aydhab','Qus','Asyut','Fustat','Alexandria'}
+MED_CLIMATE={'Jerusalem','Acre','Damascus','Aleppo'}  # Mediterranean climate: inverted growing year (green winter, dry summer) - takes effect on rebake  # Oxus: force the GEBCO arid/sand ramp instead of the olive master slice (Fadak's coloring doctrine)
+EXTRA_LEGS={'Hormuz':['Varamin|Yazd'],'Asyut':['Asyut|Kharga']}  # Oxus 8/05: Darb al-Arba'in context road off toward Kharga  # Oxus: force a 2nd-order onward stub the neighbour-walk misses  # Oxus 8/3: frame Dhofar+Cambay; Kollam/Baghdad/Varamin fall off-frame as stubs
+if len(sys.argv)>1 and sys.argv[1]=='--rerender':
+    # Oxus 8/05: re-render terrain JPGs in place (keep hand-tuned JSON); force gebco for the thin river + lush delta
+    for _name in sys.argv[2:]:
+        e=CHARTS_OUT[_name]; geo=e['geo']; OW=e['vbw']; OH=e['vbh']; W,E,S0,N=geo
+        img=gebco_relief(W,E,S0,N,OW,OH,lakeclip=True)
+        img,_eph,_forbid=anachronize(img,(W,E,S0,N))
+        _roadpx=[]
+        for _src in (e.get('legs',{}),e.get('sealegs',{})):
+            for _poly in _src.values():
+                _roadpx.append([[float(_a),float(_b)] for _a,_b in (q.split(',') for q in _poly.split())])
+        _slug=_name[3:]
+        _sea=fields_multi(img,(W,E,S0,N),SETTLE,seasons=SEASONS,roads=_roadpx,forbid=_forbid,medclimate=False)
+        for _sn,_img in _sea.items():
+            for _m,_col,_ss in _eph:
+                if _sn in _ss: _img=_img.copy(); _img[_m]=np.array(_col,np.uint8)
+            Image.fromarray(_img).save('so1271_%s_%s.jpg'%(_slug,_sn),quality=87)
+        Image.fromarray(_sea['summer']).save('so1271_%s.jpg'%_slug,quality=87)
+        print('re-rendered',_name,geo)
+    sys.exit(0)
 cities=sorted(NBR.keys())
 BATCH=int(sys.argv[1]) if len(sys.argv)>1 else 6
 made=[]
@@ -351,7 +428,9 @@ for C in cities:
     OH=max(60,min(2400,OH))
     fn='so1271_%s.jpg'%slug(C)
     from rebake_1271_fields import relief_boost
-    if S0>=MS and W>=MW and E<=ME and N<=MN:
+    if C in ARID_FORCE:
+        img=gebco_relief(W,E,S0,N,OW,OH,lakeclip=True)  # arid ramp + Dead-Sea/rift declamp
+    elif S0>=MS and W>=MW and E<=ME and N<=MN:
         slice_master(max(W,MW),min(E,ME),max(S0,MS),min(N,MN),OW,OH,'_tmp_so.png')
         img=relief_boost(np.array(Image.open('_tmp_so.png').convert('RGB')),(W,E,S0,N),OW,OH)
     elif S0<MS<N and W>=MW and E<=ME:  # Oxus: straddle 24N -> master relief above, GEBCO below
@@ -372,7 +451,7 @@ for C in cities:
         for _b in NBR.get(_a,[]):
             _g=geom(_a,_b)
             if _g: _roadpx.append([px(_lo,_la) for _lo,_la in _g[::3]])
-    _sea=fields_multi(img,(W,E,S0,N),SETTLE,seasons=SEASONS,roads=_roadpx,forbid=_forbid)
+    _sea=fields_multi(img,(W,E,S0,N),SETTLE,seasons=SEASONS,roads=_roadpx,forbid=_forbid,medclimate=(C in MED_CLIMATE))
     for _sn,_img in _sea.items():
         for _m,_col,_ss in _eph:
             if _sn in _ss:
@@ -397,7 +476,7 @@ for C in cities:
         poly=' '.join('%.1f,%.1f'%(x,y) for x,y in p)
         k=legkey(C,n)
         terr=EDGE_TERR.get(k,'land')
-        if terr in ('med','sea'): centry['sealegs'][k]=poly
+        if terr in ('med','sea','coast','deep'): centry['sealegs'][k]=poly  # Oxus 8/04 (Kris): coast+deep are sea routes too - draw them blue like Aden-Socotra
         else: centry['legs'][k]=poly
     # ONWARD ROADS (Kris): draw each destination's onward legs dark so the network never looks like
     # a dead end; faint dots for the onward towns that land inside the rect; SVG clips the rest.
@@ -415,7 +494,7 @@ for C in cities:
                 p2=np.c_[np.interp(t2,dd2,p2[:,0]),np.interp(t2,dd2,p2[:,1])]
             poly2=' '.join('%.1f,%.1f'%(x,y) for x,y in p2)
             terr2=EDGE_TERR.get(k2,'land')
-            if terr2 in ('med','sea'): centry.setdefault('sealegs',{})[k2]=poly2
+            if terr2 in ('med','sea','coast','deep'): centry.setdefault('sealegs',{})[k2]=poly2
             else: centry['legs'][k2]=poly2
             drawn.add(k2)
             if m in LL and m not in centry['cities']:
@@ -423,6 +502,13 @@ for C in cities:
                 if -40<=mx<=OW+40 and -40<=my<=OH+40:
                     centry['cities'][m]={'x':int(mx),'y':int(my),'r':6,'ldx':12,'ldy':-10,'faint':True}
     if not centry['sealegs']: del centry['sealegs']
+    # IN-FRAME LANDMARKS (Oxus 8/04, Kris): any node whose coords fall inside the chart gets a faint dot,
+    # even with no road to it from here - e.g. Aydhab simply IS within the Medina frame, so it shows.
+    for _ln,_lll in LL.items():
+        if _ln in centry['cities']: continue
+        _lmx,_lmy=px(*_lll)
+        if 0<=_lmx<=OW and 0<=_lmy<=OH:
+            centry['cities'][_ln]={'x':int(_lmx),'y':int(_lmy),'r':6,'ldx':12,'ldy':-10,'faint':True}
     # RUIN SITES (Kris): dead cities marked with the three-dots-in-a-triangle, not a live dot
     RUINS_1271={'Merv':(61.83,37.66)}
     for _rn,(_rlo,_rla) in RUINS_1271.items():
