@@ -68,7 +68,7 @@ def cataract(lon,lat,label,ldx,ldy,anc='la'):
 # context road: Qus <-> Aydhab (the normal Karimi road the raiders' target sat on)
 if 'Aydhab|Qus' in GEO: dashline(GEO['Aydhab|Qus'],ROAD,4,15,10)
 cataract(32.87,24.07,'1st Cataract',-12,8,'ra')
-cataract(30.98,21.48,'2nd Cataract',11,-7,'la')
+cataract(31.247,21.821,'2nd Cataract',-12,7,'ra')
 
 # THE RAID: David of Makuria strikes north out of the desert onto Aydhab
 arrow((31.6,20.6),(35.9,22.25),GREEN,7)

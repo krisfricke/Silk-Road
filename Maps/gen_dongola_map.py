@@ -23,7 +23,7 @@ F_X=ImageFont.truetype('/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf'
 
 # lon,lat for every site (Wikipedia / known positions)
 SITE={'Aswan':(32.90,24.09),'Faras':(31.47,22.20),'Gebel Adda':(31.65,22.32),
-      'Meinarti':(31.28,21.72),'Dongola':(30.75,18.22),'Qus':(32.76,25.92),'Aydhab':(36.49,22.33)}
+      'Meinarti':(30.598,20.997),'Dongola':(30.75,18.22),'Qus':(32.76,25.92),'Aydhab':(36.49,22.33)}
 # per-state: title, out filename, the current battle, sites already TAKEN (Mamluk gold), whether it's a
 # Nubian raid (green arrow to the battle) or a Mamluk advance (gold arrow up the Nile from Aswan).
 STATES={
@@ -83,7 +83,7 @@ def render(when):
         st((x+ldx,y+ldy),label,F_X,(60,96,140),ow=2,anchor=anc)
 
     if 'Aydhab|Qus' in GEO: dashline(GEO['Aydhab|Qus'],ROAD,4,15,10)   # the Karimi road, context
-    cataract(32.87,24.07,'1st Cataract',-12,8,'ra'); cataract(30.98,21.48,'2nd Cataract',11,-7,'la')
+    cataract(32.87,24.07,'1st Cataract',-12,8,'ra'); cataract(31.247,21.821,'2nd Cataract',-12,7,'ra')
 
     # movement arrow
     bl,bt=SITE[st_['battle']]
@@ -95,11 +95,11 @@ def render(when):
         st(px((ax+bl)/2+0.9,(ay+bt)/2),"Baybars's army",F_S,GOLD,anchor='ma')
 
     # sites: green = Makuria (Nubian), gold = held by Egypt/taken; battle = crossed swords
-    order=['Aswan','Faras','Gebel Adda','Meinarti','Dongola']
-    LOFF={'Aswan':(14,-6,'la'),'Faras':(-12,-4,'ra'),'Gebel Adda':(15,-4,'la'),'Meinarti':(15,-2,'la'),'Dongola':(18,-6,'la')}
+    order=['Aswan','Aydhab','Faras','Gebel Adda','Meinarti','Dongola']
+    LOFF={'Aswan':(14,-6,'la'),'Faras':(-12,-4,'ra'),'Gebel Adda':(15,-4,'la'),'Meinarti':(15,-2,'la'),'Dongola':(18,-6,'la'),'Aydhab':(-14,10,'ra')}
     for nm in order:
         lon,lat=SITE[nm]; x,y=px(lon,lat)
-        egy=(nm=='Aswan') or (nm in st_['taken'])       # Egyptian/Mamluk-held
+        egy=(nm in ('Aswan','Aydhab')) or (nm in st_['taken'])       # Egyptian/Mamluk-held
         col=GOLD if egy else GREEN
         r=8 if nm in ('Aswan','Dongola') else 6
         d.ellipse([x-r,y-r,x+r,y+r],fill=col,outline=PARCH,width=2)

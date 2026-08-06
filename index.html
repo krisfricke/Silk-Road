@@ -137,7 +137,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='3.3.85'; const BUILD='0805.oxusCampaignMaps'; /* build-stamp: version ghosts shall not pass */
+const VERSION='3.4.01'; const BUILD='0806.oxusStoryline'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -421,6 +421,9 @@ const ERA1271_NET={
  {name:'Jeddah', ll:[39.17,21.50], tier:'minor', hub:'minor', cash:800,
   desc:"The port of Mecca on the Red Sea \u2014 where the pilgrim fleets make landfall and the holy city takes its grain and its goods off the water.",
   adm:"Jeddah \u2014 a walled roadstead of coral-rag houses behind a reef, living on two tides that never fail it: pilgrims crossing from Aydhab for the Hajj, and Karimi ships bringing India's pepper and Egypt's grain up to feed Mecca, a day's ride inland. What the desert cannot give, the sea lands here."},
+ {name:'Famagusta', ll:[33.94,35.13], tier:'hub',
+  desc:"The great harbour of Cyprus \u2014 after 1291, the last Latin emporium of the East, gorged on the trade and the refugees of a drowned kingdom.",
+  adm:"Famagusta on Cyprus \u2014 a Lusignan port that was a quiet anchorage until Acre fell, and overnight became the richest city of the Latin East: the Genoese, Venetian and Pisan houses that fled the mainland crammed within its walls, the spice and silk of the caravan-roads landed here now instead of at Acre, and a whole generation of Outremer's survivors making second fortunes off the ruin of the first."},
  {name:'Aden', ll:[45.03,12.80], tier:'hub',
   desc:"The crater-harbour at Arabia's foot \u2014 the great exchange where Red Sea money meets Indian Ocean cargo.",
   adm:"Aden \u2014 the mountain is a dead volcano and the harbour is its flooded mouth: the Rasulid sultans keep the tanks, the customs, and the best-run port between Egypt and India. Ships time their year by it: the India fleets in on one monsoon, out on the other, and the warehouses breathing pepper the whole while."},
@@ -1436,6 +1439,8 @@ function goodMax(g){ var _era=(S&&S.era)||'762'; if(!GMAX)GMAX={}; if(!GMAX[_era
 function cityGoodRel(g,c){ const lo=goodMin(g), hi=goodMax(g), b=ovrBase(g,c); return hi>lo ? (b-lo)/(hi-lo) : 0; } // 0 = this city is the cheapest place for g; 1 = the dearest
 const BAZAAR_N=9; // how many comparative-advantage goods a bazaar always lists (plus anything carried)
 function cityShownGoods(c){
+  if(S&&S.sack&&gameDate().t>=S.sack.end) S.sack=null;   // the raiders have gone; the market reopens
+  if(S&&S.sack&&c&&S.sack.city===c.name){ return GOODS.filter(function(g){return g.id==='aloe'||g.id==='rhubarb'||g.id==='wine'||(g.id==='slaves'&&SLAVERY);}); }  // a sacked town trades only medicine, wine (to the drunk victors), and its own people (the cheapest slaves in the world)
   if(c&&c.camp){ var cs={felt:1}; if(SLAVERY)cs.slaves=1; if(typeof OVR!=='undefined'&&OVR[c.name])for(var _k in OVR[c.name])cs[_k]=1; /* a camp with its own trade (the Perevoloka: furs, slaves) shows it */ if(S)for(var _i=0;_i<GOODS.length;_i++){var _g=GOODS[_i]; if((S.goods[_g.id]||0)>0)cs[_g.id]=1;} return GOODS.filter(function(g){return cs[g.id]&&!(g.id==='slaves'&&!SLAVERY);}); }
   const N=(c&&c.hub==='minor')?4:BAZAAR_N;
   const ranked=GOODS.filter(g=>wouldStock(g,c) && (g.id!=='conut'||conutHere(c.name)) && (g.id!=='aloe'||aloeHere(c.name)) && !(g.id==='slaves'&&!SLAVERY) && (g.id!=='mango'||(S&&S.mangoQuest))).sort((a,b)=>cityGoodRel(a,c)-cityGoodRel(b,c)).slice(0,N); // rank the top-N among goods actually STOCKED here, so great markets fill their list instead of showing 'none' rows // the goods this city is the best place to BUY
@@ -1494,7 +1499,7 @@ function trafficEff(){ try{
   if(_TRAF.eff&&_TRAF.effEra===era)return _TRAF.eff;
   var vis=(_TRAF.data&&_TRAF.data[era])||{};
   var adj={};
-  if(typeof SEA_EDGES!=='undefined') SEA_EDGES.forEach(function(e){ if(e.era&&e.era!=='both'&&e.era!==era)return; if(!e.era&&era==='1271')return; try{ if(typeof gatedLink==='function'&&gatedLink(e.a,e.b))return; }catch(x){} /* Kris: a shut road (war frontier, Kaidu, not-yet-open) carries no caravans and therefore no price signal - 762 Damascus must not measure itself against Aleppo or Baghdad across the closed frontier */ (adj[e.a]=adj[e.a]||[]).push(e.b); (adj[e.b]=adj[e.b]||[]).push(e.a); });
+  if(typeof SEA_EDGES!=='undefined') SEA_EDGES.forEach(function(e){ if(e.era&&e.era!=='both'&&e.era!==era)return; if(!e.era&&era==='1271')return; if(e.opensD)return; /* a port not yet risen (Famagusta) carries no price signal */ try{ if(typeof gatedLink==='function'&&gatedLink(e.a,e.b))return; }catch(x){} /* Kris: a shut road (war frontier, Kaidu, not-yet-open) carries no caravans and therefore no price signal - 762 Damascus must not measure itself against Aleppo or Baghdad across the closed frontier */ (adj[e.a]=adj[e.a]||[]).push(e.b); (adj[e.b]=adj[e.b]||[]).push(e.a); });
   var A=trafficAnchors(era);
   var T=function(n){return 10+(vis[n]||0);};
   var raw={};
@@ -1561,6 +1566,7 @@ function price(g,c){ if(g&&g.id==='mango'&&typeof mangoPrice==='function')return
   p*=(typeof trafficPriceMult==='function')?trafficPriceMult(g,c):1; /* the caravan cycle */
   p*=frontierSellMult(c,g.id);
   if((g.id==='honey'||g.id==='wax'||g.id==='mead') && typeof TARIM_BASIN!=='undefined' && TARIM_BASIN.has(c.name)) p*=1.5;
+  if(S&&S.sack&&S.sack.city===c.name&&gameDate().t<S.sack.end){ if(g.id==='aloe'||g.id==='rhubarb') p*=0.25; else if(g.id==='slaves') p*=0.30; else if(g.id==='wine'){ var _pr=Math.max(0,Math.min(1,(gameDate().t-S.sack.start)/((S.sack.end-S.sack.start)||1))); p*=(1+Math.pow(_pr,1.6)); } }  /* sacked market (Kris): medicine sold cheap to the desperate; wine dearer by the day to the drunk victors, peaking as they depart */
   return Math.max(1,Math.round(p));
 }
 function hpWord(){if(S&&S.seasick&&(S.sailing||S.voyaging||S.screen==='sailing'||S.screen==='voyage'))return 'ailing';return S.hp>75?'hale':S.hp>50?'weary':S.hp>25?'ailing':'<span class="bad">failing</span>'}
@@ -1829,14 +1835,26 @@ function checkHerbCrush(){
   S.pendingEvent={h:'A THING UNDERSTOOD', t:"A few weeks of the road have made it plain even to your nephew: Roshanak is easy and friendly with him, and with everyone, and nothing more than that. He takes it better than you feared \u2014 quiet for an evening, and then, watching her splint a drover\u2019s wrist by firelight, he seems to decide that a friend who can do that is worth a good deal more than a sweetheart who cannot. He is, if anything, the steadier for the lesson.", ch:[{l:'Go on',f(){}}]}; render(); /* Kris's frozen screen: the ONE check in the stepDay chain that forgot to render - the dialog armed invisibly and ate every click */
   return true;
 }
+/* ===== extensible festivals: Lunar New Year (east) + Eid al-Fitr / al-Adha (Muslim) — Kris ===== */
+function lunarNewYear(year){ var SYN=29.530588853*86400000, REF=Date.UTC(2000,0,6,18,14); var lo=Date.UTC(year,0,21), hi=Date.UTC(year,1,20,23,59,59); var k=Math.round((lo-REF)/SYN); for(var i=-2;i<=2;i++){ var t=REF+(k+i)*SYN; if(t>=lo&&t<=hi){ var dt=new Date(t); return [dt.getUTCMonth()+1, dt.getUTCDate()]; } } return null; }
+function gToHijri(t){ var jd=Math.floor(t/86400000)+2440588; var l=jd-1948440+10632; var n=Math.floor((l-1)/10631); l=l-10631*n+354; var j=Math.floor((10985-l)/5316)*Math.floor((50*l)/17719)+Math.floor(l/5670)*Math.floor((43*l)/15238); l=l-Math.floor((30-j)/15)*Math.floor((17719*j)/50)-Math.floor(j/16)*Math.floor((15238*j)/43)+29; var m=Math.floor((24*l)/709); var d=l-Math.floor((709*m)/24); var y=30*n+j-30; return {y:y,m:m,d:d}; }
+function lunarNewYearEvent(){ var road=_festOnRoad(), cold=_festClimateCold(), here=(typeof eraName==='function'&&city())?eraName(city().name):''; var t = road
+    ? "By the moon\u2019s reckoning it is the first day of the new year \u2014 the great Spring Festival, greatest of all the feasts of Cathay, when families gather from the ends of the earth and the old year\u2019s debts are squared before the new. "+(cold?"The road lies cold and the company far from home; ":"The road is kind today; ")+"the eastern men of the company hang what red they can find, loose a string of crackers to fright the year\u2019s ill-luck away, and eat long noodles for long life, and speak of home."
+    : "It is the first dawn of the lunar year \u2014 the Spring Festival, the greatest feast of the East: red on every door, crackers in the streets, the kitchen-god packed off to heaven and a whole year\u2019s debts squared away. You keep it in "+(here||'the town')+" as the Cathayans do, and a caravan far from home makes itself a family for the night.";
+  return {h:'THE SPRING FESTIVAL', t:t, ch:[{l:'Keep the feast \u2014 red, crackers, and long noodles',f:function(){ S.hp=clamp(S.hp+6,0,100); if(typeof healMembers==='function')healMembers(4); log("You see the lunar new year in as the East does \u2014 the company the warmer for it, and the year turned lucky."); }}]}; }
+function eidFitrEvent(){ var here=(typeof eraName==='function'&&city())?eraName(city().name):''; return {h:'EID AL-FITR', t:"The new moon is sighted and the long fast of Ramadan is broken at last \u2014 Eid al-Fitr, the Feast of Breaking-Fast. From "+(here||'the town')+" to the ends of Islam the mosques fill at dawn, the alms of the fast are pressed into the hands of the poor, and every house with anything to spare sets out sweets and greets its neighbours.", ch:[{l:'Keep the feast and give the alms',f:function(){ if(S.silver>=5)S.silver-=5; S.hp=clamp(S.hp+6,0,100); if(typeof healMembers==='function')healMembers(4); log("You break the fast with the town \u2014 alms given, sweets shared, the road the friendlier for it."); }}]}; }
+function eidAdhaEvent(){ var here=(typeof eraName==='function'&&city())?eraName(city().name):''; return {h:'EID AL-ADHA', t:"It is Eid al-Adha, the Feast of the Sacrifice, the greater of the two \u2014 the days the pilgrims stand at Arafa by Mecca, and every household that can afford it slaughters a sheep and gives a third of the meat away. "+(here||'The town')+" smells of roasting mutton and woodsmoke, and the beggars eat as well as the emirs today.", ch:[{l:'Buy a sheep, share the meat',f:function(){ if(S.silver>=8){ S.silver-=8; S.food=(S.food||0)+10; } S.hp=clamp(S.hp+6,0,100); if(typeof healMembers==='function')healMembers(4); log("You keep the Sacrifice as the faithful do \u2014 a third eaten, a third given, a third kept; the company fed and heartened."); }}]}; }
 function checkHoliday(){
   if(!S||S.dead||!S.day||S.pendingEvent||S.eventOutcome) return;
   if(typeof gameDate!=='function') return; var gd=gameDate(); if(!gd) return;
   S.onceFlags=S.onceFlags||{};
-  if(typeof isWest==='function' && isWest()){
-    if(gd.m===12 && gd.d===25 && !S.onceFlags['xmas'+gd.y]){ S.onceFlags['xmas'+gd.y]=true; _fireFest(xmasEvent()); }
-  } else {
-    if(gd.m===12 && gd.d===21 && !S.onceFlags['dongzhi'+gd.y]){ S.onceFlags['dongzhi'+gd.y]=true; _fireFest(dongzhiEvent()); }
+  var _fst=(typeof orig==='function')?(orig().fest||[]):[]; function _hasF(x){ return _fst.indexOf(x)>=0; }
+  if(_hasF('nativity') && gd.m===12 && gd.d===25 && !S.onceFlags['xmas'+gd.y]){ S.onceFlags['xmas'+gd.y]=true; _fireFest(xmasEvent()); return; }
+  if(_hasF('dongzhi') && gd.m===12 && gd.d===21 && !S.onceFlags['dongzhi'+gd.y]){ S.onceFlags['dongzhi'+gd.y]=true; _fireFest(dongzhiEvent()); return; }
+  if(_hasF('lunarNewYear')){ var _lny=lunarNewYear(gd.y); if(_lny && gd.m===_lny[0] && gd.d===_lny[1] && !S.onceFlags['lny'+gd.y]){ S.onceFlags['lny'+gd.y]=true; _fireFest(lunarNewYearEvent()); return; } }
+  if(_hasF('eidFitr')||_hasF('eidAdha')){ var _h=gToHijri(gd.t);
+    if(_hasF('eidFitr') && _h.m===10 && _h.d===1 && !S.onceFlags['eidf'+_h.y]){ S.onceFlags['eidf'+_h.y]=true; _fireFest(eidFitrEvent()); return; }
+    if(_hasF('eidAdha') && _h.m===12 && _h.d===10 && !S.onceFlags['eida'+_h.y]){ S.onceFlags['eida'+_h.y]=true; _fireFest(eidAdhaEvent()); return; }
   }
 }
 function _fireFest(ev){ if(!ev)return; if(S.screen==='travel'){ S.journeying=false; if(typeof clearJourney==='function')clearJourney(); } S.pendingEvent=ev; render(); }
@@ -2370,7 +2388,7 @@ function chooseRoute(r){
 function ensureName(){ try{ if(!S||!S.nameDeferred)return; var n=prompt('Your name, for the record?','')||''; n=n.trim().slice(0,18); if(n){ S.name=n; S.nameDeferred=false; } }catch(e){} }
 function die(){ ensureName();
   if(!S.cause)S.cause='exhaustion';
-  const heir=livingParty().find(p=>p.nephew && p.alive);
+  const heir=livingParty().find(p=>p.cousin && p.alive) || livingParty().find(p=>p.nephew && p.alive);  /* the cousin, a true trader, inherits before the boy (Kris) */
   if(heir && !S.succeeded){ succeedToHeir(heir); return; }
   S.dead=true; S.screen='dead'; try{ if(typeof clearAutosave==='function')clearAutosave(); }catch(e){}
 }
@@ -2379,7 +2397,7 @@ function succeedToHeir(heir){
   try{clearInterval(voyTimer);}catch(e){} try{clearInterval(journeyTimer);}catch(e){} try{clearInterval(sailTimer);}catch(e){}
   S.voyaging=false; S.journeying=false; S.sailing=false;
   const fallen=S.name, heirGiven=heir.name;
-  heir.nephew=false; heir.grown=true;                 // he is the master now; the boyhood mischief is over
+  heir.nephew=false; heir.cousin=false; heir.grown=true;                 // he is the master now; the boyhood mischief is over
   S.party=S.party.filter(p=>p!==heir);                // the heir steps out of the roster and becomes 'you'
   var _fg=(typeof youGear==='function')?youGear():(S.youGear||null);                    // the fallen master's own kit
   S.youGear=(heir.gear)?heir.gear:{armor:null,bow:null,weapon:null,cloak:null};         // the heir keeps what he wore
@@ -3224,6 +3242,12 @@ const BIGNEWS=[
   srcT:"The English are leaving. LORD EDWARD's fleet is warping out of Acre on the morning tide \u2014 the crusade given up, a ten-year truce sworn with the Sultan, and the prince called home by word that his father the King is dying. The mole is crowded with people watching the sails dwindle west; when the last of them drops under the horizon the Kingdom is smaller and quieter than it was, left to its truce and its sea-walls.",
   rumor:"the western prince who came to fight the Sultan has given it up and gone home over the sea, his great war come to little.", full:"LORD EDWARD HAS SAILED FOR HOME. The English prince has taken ship from Acre \u2014 his crusade spent, a ten-year truce sworn with the Sultan, and word come that his father the King of England is failing. The last great crusading host to reach the Holy Land is gone west over the sea, and the Kingdom is left to its truce and its walls.",
   headline:"From Acre: the English crusader prince, Lord Edward, has given up the war and sailed home to the west."},
+ {id:'hudna', src:'Acre', date:[1272,5,22], near:NEWS_LEV, hNear:'A TEN-YEAR TRUCE', hFar:'WORD FROM THE HOLY LAND',
+  srcH:'THE COAST WAR IS PUT DOWN', srcWin:6,
+  srcT:"It is sworn. After the falling of the coast castles and the coming of the English prince, the Sultan BAYBARS and the Kingdom of Acre have sealed a truce \u2014 a hudna of ten years, ten months and ten days by the letter of it \u2014 parting the shrinking Frankish lands and the pilgrim roads between them. The Sultan turns his face from the coast; the barons breathe; and the merchants of both faiths, who never quite stopped trading through any of it, reckon the roads the safer for a while. Not peace, exactly \u2014 but not the knife either, for ten years.",
+  rumor:"the Sultan and the Franks of the coast have made a truce, they say \u2014 ten years of it \u2014 and the crusading is done for now, whatever the priests promise.",
+  full:"A TEN-YEAR TRUCE ON THE COAST. The Sultan Baybars and the Crusader Kingdom of Acre have sworn a hudna \u2014 ten years, ten months and ten days \u2014 halting the war between them and parting the last Frankish lands and the pilgrim roads. With the north quieted and Lord Edward\u2019s crusade spent, the Sultan is free to turn to his other frontiers.",
+  headline:"Word from the Holy Land: the Sultan Baybars and the Franks of Acre have sworn a ten-year truce. The coast war is stilled."},
  {id:'elbistan', src:'Sivas', date:[1277,4,15], near:NEWS_LEV, pic:'Pictures/elbistan_map_1277.jpg', hNear:'THE MONGOLS BROKEN AT ELBISTAN', hFar:'WORD OUT OF RUM',
   srcH:'ALL RUM IS IN AN UPROAR', srcWin:8,
   srcT:"Riders come in off the Abulustayn plain grey with dust: the Sultan BAYBARS has crossed the passes out of Syria and broken the Ilkhan\u2019s army whole. They met on the flats below Elbistan and the Mongols would not run \u2014 they got down off their horses in the centre and died where they stood, rank within rank, until there was no rank left. The Sultan is at Kayseri now, prayed for in the mosque as lord of Rum; but under the rejoicing runs a colder whisper \u2014 that the Ilkhan Abaqa is coming with the main horde, and a wise merchant keeps a road open behind him.",
@@ -3236,7 +3260,31 @@ const BIGNEWS=[
   rumor:"away east in Syria the Sultan of Egypt and the Mongols have fought a great battle \u2014 at Homs, they think \u2014 and it went hard, and one host or the other is broken. The road-talk cannot swear which.",
   full:"QALAWUN HAS BROKEN THE MONGOLS AT HOMS. The Ilkhan Abaqa\u2019s great army \u2014 Mongols, Georgians and Armenians, near the strength that once took Baghdad \u2014 came down on Syria, and the Sultan Qalawun met it on the plain north of Homs. The Mongol left shattered the Mamluk right and all but carried the day; but Qalawun held the centre, their prince Mongke Temur was wounded and fled, and the horde broke and ran for the Euphrates. A hard, bloody victory \u2014 Syria stands, and the Mongol tide is turned back once more.",
   headline:"Word from Syria: the Sultan Qalawun has met the Ilkhan\u2019s great invasion at Homs and thrown it back east \u2014 a bloody Mamluk victory."},
- {id:'aydhabsack', src:'Aydhab', date:[1272,5,1], near:NEWS_NILE, pic:'Pictures/aydhab_sack_1272.jpg', hNear:'AYDHAB IS SACKED', hFar:'WORD FROM THE RED SEA',
+ {id:'baybarsdead', src:'Damascus', date:[1277,7,1], near:NEWS_LEV, hNear:'THE SULTAN BAYBARS IS DEAD', hFar:'WORD FROM SYRIA',
+  srcH:'DAMASCUS IN MOURNING', srcWin:8,
+  srcT:"The citadel gates are shut and the drums beat slow: BAYBARS is dead \u2014 here, in Damascus, a few weeks after his triumph in Rum. The physicians say a fever; the bazaar says poison, a cup of qumis he had readied for another and drank himself by mischance. Forty years a soldier, seventeen a sultan \u2014 the man who broke the Franks at Antioch and the Mongols at Ayn Jalut, gone in a shuttered room. His boy Baraka Khan is proclaimed in his place, and every great emir in the army is already weighing what that is worth.",
+  rumor:"the great Sultan of Egypt is dead, they are saying \u2014 the terrible one, the breaker of Franks and Mongols both \u2014 though how he died no teller this far off will swear.",
+  full:"AL-ZAHIR BAYBARS IS DEAD. The Mamluk Sultan \u2014 the general who shattered the Mongols at Ayn Jalut and drove the Crusaders down to a strip of coast \u2014 has died at Damascus, weeks after his victory at Elbistan, of a fever the bazaar insists was poison meant for another. His young son Baraka Khan succeeds him, a boy among ambitious emirs. The most formidable enemy Franks and Mongols ever faced is gone.",
+  headline:"From Syria: al-Zahir Baybars, the Mamluk sultan who broke both Crusader and Mongol, is dead at Damascus \u2014 his boy-son proclaimed after him."},
+ {id:'qalawun', src:'Fustat', date:[1279,11,27], near:NEWS_LEV, hNear:'QALAWUN TAKES THE THRONE', hFar:'WORD FROM EGYPT',
+  srcH:'A NEW SULTAN IN CAIRO', srcWin:8,
+  srcT:"Baybars\u2019 line is finished. His son Baraka was pushed off the throne within two years; the child Salamish was set up in his place and set down again inside a season; and now the old comrade QALAWUN al-Alfi \u2014 \u2018the Thousandman,\u2019 bought as a slave once for a thousand dinars \u2014 has taken the sultanate for himself. The emirs who matter have bent the knee, the Friday prayer is said in his name, and the mint is already restriking the coin. Another soldier of Baybars\u2019 own school, and no softer than his master.",
+  rumor:"away in Egypt the old Sultan\u2019s sons have been shouldered aside and one of his great generals has taken the throne \u2014 Qalawun, if the name carries true this far.",
+  full:"QALAWUN IS SULTAN OF EGYPT. Baybars\u2019 heirs have been set aside \u2014 his son Baraka deposed, the boy Salamish raised and quickly lowered \u2014 and the veteran emir Qalawun al-Alfi has taken the throne of Egypt and Syria himself. A soldier of Baybars\u2019 school; the Franks and the Ilkhan alike will find nothing softer in him.",
+  headline:"From Egypt: the Mamluk emir Qalawun has set aside Baybars\u2019 sons and taken the sultanate \u2014 another soldier on the throne of Cairo."},
+ {id:'tripolifall', src:'Acre', date:[1289,4,27], near:NEWS_LEV, pic:'Pictures/tripoli_fall_1289.jpg', hNear:'TRIPOLI IS FALLEN', hFar:'WORD FROM THE SYRIAN COAST',
+  srcH:'REFUGEES CROWD THE ACRE MOLE', srcWin:8,
+  srcT:"Tripoli is gone. QALAWUN brought his siege-engines down the coast, threw down the walls in a month, and stormed the city in a single day of slaughter; those who reached the little isle of St Thomas offshore were taken off by Genoese and Pisan galleys, and the boats are coming into Acre now gunwale-deep with the ruined and the widowed. The County of Tripoli \u2014 a hundred and ninety years a Christian state \u2014 is wiped from the shore. Only Acre and a few sea-towers are left, and every man on this mole is doing the same cold arithmetic.",
+  rumor:"down on the Syrian shore the Sultan has stormed one of the last great Christian cities \u2014 Tripoli, they think \u2014 and put it to the sword; the Kingdom by the sea is all but done.",
+  full:"TRIPOLI HAS FALLEN TO QALAWUN. The Sultan brought his army down the coast and stormed Tripoli on 27 April 1289 after a month\u2019s siege \u2014 a great slaughter, the survivors fleeing by sea. The County of Tripoli is extinguished, and of all the Crusader states only Acre and a handful of coast-towers remain. The Latin East is down to its last city.",
+  headline:"From the Syrian coast: Qalawun has stormed Tripoli and wiped out the County \u2014 of the Crusader states, only Acre now stands."},
+ {id:'acrefall', src:'Ayas', date:[1291,5,18], near:NEWS_LEV, pic:'Pictures/acre_fall_1291.jpg', hNear:'ACRE IS FALLEN \u2014 OUTREMER IS ENDED', hFar:'WORD FROM THE HOLY LAND',
+  srcH:'THE LAST CITY IS GONE', srcWin:10,
+  srcT:"They are saying the impossible on the quays, and the refugee boats confirm it: ACRE has fallen. Al-Ashraf Khalil, Qalawun\u2019s son, brought up a siege-train such as no living man had seen and battered the walls six weeks; on the eighteenth of May the Accursed Tower gave and the assault poured through. The Templars held their sea-castle three days more and died in it when the undermined walls came down on stormers and defenders together. The harbour was a horror of overladen boats and drowning people. Within weeks Tyre, Sidon, Beirut, \u2019Atlit \u2014 all the rest \u2014 were abandoned without a blow struck. Two centuries of the Latin East, ended in one summer.",
+  rumor:"they are saying the impossible in the caravanserai \u2014 that Acre itself, the last and greatest of the Christian cities in the East, has been stormed and there is nothing left of the Kingdom at all.",
+  full:"ACRE HAS FALLEN \u2014 OUTREMER IS ENDED. On 18 May 1291 the Mamluk sultan al-Ashraf Khalil stormed Acre, the last great Crusader city; the Templars\u2019 sea-fortress fell three days later as its undermined walls collapsed. Tyre, Sidon, Beirut, Tortosa and \u2019Atlit were then abandoned one after another without a fight. After nearly two centuries the Latin Kingdom of the East is wholly extinguished \u2014 there is no Frankish Syria left.",
+  headline:"The end of Outremer: the sultan Khalil has stormed Acre, the last Crusader city, and the whole Latin East has fallen."},
+ {id:'aydhabsack', src:'Aydhab', date:[1272,8,18], near:NEWS_NILE, pic:'Pictures/aydhab_sack_1272.jpg', hNear:'AYDHAB IS SACKED', hFar:'WORD FROM THE RED SEA',
   srcH:'THE NUBIANS CAME OUT OF THE DESERT', srcWin:8,
   srcT:"Aydhab is a wound. Out of the western desert, where no army was ever looked for, came the men of DAVID, the Christian king of Nubia at Dongola \u2014 who has stopped sending the Sultan his yearly tribute of slaves and sends war in its place. They fell on the Red Sea port, sacked it, killed and carried off, and were gone into the sand again before any relief could climb the road from Qus. The pilgrim-brokers count their dead; and every man on the coast knows the Sultan Baybars will not suffer a Christian king to burn a Muslim port and keep his head.",
   rumor:"they say a Christian king out of the deep south has come down and burned one of the Red Sea ports \u2014 Aydhab, or Aswan, or both; the tellers cannot agree, only that the Nubians have turned on Egypt.",
@@ -3302,11 +3350,44 @@ function checkEdwardCandia(){ try{
     {l:'Watch the fleet water and stand out to sea',f:function(){}}]};
   render(); return true;
  }catch(e){ return false; } }
+/* ===== PROCEDURAL START-STORYLINE (Kris): a cousin's letter drives any custom start
+   home -> cousin-city (3 hops toward the nearer pole) -> near pole -> far pole -> home. The cousin
+   joins, trades well, and inherits ahead of the nephew. All targets read live off the road graph
+   and the current prices, so a start anywhere writes its own spine. Dormant unless S.startStory set. ===== */
+const STORY_OVERRIDE={ 'Hormuz':{ cousin:'Baghdad', cousinName:'Yusuf' } };  /* per-start cousin-city overrides (Kris: Hormuz->Baghdad) */
+function _storyGraph(){ var era=(S&&S.era)||'762'; var adj={}; SEA_EDGES.forEach(function(e){ if(e.era&&e.era!=='both'&&e.era!==era)return; if(!e.era&&era==='1271')return; if(e.opensD||e.untilD)return; var d=e.d||6; (adj[e.a]=adj[e.a]||[]).push([e.b,d]); (adj[e.b]=adj[e.b]||[]).push([e.a,d]); }); return adj; }
+function _storyDij(src,adj){ adj=adj||_storyGraph(); var dist={},prev={}; dist[src]=0; var Q=[[0,src]]; while(Q.length){ Q.sort(function(a,b){return a[0]-b[0];}); var c=Q.shift(),d0=c[0],u=c[1]; if(d0>(dist[u]!=null?dist[u]:1e9))continue; (adj[u]||[]).forEach(function(vw){ var nd=d0+vw[1]; if(nd<(dist[vw[0]]!=null?dist[vw[0]]:1e9)){ dist[vw[0]]=nd; prev[vw[0]]=u; Q.push([nd,vw[0]]); } }); } return {dist:dist,prev:prev}; }
+function _storyPath(src,dst){ var r=_storyDij(src); if(r.dist[dst]==null)return null; var p=[dst]; while(p[p.length-1]!==src){ var pr=r.prev[p[p.length-1]]; if(pr==null)return null; p.push(pr); } return p.reverse(); }
+function _storyHops(src,n,adj){ adj=adj||_storyGraph(); var seen={},lvl={}; seen[src]=true; lvl[src]=0; var q=[src],out=[]; while(q.length){ var u=q.shift(); if(lvl[u]===n){ out.push(u); continue; } if(lvl[u]>n)continue; (adj[u]||[]).forEach(function(vw){ var v=vw[0]; if(!seen[v]){ seen[v]=true; lvl[v]=lvl[u]+1; q.push(v); } }); } return out; }
+function _cityObj(nm){ return (typeof SEA_BYNAME!=='undefined'&&SEA_BYNAME[nm])||(typeof cityByName==='function'&&cityByName(nm))||null; }
+function bestGood(fromNm,toNm){ var a=_cityObj(fromNm), b=_cityObj(toNm); if(!a||!b)return null; var best=null; for(var i=0;i<GOODS.length;i++){ var g=GOODS[i]; if(g.amberOnly||g.noLedger||g.id==='slaves'||g.id==='mango')continue; try{ var m=(price(g,b)-price(g,a)); if(best==null||m>best.m){ best={id:g.id,name:g.n,m:m}; } }catch(e){} } return best; }
+function storyPoles(startNm){ var era=(S&&S.era)||'762'; var pw=ERAS[era].goalW, pe=ERAS[era].goalE; var r=_storyDij(startNm); var dw=r.dist[pw]!=null?r.dist[pw]:1e9, de=r.dist[pe]!=null?r.dist[pe]:1e9; return (dw<=de)?{near:pw,far:pe}:{near:pe,far:pw}; }
+function storyCousinCity(startNm, poleNm, override){ if(override && _cityObj(override))return override; var path=_storyPath(startNm,poleNm); var primary=path?(path[3]||path[path.length-1]):poleNm; var r=_storyDij(startNm); var dpole=r.dist[poleNm]!=null?r.dist[poleNm]:1e9; function via(c){ var rc=_storyDij(c); return (r.dist[c]!=null?r.dist[c]:1e9)+(rc.dist[poleNm]!=null?rc.dist[poleNm]:1e9); } var pv=via(primary); var best=primary, bestM=(bestGood(startNm,primary)||{m:-1e9}).m; _storyHops(startNm,3).forEach(function(c){ if(c===primary)return; var rc=_storyDij(c); if(rc.dist[poleNm]==null||rc.dist[poleNm]>=dpole)return; if(via(c)>1.2*pv)return; var mm=(bestGood(startNm,c)||{m:-1e9}).m; if(mm>bestM){ best=c; bestM=mm; } }); return best; }
+function genStartStory(startNm){ var ov=(STORY_OVERRIDE[startNm]||{}); var poles=storyPoles(startNm); var cc=storyCousinCity(startNm, poles.near, ov.cousin); return { stage:0, home:startNm, cousin:cc, near:poles.near, far:poles.far, cousinName:(ov.cousinName||'Yusuf'), started:false }; }
+function beginStartStory(startNm){ if(!startNm)return; try{ S.startStory=genStartStory(startNm); }catch(e){} }
+function _storyCousinAlive(){ return (S.party||[]).some(function(p){return p.cousin&&p.alive;}); }
+function storyLetterEvent(){ var st=S.startStory; var g=bestGood(st.home,st.cousin); var gn=g?g.name.toLowerCase():'trade goods'; return {h:'A LETTER FROM YOUR COUSIN', t:"A courier brings a letter under your cousin "+st.cousinName+"’s hand, come up the road from "+eraName(st.cousin)+". He writes that trade runs hot there just now — a load of "+gn+" carried up from "+eraName(st.home)+" would turn a handsome profit, and would you not come, and bring what you can? Your kin have pooled their purses and stood you a caravan on the strength of it. The road out of "+eraName(st.home)+" runs toward "+eraName(st.cousin)+".", ch:[{l:'Load the caravan and set out',f:function(){ st.started=true; }}]}; }
+function storyGreetEvent(){ var st=S.startStory; var g=bestGood(st.cousin,st.near); var gn=g?g.name.toLowerCase():'trade goods';
+  if(!_storyCousinAlive()){ var c={id:'cousin', name:st.cousinName, role:'your cousin, a sharp and restless trader', kind:'companion', cousin:true, heir:true, recruited:true, freedman:false, skills:{trade:3}, fromCity:st.cousin, alive:true}; S.party.push(c); if(typeof normalizeMember==='function')normalizeMember(S.party[S.party.length-1]); }
+  return {h:'YOUR COUSIN '+String(st.cousinName||'').toUpperCase(), t:"Your cousin "+st.cousinName+" all but pulls you off the road with delight, and has your beasts stabled before you can object. Over supper the talk turns to silver: he is sure — he is always sure — that the real money lies further on. Take "+gn+" from here up to "+eraName(st.near)+", he says, and you will not regret it; and he is coming with you, for a share and for the road. He is a born trader, and no fool with a ledger.", ch:[{l:'Take him on, and turn for '+eraName(st.near),f:function(){ st.stage=1; }}]}; }
+function storyPoleNearEvent(){ var st=S.startStory; var who=_storyCousinAlive()?('Your cousin '+st.cousinName):'Your nephew, wide-eyed at the size of the place,'; return {h:String(eraName(st.near)).toUpperCase()+' AT LAST', t:eraName(st.near)+" is everything the road promised, and louder. "+who+" is already talking of the next thing: they say the far end of the world — "+eraName(st.far)+" — pays best of all for what a man can only carry there from here, and richest of all is the one who carries it first. Why stop now, with the caravan sound and the purse fat?", ch:[{l:'On, then — for '+eraName(st.far),f:function(){ st.stage=2; }},{l:'Rest here a while, then go on',f:function(){ st.stage=2; }}]}; }
+function storyPoleFarEvent(){ var st=S.startStory; var who=_storyCousinAlive()?('Your cousin '+st.cousinName):'Your nephew'; return {h:String(eraName(st.far)).toUpperCase()+' — THE FAR END OF THE ROAD', t:"You have come the whole length of the world to "+eraName(st.far)+", and there is nothing ahead now but the long way back. "+who+" reckons it up one night and says aloud what you are both thinking: you are made — if you can only get home to "+eraName(st.home)+" with it. Home. That word again, after all these miles.", ch:[{l:'Turn for home — '+eraName(st.home),f:function(){ st.stage=3; }}]}; }
+function storyHomeEvent(){ var st=S.startStory; st.stage=4; return {h:'HOME, AND RICHER', t:"The gates of "+eraName(st.home)+" open on a caravan nobody quite recognises — leaner, browner, and a great deal richer than the one that crept out on a cousin’s letter and the family’s pooled coppers. You have been to the ends of the earth and come home with your name made. Whatever you do now, you do as a merchant of consequence.", ch:[{l:'Home.',f:function(){}}]}; }
+function checkStartStory(){ if(!S||S.dead||S.pendingEvent||S.eventOutcome)return false; var st=S.startStory; if(!st)return false; if(S.screen!=='city'&&S.screen!=='port')return false; var at=(S.seaMode?S.portName:(city()&&city().name)); if(!at)return false;
+  if(!st.started){ if(at===st.home){ S.pendingEvent=storyLetterEvent(); return true; } return false; }
+  if(st.stage===0 && at===st.cousin){ S.pendingEvent=storyGreetEvent(); return true; }
+  if(st.stage===1 && at===st.near){ S.pendingEvent=storyPoleNearEvent(); return true; }
+  if(st.stage===2 && at===st.far){ S.pendingEvent=storyPoleFarEvent(); return true; }
+  if(st.stage===3 && at===st.home){ S.pendingEvent=storyHomeEvent(); return true; }
+  return false;
+}
 function checkBigNewsTown(){ /* TOWN WILDFIRE - fires on arrival or any calm city render */
  try{
   if(!S||S.era!=='1271'||S.pendingEvent)return false;
   if(S.screen!=='city'&&S.screen!=='port')return false;
   var at=(S.seaMode?S.portName:(city()&&city().name)); if(!at)return false;
+  if(at==='Aydhab' && !S.onceFlags.aydhabSackHit && !S.onceFlags.aydhabApproached && typeof dateBetween==='function' && dateBetween(1272,8,18,1272,9,5)){ S.onceFlags.aydhabSackHit=true; S.onceFlags['bignews_aydhabsack']=true; S.pendingEvent=evAydhabSack(); return true; }
+  if(at==='Acre' && !S.onceFlags.acreFled && (typeof gameDate==='function') && gameDate().t>=Date.UTC(1291,4,18) && gameDate().t<=Date.UTC(1291,4,28)){ S.onceFlags.acreFled=true; S.onceFlags['bignews_acrefall']=true; S.pendingEvent=evAcreFall('harbour'); return true; }  /* caught by surprise: already in town when the raid broke */
   if(typeof checkEdwardCandia==='function'&&checkEdwardCandia())return true;
   for(var i=0;i<BIGNEWS.length;i++){ var ev=BIGNEWS[i];
     if(S.onceFlags['bignews_'+ev.id])continue;
@@ -5487,6 +5568,7 @@ function workMonth(){
  var d=waitDays(30); var earn=d; S.silver+=earn; S.job.days=(S.job.days||0)+d;
  if(!S.dead && d>0) S.hp=clamp(S.hp+Math.min(10,d*0.4),0,100);
  log('You work '+d+' day'+(d===1?'':'s')+' as '+lj.t+' in '+here+' and earn '+earn+' s.'+(d<30?' Your provisions ran short — see to food before you work on.':'')+(S.job.bee?' The hives are loud with the sage-bloom, and the stings stop mattering after the first week.':''));
+ if(!S.dead && !S.pendingEvent && typeof checkStartStory==='function' && checkStartStory())return;
  if(!S.dead && !S.pendingEvent && typeof checkBigNewsTown==='function') checkBigNewsTown();
  if(!S.dead && !S.pendingEvent && d>=6 && rnd()<0.5 && typeof maybeCityEvent==='function') maybeCityEvent();
  if(!S.dead && !S.pendingEvent) checkJobEnd();
@@ -6411,7 +6493,17 @@ function wealthArc(start,end){
 /* ============ v0.9.18 — start in Constantinople (Byzantine origin) ============ */
 const MONTHS_WEST=['March','April','May','June','July','August','September','October','November','December','January','February'];
 const CAL_MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
-function isWest(){ return !!(S && S.origin==='west'); }
+/* ===== ORIGINS: the merchant's home perspective — extensible, not just east/west (Kris).
+   side = physical routing (which end of the road you start); cal = calendar shown; dist = distance
+   unit the player thinks in; fest = the festivals they keep. New starts drop in as one more entry. ===== */
+const ORIGINS={
+  west:    { label:'the Latin west', side:'west', cal:'julian',  dist:'mile',    fest:['nativity'] },
+  east:    { label:'Cathay',         side:'east', cal:'chinese', dist:'li',      fest:['dongzhi','lunarNewYear'] },
+  persian: { label:'the Persian lands', side:'east', cal:'hijri', dist:'farsakh', fest:['eidFitr','eidAdha'] },   /* future starts: Hormuz, Nishapur, Samarkand... */
+  arab:    { label:'the Arab lands',    side:'west', cal:'hijri', dist:'mil',     fest:['eidFitr','eidAdha'] }    /* future starts: Cairo, Baghdad, Aden... */
+};
+function orig(){ return (ORIGINS[(S&&S.origin)||'west']) || ORIGINS.west; }
+function isWest(){ return orig().side==='west'; }
 function routeOrient(){ return (S&&S.returning)?!isWest():isWest(); }  /* homeward legs rebuild with the opposite orientation (see chooseReturnRoute) */
 function goalName(){ return isWest() ? ERA().goalE : ERA().goalW; }
 const STUB_HINTS={karakorum:{e:'The yam road northwest across the steppe \u2014 post-riders change horses every forty li, and a month of grass ends at Karakorum, the old capital of the world.',w:'The yam road down from Karakorum to the Khan\u2019s summer seat \u2014 the riders do it in days; a caravan, in weeks.'},urgench:{e:'Over the bridge of boats and up the Ustyurt scarp \u2014 the wagon-road to Urgench, a month of wells, cairns and wind.',w:'Down off the Ustyurt to Saraichik\u2019s bridge of boats \u2014 the wagon-road from Khwarezm to the Horde\u2019s river-cities.'},rhine:{e:'The Rhine Road \u2014 salt of Lueneburg, glass and wine of the Rhineland, linen of Flanders come up this way to Lubeck. Another road, another journey.',w:'The Rhine Road, west toward the Empire\u2019s river-cities. Your business lies on the Amber Road.'},india_kabul:{e:"The Kabul road \u2014 pepper and indigo come up through the passes from Hind. You set out for Cathay; let's not get sidetracked into India.",w:"The Kabul road, down through the passes toward Hind. You are bound for the Franks' sea \u2014 India is another journey."},india_kashmir:{e:"The Leh road \u2014 over the Karakoram to Kashmir, the highest trade road in the world. You set out for Cathay; let's not get sidetracked into India.",w:"The Leh road climbs over the Karakoram toward Kashmir and Hind. You are bound for the Franks' sea \u2014 India is another journey."}};
@@ -6428,7 +6520,11 @@ function reorient(fwd, west){
 function fullRoute(r, west){ if(r==='k'){ var cont=MAIN2.slice(1).map(function(c,i){ return i===0?Object.assign({},c,{dist:560}):c; }); return reorient([...MAIN1,...STEPPE,...cont], west); } return reorient([...MAIN1,...(r==='n'?NORTH:SOUTH),...MAIN2], west); }
 function preForkItin(west){ const full=fullRoute('n', west); return west ? full.slice(0, MAIN2.length+1) : full.slice(0, MAIN1.length); }
 function fmtDist(li){ /* DISTANCE DOCTRINE (Kris): the engine's internal unit is an abstract road-unit (~1 li ~ 0.5 km); NOTHING player-facing prints it raw. Display derives by PERSPECTIVE: western-origin characters think in miles (unit/3), eastern-origin in li. Diegetic speech by locals may keep its own units (a Hami caravan-master says 'forty li'; a Venetian pilot says 'miles'). Every distance shown to the player routes through THIS function - no hardcoded ' li' strings. */
- if(isWest()){ const mi=Math.max(1,Math.round(li/3)); return mi+' mile'+(mi!==1?'s':''); } return li+' li'; }
+ var _u=(typeof orig==='function')?orig().dist:(isWest()?'mile':'li');
+ if(_u==='mile'){ const mi=Math.max(1,Math.round(li/3)); return mi+' mile'+(mi!==1?'s':''); }
+ if(_u==='farsakh'){ const f=Math.max(1,Math.round(li/12)); return f+' farsakh'+(f!==1?'s':''); }   /* Persian parasang ~6 km ~ 12 li */
+ if(_u==='mil'){ const ml=Math.max(1,Math.round(li/4)); return ml+' m\u012bl'; }                    /* the Arabic mile ~2 km ~ 4 li; 3 to a farsakh */
+ return li+' li'; }
 function growNephew(){
   const neph=livingParty().find(p=>p.nephew);
   if(neph && !neph.grown){ neph.grown=true; neph.skills.trade=Math.max(neph.skills.trade||0,1); neph.skills.handle=Math.max(neph.skills.handle||0,1);
@@ -6705,6 +6801,7 @@ function autoForage(days){ const h=bestHunter(); if(!h||days<=0||S.dead)return; 
 let voyTimer=null;
 function clearVoy(){ if(voyTimer){clearInterval(voyTimer);voyTimer=null;} }
 
+if(typeof RADIAL1271!=='undefined'&&RADIAL1271['Acre'])RADIAL1271['Famagusta']=Object.assign({}, RADIAL1271['Acre']);  /* Famagusta is Acre's heir as the Latin emporium (Kris) */
 /* full sea-port cities. frac = east(0)..west(1) position, drives base prices. */
 const SEA=[
  /* ================= THE AMBER ROAD (step 7, Zaiton) ================= */
@@ -7053,12 +7150,15 @@ Object.assign(CITY_ADMIRE, CITY_ADMIRE_SEA);
 /* the sea network as an undirected graph. d=base days, terr: land|canal|coast|deep|med (only coast/deep are monsoon-gated). */
 const SEA_EDGES=[
  {a:"Candia",b:"Ayas", d:8, terr:'med', era:'1271', water:"the sea road between Candia and Ayas"},
- {a:"Candia",b:"Acre", d:6, until:1291, terr:'med', era:'1271', water:"the sea road between Candia and Acre"},
+ {a:"Candia",b:"Acre", d:6, untilD:[1291,5,18], terr:'med', era:'1271', water:"the sea road between Candia and Acre"},
  {a:"Candia",b:"Alexandria", d:5, terr:'med', era:'1271', water:"the sea road between Candia and Alexandria"},
- {a:"Acre",b:"Ayas", d:4, until:1291, terr:'med', era:'1271', water:"the sea road between Acre and Ayas"},
- {a:"Acre",b:"Alexandria", d:5, until:1291, terr:'med', era:'1271', water:"the coasting run between Acre and Alexandria"},
- {a:"Acre",b:"Jerusalem", d:3, until:1291, terr:'land', hajj:true, era:'1271', water:"the pilgrim road up through the hills of Galilee and Samaria"},
- {a:"Acre",b:"Damascus", d:5, until:1291, terr:'land', hajj:true, era:'1271', water:"the caravan road over Galilee and the Golan \u2014 the truce-trade every war has learned to spare"},
+ {a:"Acre",b:"Ayas", d:4, untilD:[1291,5,18], terr:'med', era:'1271', water:"the sea road between Acre and Ayas"},
+   {a:"Famagusta",b:"Ayas", d:2, opensD:[1291,5,18], terr:'med', era:'1271', water:"the short crossing from Cyprus to the Cilician shore"},
+   {a:"Famagusta",b:"Candia", d:5, opensD:[1291,5,18], terr:'med', era:'1271', water:"the sea road west from Cyprus to Crete"},
+   {a:"Famagusta",b:"Alexandria", d:4, opensD:[1291,5,18], terr:'med', era:'1271', water:"the run down from Cyprus to the Egyptian shore"},
+ {a:"Acre",b:"Alexandria", d:5, untilD:[1291,5,18], terr:'med', era:'1271', water:"the coasting run between Acre and Alexandria"},
+ {a:"Acre",b:"Jerusalem", d:3, untilD:[1291,5,18], terr:'land', hajj:true, era:'1271', water:"the pilgrim road up through the hills of Galilee and Samaria"},
+ {a:"Acre",b:"Damascus", d:5, untilD:[1291,5,18], terr:'land', hajj:true, era:'1271', water:"the caravan road over Galilee and the Golan \u2014 the truce-trade every war has learned to spare"},
  {a:"Aleppo",b:"Damascus", d:8, terr:'land', hajj:true, era:'1271', halt:'Homs', haltFrom:'Damascus', haltAt:0.54, halt2:'Hama', halt2From:'Damascus', halt2At:0.66, water:"the old Syrian high road \u2014 Homs astride its Gap, then Hama where the great norias groan on the Orontes; the bridges are Roman masonry and take no toll but wonder"},
  {a:"Aleppo",b:"Ayas", d:4, terr:'land', hajj:true, era:'1271', water:"down past the ruin of Antioch to the Armenian shore"},
  {a:"Aleppo",b:"Baghdad", d:18, terr:'land', hajj:true, era:'1271', halt:'Hit', haltFrom:'Baghdad', haltAt:0.20, water:"down the Euphrates road \u2014 across the war-frontier of Mamluk and Ilkhan, where the caravans pay both sides"},
@@ -7302,6 +7402,8 @@ const SEA_EDGES=[
  {a:'Iconium',b:'Trebizond', d:24, terr:'land', free:true, water:'the hard mountain road north over the Pontic ranges to the Black Sea'},
  {a:'Constantinople',b:'Trebizond', d:9, terr:'med', storm:1.8, water:'the Black Sea, coasting east toward Trebizond', waterB:'the Black Sea, coasting west toward the City'},
  {a:'Aylah',b:'Qulzum', d:7, terr:'land', hajj:true, thirst:1.4, water:"over the Sinai by the pilgrim road, Nakhl's lone well at the middle of the crossing"},
+   {a:'Aylah',b:'Aydhab', d:7, era:'1271', terr:'coast', windEasy:'Aydhab', windHardMul:3, freightHi:'Aydhab', freightHiMul:2, freightLoMul:0.5, water:"south down the whole length of the Red Sea from the head of the gulf, running fast before the north wind to the Beja shore", waterB:"north up the Red Sea against the everlasting north wind \u2014 a long, tedious beat, tack upon weary tack, that no captain loves and every captain overcharges for the privilege of avoiding"},
+   {a:'Damascus',b:'Aylah', d:14, era:'1271', terr:'land', hajj:true, thirst:1.6, water:"the Syrian pilgrim road south through Transjordan \u2014 down out of the Hauran, over the Moab plateau past Karak's great castle, by Ma'an's wells to the head of the gulf", sight:"The road skirts a cleft in the red mountains where a whole city stands carved into the rock \u2014 tomb-fronts and a temple cut from the living cliff, empty these thousand years: the Nabataeans' Petra, that the caravans of the frankincense road once made rich."},
  {a:'Aylah',b:'Medina', era:'both', d:20, terr:'land', hajj:true, thirst:1.7, water:"down the pilgrim road of the Hijaz, well to well", sight:"Days out of Aylah you pass beneath cliffs carved with great tomb-fronts \u2014 Hegra, the rock-cut city of the vanished Thamud, its doors opening on nothing. The caravan quickens its pace without being told."},
  {a:'Medina',b:'Mecca', era:'both', d:10, terr:'land', hajj:true, thirst:1.2, water:"along the pilgrim road between the holy cities, black lava-field and thorn"},
  {a:'Medina',b:'Yamama', d:20, terr:'land', hajj:true, thirst:2.2, harsh:true, water:"east across the Najd on the Yamama road, well to well through the red sands"},
@@ -7314,7 +7416,7 @@ const SEA_EDGES=[
  {a:'Yamama',b:'Mecca', d:22, terr:'land', hajj:true, thirst:2.2, harsh:true, water:"west across the width of Arabia on the Basra pilgrim road"},
  {a:'Kollam',  b:'Zanzibar',d:20, terr:'deep', oneway:'Zanzibar', founder:0.15, coreMon:[5,6,7,8,9], water:'the open ocean, running east before the summer monsoon for the Malabar coast of India', sight:"Three weeks of empty blue \u2014 no land, no sail, only the wind hard at your back and the long swell of the open ocean \u2014 and then a low green smudge that is the coast of India."},
 ];
-function seaEdges(name){ const out=[]; for(const e of SEA_EDGES){ if(e.era&&e.era!=='both'&&e.era!==((S&&S.era)||'762')) continue; if(!e.era&&S&&S.era==='1271') continue; /* the 1271 net is self-contained: untagged 762 edges must not leak era-762 towns into a 1271 run */ if(e.until&&S&&gameDate().y>=e.until) continue; if(e.opens&&S&&gameDate().y<e.opens) continue; if(e.front&&typeof frontClosed==='function'&&frontClosed(e.a,e.b)) continue; if(typeof siegeAt==='function'&&(siegeAt(e.a)||siegeAt(e.b))) continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed()) continue; if(e.jwar&&typeof japanWarClosed==='function'&&japanWarClosed()) continue; if(e.tughril&&typeof tughrilClosed==='function'&&tughrilClosed()) continue; if(e.oneway && e.oneway!==name) continue; if(e.a===name)out.push({to:e.b,d:e.d,terr:e.terr,water:e.water,sight:e.sight,lbl:e.lblA}); else if(e.b===name)out.push({to:e.a,d:e.d,terr:e.terr,water:e.water,sight:e.sight,lbl:e.lblB}); } return out; }
+function seaEdges(name){ const out=[]; for(const e of SEA_EDGES){ if(e.era&&e.era!=='both'&&e.era!==((S&&S.era)||'762')) continue; if(!e.era&&S&&S.era==='1271') continue; /* the 1271 net is self-contained: untagged 762 edges must not leak era-762 towns into a 1271 run */ if(e.until&&S&&gameDate().y>=e.until) continue; if(e.opens&&S&&gameDate().y<e.opens) continue; if(e.untilD&&S&&gameDate().t>=Date.UTC(e.untilD[0],e.untilD[1]-1,e.untilD[2])) continue; if(e.opensD&&S&&gameDate().t<Date.UTC(e.opensD[0],e.opensD[1]-1,e.opensD[2])) continue; if(e.front&&typeof frontClosed==='function'&&frontClosed(e.a,e.b)) continue; if(typeof siegeAt==='function'&&(siegeAt(e.a)||siegeAt(e.b))) continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed()) continue; if(e.jwar&&typeof japanWarClosed==='function'&&japanWarClosed()) continue; if(e.tughril&&typeof tughrilClosed==='function'&&tughrilClosed()) continue; if(e.oneway && e.oneway!==name) continue; if(e.a===name)out.push({to:e.b,d:e.d,terr:e.terr,water:e.water,sight:e.sight,lbl:e.lblA}); else if(e.b===name)out.push({to:e.a,d:e.d,terr:e.terr,water:e.water,sight:e.sight,lbl:e.lblB}); } return out; }
 /* THE SONG FRONTIER (Kris's model): you cannot travel between Song-held and Yuan-held cities;
    within each sphere (and to/from neutral ports) trade runs free. Cities flip on history's
    calendar, sieges close a city to EVERYONE while they burn, and the flips travel as BIGNEWS. */
@@ -7347,7 +7449,7 @@ function landLinkFor(a,b){ /* ONE LAND MODEL: resolve a land link even when only
  if(((S&&S.era)||'762')!=='1271')return null;
  for(const e of SEA_EDGES){ if(e.terr!=='land')continue; if(e.until&&S&&gameDate().y>=e.until)continue; if(e.opens&&S&&gameDate().y<e.opens)continue; if(e.front&&typeof frontClosed==='function'&&frontClosed(e.a,e.b)) continue; if(typeof siegeAt==='function'&&(siegeAt(e.a)||siegeAt(e.b))) continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed())continue; if((e.a===a&&e.b===b)||(e.a===b&&e.b===a))return e; }
  return null; }
-function findLink(a,b){ for(const e of SEA_EDGES){ if(e.era&&e.era!=='both'&&e.era!==((S&&S.era)||'762')) continue; if(!e.era&&S&&S.era==='1271') continue; if(e.until&&S&&gameDate().y>=e.until) continue; if(e.opens&&S&&gameDate().y<e.opens) continue; if(e.front&&typeof frontClosed==='function'&&frontClosed(e.a,e.b)) continue; if(typeof siegeAt==='function'&&(siegeAt(e.a)||siegeAt(e.b))) continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed()) continue; if(e.jwar&&typeof japanWarClosed==='function'&&japanWarClosed()) continue; if(e.tughril&&typeof tughrilClosed==='function'&&tughrilClosed()) continue; if((e.a===a&&e.b===b)||(e.a===b&&e.b===a)) return e; } return null; }
+function findLink(a,b){ for(const e of SEA_EDGES){ if(e.era&&e.era!=='both'&&e.era!==((S&&S.era)||'762')) continue; if(!e.era&&S&&S.era==='1271') continue; if(e.until&&S&&gameDate().y>=e.until) continue; if(e.opens&&S&&gameDate().y<e.opens) continue; if(e.untilD&&S&&gameDate().t>=Date.UTC(e.untilD[0],e.untilD[1]-1,e.untilD[2])) continue; if(e.opensD&&S&&gameDate().t<Date.UTC(e.opensD[0],e.opensD[1]-1,e.opensD[2])) continue; if(e.front&&typeof frontClosed==='function'&&frontClosed(e.a,e.b)) continue; if(typeof siegeAt==='function'&&(siegeAt(e.a)||siegeAt(e.b))) continue; if(e.kaidu&&typeof kaiduClosed==='function'&&kaiduClosed()) continue; if(e.jwar&&typeof japanWarClosed==='function'&&japanWarClosed()) continue; if(e.tughril&&typeof tughrilClosed==='function'&&tughrilClosed()) continue; if((e.a===a&&e.b===b)||(e.a===b&&e.b===a)) return e; } return null; }
 function japanWarClosed(){ try{ var t=gameDate().t; return (t>=Date.UTC(1274,9,1)&&t<Date.UTC(1275,0,15)) || (t>=Date.UTC(1281,4,1)&&t<Date.UTC(1281,9,1)); }catch(e){ return false; } } /* the two invasions: Oct-Nov 1274 and the great armada of summer 1281 - the crossing is a war-sea, no master will carry you */
 function tughrilClosed(){ try{ var t=gameDate().t; return t>=Date.UTC(1279,6,1)&&t<Date.UTC(1281,5,1); }catch(e){ return false; } } /* Tughril's Bengal rebellion vs Balban's campaigns: the Ganges road is an army's road */
 function monsoonSeaLL(ll){ if(!ll)return false; var lon=ll[0],lat=ll[1]; if(lat<36&&lat>=28&&lon>=105&&lon<=135)return true; /* East Asia typhoon belt (Kinsay-Hakata: the kamikaze waters) */ if(lat>=28||lon<32||lon>135)return false; if(lat>=24&&lon>=47&&lon<=56.7)return false; /* Persian Gulf inside Hormuz: shamal country, not cyclone country */ return true; }
@@ -7445,9 +7547,11 @@ function voyFare(from,to){ const lk=findLink(from,to); if(!lk)return {per:0,carg
   if(lk.free || lk.terr==='land')return {per:0,cargo:0,total:0,days:lk.d}; // overland legs: your own caravan, no toll or porter fee, ever
   const days=lk.d, people=Math.max(1,livingComps()+1);
   const mult=(lk.terr==='canal'||lk.terr==='land'||lk.terr==='med')?0.6:1.0; // river-barge, canal and short Med hops cost less per day than the open ocean
-  const per=Math.round(people*(0.6+0.25*days)*mult);     // a head of passage — far below what the food for the far longer overland march would run
-  const cargo=Math.round(cargoW()*(0.10+0.012*days)*mult); // porterage by the weight; a fraction of the route's trading margins
-  return {per:per, cargo:cargo, total:per+cargo, days:days};
+  var per=Math.round(people*(0.6+0.25*days)*mult);     // a head of passage — far below what the food for the far longer overland march would run
+  var cargo=Math.round(cargoW()*(0.10+0.012*days)*mult); // porterage by the weight; a fraction of the route's trading margins
+  if(lk.freightHi){ var _fm=(to===lk.freightHi ? (lk.freightHiMul||2) : (lk.freightLoMul||0.5)); cargo=Math.round(cargo*_fm); per=Math.round(per*_fm); } // wind-asymmetric fare (Kris): head AND freight swing — premium running south, cheap on the tedious beat north
+  var _dd=days; if(lk.windEasy && to!==lk.windEasy) _dd=Math.round(days*(lk.windHardMul||3)); // the return north is the long way
+  return {per:per, cargo:cargo, total:per+cargo, days:_dd};
 }
 function iceClosed(e){ if(!e||!e.ice)return false; var m=monthNum(); if(e.ice==='gulf') return (m>=12||m<=4); if(e.ice==='mid') return (m>=1&&m<=3); return false; }
 function iceboundEvent(fromName,toName){ var m=monthNum(); return {h:'THE SEA IS ICE', t:"No ship sails for "+toName+" \u2014 the sea is frozen"+(m>=12||m<=1?" and the skippers are drinking through the dark":"")+". The harbour folk shrug: the ice road opens when it opens, and it is not open yet. Come back when the water shows.", ch:[{l:'Wait for the thaw here',f(){}},{l:'Look for another road',f(){}}]}; }
@@ -7534,6 +7638,7 @@ const FERRY_LANES={'Aydhab|Jeddah':1}; /* Oxus 8/04 (Kris): legs where the WHOLE
     d=Math.max(2, Math.round(_li/_rate*(0.9+rnd()*0.2)));
   } else {
     d=Math.max(2, Math.round(lk.d*(0.85+rnd()*0.30)));
+    if(lk.windEasy && toName!==lk.windEasy) d=Math.round(d*(lk.windHardMul||3)); // beating north up the Red Sea against the everlasting wind
     if(monsoonGated(lk)&&(gameDate().m===4||gameDate().m===10)) d=Math.round(d*1.4);
   }
   if(!S.seaMode){ S.seaMode=true; if(typeof addSeaMarkets==='function')addSeaMarkets(); }
@@ -7771,6 +7876,7 @@ function stepVoy(){
     if(dateBetween(762,11,1,763,2,14) && rnd()<0.10){ S.voyaging=false; clearVoy(); S.pendingEvent=revoltBandits(); render(); return; }
   }
   if(S.voy.terr==='land' && S.voy.hajj){ if(hajjDay()) return; }
+  if(S.voy && S.voy.to==='Acre' && !S.voy._acreFall && (typeof gameDate==='function') && gameDate().t>=Date.UTC(1291,4,18)){ S.voy._acreFall=true; S.voyaging=false; clearVoy(); S.pendingEvent=evAcreFall('sea'); render(); return; }
   if(S.voy.daysLeft<=0){ if(!S.voy._landed){ S.voy._landed=true; updateVoy(); return; } S.voyaging=false; clearVoy(); voyArrive(); render(); return; } /* one tick with the dot AT the gates (Kris) - safe now the arrival exception is dead */
   const p=(S.voy.total-S.voy.daysLeft)/S.voy.total;
   /* COASTING legs camp ashore nightly (Kris): villages and war-bands find your fires */
@@ -8234,13 +8340,183 @@ function bakhamraTalk(cityName){
   }
   return false;
 }
+function evAydhabSackApproach(){
+  var _from=S.prevPort||''; var _lk=(_from&&typeof findLink==='function')?findLink('Aydhab',_from):null;
+  var _bysea=!!(_lk && (_lk.terr==='coast'||_lk.terr==='sea'||_lk.terr==='med'||_lk.terr==='deep'));
+  var _endD=[1272,9,6];
+  var _seen=function(){ S.onceFlags.aydhabApproached=true; S.onceFlags['bignews_aydhabsack']=true; };
+  if(_bysea){
+    return {h:'AYDHAB IS BURNING', t:"You raise Aydhab to a sky full of smoke — black columns standing off the caravanserais — and then you see the boats: every hull that will float is putting out from the roads, low and wallowing, crammed gunwale-deep with people and the little they could carry. The Nubians are in the town; David of Dongola’s raiders came out of the desert and Aydhab is being put to the sack. There is no landing there today. But Jeddah lies only days across the water.", ch:[
+      {l:'Bear away — make for Jeddah across the sea',f(){ _seen(); log("You put up the helm and stand away east; Aydhab and its smoke sink under the horizon astern, and you lay a course for Jeddah."); if(typeof beginVoyage==='function')beginVoyage('Aydhab','Jeddah'); }},
+      {l:'Take off as many refugees as you can and carry them to Jeddah',f(){ _seen(); sackRescueRefugees(); }},
+      {l:'Chance it — sail straight into the burning harbour',f(){ _seen(); sackEnter('Aydhab',_endD); }}]};
+  }
+  return {h:'AYDHAB IS BURNING', t:"You come down the last of the desert road to find Aydhab under a sky full of smoke, and the road itself running the wrong way: people streaming out on foot and on camel, whole families with all they own on their backs, every one with the same word. The Nubians are in the town; David of Dongola’s raiders came out of the desert and Aydhab is being put to the sack. There is no going in there today — not unless you mean to.", ch:[
+    {l:'Draw off to a hilltop and watch from a safe distance until it settles',f(){ _seen(); sackWaitOut('Aydhab',_endD); }},
+    {l:'Turn back up the road the way you came',f(){ _seen(); log("You will not walk into that; you turn the caravan around and put Aydhab and its smoke behind you."); if(typeof turnBack==='function')turnBack(true); }},
+    {l:'Ride straight in — chance the burning city',f(){ _seen(); sackEnter('Aydhab',_endD); }}]};
+}
+function sackWaitOut(city,endD){ var _tg=Date.UTC(endD[0],endD[1]-1,endD[2]),_now=gameDate().t; var _dd=Math.max(7,Math.round((_tg-_now)/86400000)); if(typeof passDays==='function')passDays(_dd); if(S.dead)return; log("You lie up on a rise above "+eraName(city)+" and watch it burn — smoke by day, fires by night, the raiders working the wharves at their leisure. Days on, they go south as suddenly as they came, and you bring the caravan down into a battered town: half its warehouses ash, its market a graveyard, but standing, and glad enough of an honest trader."); }
+function sackRescueRefugees(){
+  log("You bring your hull alongside the wallowing feluccas and take off all you can hold — women and children, a few old men, two of them badly burned — and turn east for Jeddah with your deck a press of the frightened and the grateful. You will make nothing by it; you do it anyway.");
+  if(typeof nudgeManumit==='function')nudgeManumit(2);
+  joinRefugee();
+  S._refugeeRun=true;   /* on reaching Jeddah, the master will offer to run you back */
+  if(typeof beginVoyage==='function')beginVoyage('Aydhab','Jeddah');
+}
+const REFUGEES=[
+ {name:'Nafisa', g:'f', role:'a Karimi factor\u2019s widow', skills:{trade:1}, origin:'the widow of a Karimi factor of Aydhab, husband and warehouse both gone in the sack'},
+ {name:'Idris', g:'m', role:'a Beja camel-broker of the desert road', skills:{handle:2}, origin:'a Beja camel-broker of the Aydhab road, his herd run off in the raid'},
+ {name:'Yohannes', g:'m', role:'a Nubian boatman of the Red Sea', skills:{}, ss:9, salty:true, origin:'a Nubian boatman, taken from the very boat he tried to flee in'},
+ {name:'Mansur', g:'m', role:'a Hadrami dhow-hand', skills:{}, ss:10, salty:true, origin:'a Hadrami sailor stranded when his dhow burned at the Aydhab mole'},
+ {name:'Sittana', g:'f', role:'a water-carrier\u2019s daughter', skills:{}, origin:'a water-carrier\u2019s girl of Aydhab, her family scattered in the smoke'},
+ {name:'Girgis', g:'m', role:'a Coptic tally-clerk', skills:{trade:1}, origin:'a Coptic clerk who kept the customs-tallies of Aydhab until there were none left to keep'},
+ {name:'Bilqis', g:'f', role:'a Yemeni pearl-merchant\u2019s daughter', skills:{}, origin:'daughter of a Yemeni pearl-merchant, her dowry carried off in the sack'},
+ {name:'Sa\u2019d', g:'m', role:'an Aydhab water-seller', skills:{}, origin:'an Aydhab water-seller, his cisterns fouled and his living gone'},
+ {name:'Kwlai', g:'m', role:'a Beja herd-boy', skills:{}, origin:'a Beja herd-boy who came into the port to sell goats the morning it fell'},
+ {name:'Habiba', g:'f', role:'a keeper of a pilgrims\u2019 lodging', skills:{cook:1}, origin:'kept a pilgrims\u2019 lodging by the Aydhab harbour, now ash'},
+ {name:'Farhad', g:'m', role:'a Persian spice-broker\u2019s agent', skills:{trade:1}, origin:'a Persian spice-agent caught in Aydhab between ships'},
+ {name:'Amina', g:'f', role:'a midwife of the harbour lanes', skills:{}, origin:'a midwife of the Aydhab harbour quarter, her house burned over her'}
+];
+function joinRefugee(poolArr, cityName){ poolArr=poolArr||REFUGEES; cityName=cityName||'Aydhab'; if(rnd()>=0.5)return false; var used=S._refUsed=S._refUsed||[]; var pool=poolArr.filter(function(r){ return used.indexOf(r.name)<0 && !(S.party||[]).some(function(p){return (p.name||'').split(',')[0]===r.name;}); }); if(!pool.length)return false; var r=pool[Math.floor(rnd()*pool.length)]; used.push(r.name); var m={name:r.name, role:r.role, skills:Object.assign({},r.skills||{}), g:r.g, alive:true, kind:'companion', recruited:true, freedman:false, unpaid:true, fromCity:cityName}; if(r.ss!=null)m.ss=r.ss; if(r.salty)m.salty=true; S.party.push(m); if(typeof normalizeMember==='function')normalizeMember(S.party[S.party.length-1]); log('<b>'+r.name+'</b>, '+r.role+', has nothing left in '+cityName+' and nowhere to go; out of plain gratitude '+(r.g==='f'?'she':'he')+' asks to come with you \u2014 and will take no wage, only a place by the fire and a road away from this coast.'); return true; }
+const ACRE_REFUGEES=[
+ {name:'Bartolomeo', g:'m', role:'a Pisan notary of the Acre customs', skills:{trade:1}},
+ {name:'Ysabel', g:'f', role:'a Genoese ship-chandler\u2019s widow', skills:{trade:1}},
+ {name:'Vartan', g:'m', role:'an Armenian silversmith', skills:{}},
+ {name:'Surien', g:'m', role:'a Syrian Christian dragoman', skills:{trade:1}},
+ {name:'Guiot', g:'m', role:'a poulain sergeant, Acre-born', skills:{}},
+ {name:'Blanchefleur', g:'f', role:'a hospice sister of the Order of St John', skills:{cook:1}},
+ {name:'Andrea', g:'m', role:'a Genoese caulker', skills:{}, ss:9, salty:true},
+ {name:'Yusuf', g:'m', role:'a Maronite muleteer of the Galilee road', skills:{handle:1}},
+ {name:'Zaccaria', g:'m', role:'a Venetian glass-merchant', skills:{trade:1}},
+ {name:'Maria', g:'f', role:'a Cypriot sailmaker of the harbour', skills:{}},
+ {name:'Toros', g:'m', role:'a Cilician Armenian sailor', skills:{}, ss:8, salty:true},
+ {name:'Perronelle', g:'f', role:'a dyer\u2019s daughter of the Genoese quarter', skills:{}}
+];
+function sackScriptCrossing(from,to,days,terr){ terr=terr||'med'; S.voy={from:from,to:to,daysLeft:days,total:days,terr:terr,crewJob:false,grace:S.day+days+2,storm:1,water:null,sight:null,sightDone:true,east:false,coast:false,dNom:days}; S.screen='voyage'; S.voyaging=false; }
+function evAcreFall(ctx){
+  var atSea=(ctx==='sea');
+  var _fare=Math.max(200,Math.round((S.silver||0)*0.2)), _can=(S.silver||0)>=_fare;
+  function toFamagusta(withRef){
+    if(withRef) joinRefugee(ACRE_REFUGEES,'Acre');
+    if(atSea && S.voy){ S.voy.from='the Acre roads'; S.voy.to='Famagusta'; S.voy.daysLeft=2; S.voy.total=2; S.voy._landed=false; S.voy.sight=null; S.voy.sightDone=true; S.voy.coast=false; }
+    else { sackScriptCrossing('Acre','Famagusta',2); }
+    log(withRef ? "You take off all the souls your deck will bear and turn north for Cyprus, low in the water and quiet." : "You crowd on what sail you have and stand away north for Cyprus.");
+  }
+  var ch;
+  if(atSea){
+    ch=[
+      {l:'Come alongside the refugee boats \u2014 take off all you can and bear on for Famagusta',f(){ toFamagusta(true); }},
+      {l:'Crowd on sail for Famagusta with an empty deck',f(){ toFamagusta(false); }},
+      {l:'Put about \u2014 you\u2019ll not go near that coast',f(){ if(S.voy){ var trav=Math.max(1,(S.voy.total||1)-(S.voy.daysLeft||0)); var o=S.voy.from; S.voy.to=o; S.voy.from='the Acre roads'; S.voy.daysLeft=trav; S.voy.total=trav; S.voy._landed=false; } log('You put up the helm and stand away from the burning coast, back the way you came.'); }}
+    ];
+  } else {
+    function _loot(){ if(typeof clearHerd==='function')clearHerd(); for(const g of GOODS){ S.goods[g.id]=0; if(S.basis)S.basis[g.id]=0; } }
+    ch=[];
+    if(_can) ch.push({l:'Buy a place on a boat off the mole \u2014 cross to Famagusta ('+_fare+' s)',f(){ _loot(); S.silver-=_fare; log("The boatman standing off the mole will take you for "+_fare+" s and not a coin less \u2014 this dawn he could ask the moon. You pay it, and pull away north with your people and your purse and little else; behind you Acre goes down in smoke."); sackScriptCrossing('Acre','Famagusta',2,'med'); }});
+    ch.push({l:'Cut your way out and take the hill-road to Jerusalem',f(){ _loot(); log("You get your people out through a gap in the Mamluk line and onto the Nazareth road \u2014 the cargo and the beasts left in the burning streets, three days on foot to Jerusalem with your lives and little else."); sackScriptCrossing('Acre','Jerusalem',3,'land'); }});
+    ch.push({l:'Cut your way out and take the Galilee road to Damascus',f(){ _loot(); log("You force a way out onto the road over Galilee \u2014 the cargo and the beasts lost behind you, five hard days to Damascus with your lives and little else."); sackScriptCrossing('Acre','Damascus',5,'land'); }});
+  }
+  var t = atSea
+    ? "The sky over Acre stands black to the mast-tops, and the sea between you and the mole is full of boats \u2014 fishing-smacks, war-galleys, anything that floats \u2014 pulling away east and gunwale-deep with people. Acre has fallen: the Sultan\u2019s men are over the walls and into the streets, and there is no harbour to make for now. But Cyprus lies a day or two north."
+    : "It is over the walls \u2014 the Accursed Tower has fallen and the Mamluks are loose in the streets. They are through the Genoese quarter and into yours before you can get the packs up; the cargo and the beasts are gone in the press, and there is steel between you and the water. You will get out with your life and your people, or not at all."+(_can?" A boatman standing off the mole will run you across to Cyprus \u2014 for a drowning man\u2019s price ("+_fare+" s) \u2014 or you take to the land on foot.":" You have not the silver a boatman would want to cross to Cyprus; it must be the land, and your own feet.");
+  return {h:'ACRE IS FALLEN', t:t, ch:ch};
+}
+
+function evRefugeeMore(){
+  var sur=100, fare=0; try{ fare=Math.round((voyFare('Jeddah','Aydhab').total)||0); }catch(e){ fare=0; }
+  var total=fare+sur;
+  return {h:'THE REFUGEES ASHORE AT JEDDAH', t:"You put your people ashore at Jeddah, into the hands of the pilgrim-charities and the Sharif\u2019s men, who take them in without a word \u2014 yours is not the first boat, nor will it be the last. The dhow-master watches the crowd shuffle up the strand and reckons his risk aloud: he will run you back across to Aydhab once more, but the crossing is dearer now \u2014 a hundred silver over the ordinary fare, for the danger of a burning coast. It is still burning. Will you cross again?", ch:[
+    {l:'Cross back for more \u2014 the fare and a hundred over ('+total+' s)',f(){
+      if((S.silver||0)<total){ log("You count your silver and come up short of the "+total+" the master wants; he shrugs, and finds a charter with a fuller purse."); return; }
+      S.silver-=sur; S._refugeeReturning=true;
+      log("You pay the master his danger-money \u2014 a hundred silver over the fare \u2014 and he puts the helm over for the smoke on the western shore.");
+      if(typeof beginVoyage==='function')beginVoyage('Jeddah','Aydhab');
+    }},
+    {l:'Enough \u2014 your part in this is done',f(){ log("You have done what one hull can do, and more than most would. You see your refugees as settled as a stranger may leave them, and turn back to your own affairs."); }}
+  ]};
+}
+function evAydhabReturnSack(){
+  var _endD=[1272,9,6];
+  var days=3; try{ days=Math.max(1,(voyFare('Aydhab','Jeddah').days)||3); }catch(e){ days=3; }
+  var reserve=Math.max(foodNeed(), Math.ceil(foodNeed()*(days+1)));
+  var give=Math.max(0,(S.food||0)-reserve);
+  var ch=[
+    {l:'Take on all the refugees you can and return to Jeddah',f(){ sackRescueRefugees(); }},
+    {l:'Give away all the food you can spare, then take on refugees and return to Jeddah'+(give>0?' (\u2212'+give+' food)':''),f(){
+      var g=Math.max(0,(S.food||0)-reserve);
+      if(g>0){ S.food=reserve; log("You have your people break open all the provision you can spare \u2014 grain and dates and dried fish into a hundred reaching hands \u2014 keeping back only what will feed your own across to Jeddah. It is gone in minutes, and the blessing of it follows you down to the water."); }
+      else { log("You go to give away your food and find you have barely enough to see your own people back to Jeddah; there is nothing to spare, and you are ashamed of it."); }
+      sackRescueRefugees();
+    }},
+    {l:'Put in and enter the city \u2014 chance the sack',f(){ sackEnter('Aydhab',_endD); }}
+  ];
+  return {h:'BACK OFF THE BURNING COAST', t:"You raise Aydhab again out of the same standing pall of smoke; the boats putting out are fewer now and lower in the water, riding so deep with people it is a wonder they float. The sack has not yet burned itself out. What will you do?", ch:ch};
+}
+function sackHere(){ if(!(S&&S.sack))return false; if((typeof gameDate==='function')&&gameDate().t>=S.sack.end)return false; var nm=(S.seaMode?S.portName:((city()&&city().name)||S.portName)); return nm===S.sack.city; }
+function sackNight(){
+  if(!S)return;
+  if(!sackHere()){ render(); return; }
+  consumeDay(false); if(S.dead){ render(); return; }
+  if(S.pendingEvent){ render(); return; }
+  var t=gameDate().t;
+  if(t>=S.sack.end){ S.sack=null; log("With the dawn the raiders are simply gone \u2014 south, the way they came, with the last of their plunder and their prisoners. "+eraName(S.portName||(city()&&city().name)||'The town')+" is a ruin, but it is quiet, and you may trade in it as an honest town again."); render(); return; }
+  var span=(S.sack.end-S.sack.start)||1;
+  var frac=clamp((S.sack.end - t)/span, 0, 1);
+  var chance=clamp(0.5*frac*(S.banditFreq||1), 0, 0.95);
+  if(rnd()<chance){ S.pendingEvent=evSackRaid(); render(); return; }
+  log("The night passes to the sound of splitting timber and drunken singing off the wharves, but no boot comes to your door. You keep what watch you can, and see the grey of another morning.");
+  render();
+}
+function sackRaidLoot(){
+  var taken=[];
+  if((S.goods.wine||0)>0){ taken.push(S.goods.wine+' jars of wine'); S.goods.wine=0; if(S.basis)S.basis.wine=0; }
+  function uv(g){ return Math.max(1, g.w||g.e||10); }
+  var stacks=GOODS.filter(function(g){ return g.id!=='wine' && (S.goods[g.id]||0)>0; })
+    .map(function(g){ var q=S.goods[g.id]||0, v=uv(g); return {g:g,q:q,v:v,val:q*v,dens:v/Math.max(0.1,(g.wt||1))}; });
+  var total=stacks.reduce(function(a,x){ return a+x.val; },0);
+  if(total<=0) return taken;
+  stacks.sort(function(a,b){ return b.dens-a.dens; });
+  var target=0.9*total, removed=0;
+  for(var i=0;i<stacks.length && removed<target-1e-9;i++){
+    var st=stacks[i], need=target-removed;
+    if(st.val<=need){ S.goods[st.g.id]=0; if(S.basis)S.basis[st.g.id]=0; removed+=st.val; taken.push(st.q+' '+(st.g.n||st.g.id).toLowerCase()); }
+    else { var tq=Math.min(st.q, Math.ceil(need/st.v)); S.goods[st.g.id]=Math.max(0,st.q-tq); if(S.goods[st.g.id]<=0&&S.basis)S.basis[st.g.id]=0; removed+=tq*st.v; if(tq>0)taken.push(tq+' '+(st.g.n||st.g.id).toLowerCase()); }
+  }
+  return taken;
+}
+function evSackRaid(){
+  var bandits=3+ri(3)+(S.banditMod||0); bandits=Math.max(1,bandits);
+  var str=(typeof combatStrength==='function')?combatStrength():0;
+  var odds = str>=bandits*2 ? ('You could see '+(bandits===1?'him':'them')+' off') : str>=bandits ? 'It would be a near thing' : str>0 ? 'You are badly outmatched' : 'You have no one fit to fight \u2014 this is madness';
+  return {h:'DRUNKEN SOLDIERS IN THE NIGHT', t:"Sometime after midnight they come: "+(bandits===1?"a lone Makurian soldier":"a knot of "+bandits+" Makurian soldiers")+", reeling with looted wine and hung about with other men\u2019s silver, who have heard there is a foreign trader camped in the ruins and mean to have his packs too. "+odds+".", ch:[
+    {l:'Stand and fight them off',f(){ var _cS=Math.round(S.silver), _cG=Object.assign({},S.goods); enterBattle({n:bandits, sea:false, cache:{silver:_cS,goods:_cG}}); }},
+    {l:'Flee into the dark, abandoning the richest of your goods',f(){ var lost=sackRaidLoot(); log("You rouse your people and slip out through a gap in the burning quarter, leaving the soldiers your packs to squabble over \u2014 "+(lost.length?lost.join(', ')+" gone into the dark":"the little you had, gone")+". You keep your lives and the dregs of your cargo, and creep back to your corner of the ruin before dawn."); }}
+  ]};
+}
+function sackEnter(city,endD){
+  S.sack={city:city,start:gameDate().t,end:Date.UTC(endD[0],endD[1]-1,endD[2])};
+  if(!S.shortage)S.shortage={}; if(S.shortage[city]==null)S.shortage[city]=S.day;   /* a sacked town is a famine town */
+  if(rnd()<0.5){ var lost=(typeof loseRandomGoods==='function')?loseRandomGoods(0.3):'a share of your goods'; log("You push in through the gate — and pay for it at once: hands out of the smoke cut "+lost+" from the packs before you win clear into the ruined market. But you are inside."); }
+  else { log("You push in through the gate — and conquerors and conquered alike stop and stare at the caravan mad enough to arrive on this of all days. No hand is lifted against you; you pass into the sacked city untouched, for now."); }
+  log("Nothing is for sale here now but what the desperate will trade for a little medicine \u2014 and food, if it is to be had at all, at famine\u2019s own price; nothing sells but what a drunk soldier wants; and the conquerors are driving the townsfolk themselves to the block for a handful of silver. The nights are not safe.");
+}
 function evAydhabSack(){ var _fare=Math.max(200,Math.round((S.silver||0)*0.2)); var _can=(S.silver||0)>=_fare;
   var _ch=[{l:'Stand over your goods (lose all but a fifth of your silver)',f(){ clearHerd(); for(const g of GOODS){ S.goods[g.id]=0; S.basis[g.id]=0; } S.silver=Math.round(S.silver*0.2); log("You will not leave your hoard \u2014 and it costs you all but a fifth of your silver besides. When the raiders go south with the dawn you have your life, your people, and little else: the cargo and the beasts are carried off into the desert. You begin again."); }}];
   if(_can) _ch.push({l:'Buy a place on a ship in the roads ('+_fare+' s)',f(){ S.silver-=_fare; clearHerd(); for(const g of GOODS){ S.goods[g.id]=0; S.basis[g.id]=0; } log("The dhow-master will not cast off for less than "+_fare+" s a head \u2014 this dawn he could ask the moon \u2014 and you pay it and leave the cargo where it lies. From the roads you watch Aydhab burn: the goods and the beasts gone, your purse the lighter by his fare, but your people off with you, which is more than many managed."); }});
   return {h:'THE NUBIANS ARE IN THE TOWN', t:"There is no warning worth the name \u2014 a dawn of dust on the western hills, and then they are among the wharves: the men of David of Nubia, come out of the desert where no army was ever looked for. Aydhab is theirs to plunder \u2014 steel in the lanes, smoke off the caravanserais, the pilgrim-crowds screaming for the boats. Your goods are on the quay, and the raiders are between you and them."+(_can?" A dhow-master standing off in the roads will take you off, for a price a drowning man would pay ("+_fare+" s).":" You have not the silver to buy a place on the boats in the roads; there is nothing for it but to weather the sack."), ch:_ch}; }
 function checkSeaHistory(port){
   var _g=gameDate();
-  if(port==='Aydhab' && S.onceFlags && !S.onceFlags.aydhabSack && (typeof dateBetween==='function') && dateBetween(1272,4,20,1272,5,15)){ S.onceFlags.aydhabSack=true; S.onceFlags['bignews_aydhabsack']=true; S.pendingEvent=evAydhabSack(); return; }
+  /* --- sacked-Aydhab refugee ferry loop --- */
+  if(port==='Jeddah' && S._refugeeRun){ S._refugeeRun=false;
+    if((typeof dateBetween==='function') && dateBetween(1272,8,18,1272,9,5)){ S.pendingEvent=evRefugeeMore(); return; }
+  }
+  if(port==='Aydhab' && S._refugeeReturning){ S._refugeeReturning=false;
+    if((typeof dateBetween==='function') && dateBetween(1272,8,18,1272,9,5)){ S.pendingEvent=evAydhabReturnSack(); return; }
+    log("You come back across to a coast gone quiet: the raiders melted away south, the fires burned down to smoke and reek. Aydhab has settled, after a fashion, and you put in with your refugees among the survivors.");
+    return;
+  }
+  if(port==='Aydhab' && S.onceFlags && !S.onceFlags.aydhabApproached && !S.onceFlags.aydhabSackHit && (typeof dateBetween==='function') && dateBetween(1272,8,18,1272,9,5)){ S.onceFlags.aydhabApproached=true; S.onceFlags['bignews_aydhabsack']=true; S.pendingEvent=evAydhabSackApproach(); return; }
   if((port==='Qulzum'||port==='Fustat') && _g.y>=767 && _g.y<=777 && S.onceFlags && !S.onceFlags.canalClosed767){ S.onceFlags.canalClosed767=true; S.pendingEvent={h:'THE CANAL IS CLOSED', t:"The basin where the barges lay is a mudflat, and stones have been tipped into the channel mouth by the hundredweight. By order of al-Mansur the Canal of the Commander of the Faithful is dammed \u2014 no grain shall go by water to Medina, where the Alid cause still smoulders. The boatmen sit unemployed in the shade and curse quietly. A dusty land road now follows the old channel through the Wadi Tumilat.", ch:[{l:'So the roads must serve',f(){}}]}; return; }
   if(port==='Medina' && S.onceFlags){
     var _r=(_g.y===762 && ((_g.m===9&&_g.d>=25)||_g.m===10||_g.m===11||(_g.m===12&&_g.d<=6)));
@@ -8522,8 +8798,8 @@ function renderPort(m){
   '<button onclick="S.screen=\'notes\';render()">Prices &amp; notes</button>'+
   (!S.job?'<button onclick="openHire()">Hire / release guards</button>':'')+
   ((typeof KHABIR_TOWNS!=='undefined'&&!S.job&&city()&&KHABIR_TOWNS.has(city().name)&&!khabirAboard())?'<button onclick="hireKhabir()">Hire a desert guide (100 s)</button>':'')+
-  (!S.job?'<button onclick="restCity()">Rest 3 days</button>':'')+
-  (!S.job?'<button onclick="waitMonth()">Wait a month</button>':'')+(typeof jobsOffered==='function'&&jobsOffered()?(S.job?'<button class="seal" onclick="jobBackToWork()">Back to work</button> <button onclick="jobQuit()">Take up the road again</button>'+((typeof isMaritimeHere==='function'&&isMaritimeHere())?' <button onclick="openJobs()">Change work\u2026</button>':'')+' ':'<button onclick="openJobs()">Look for work</button>'):'')+
+  (sackHere()?'<button class="seal" onclick="sackNight()">Wait out the night in the sacked town</button>':(!S.job?'<button onclick="restCity()">Rest 3 days</button>':''))+
+  (!S.job&&!sackHere()?'<button onclick="waitMonth()">Wait a month</button>':'')+(typeof jobsOffered==='function'&&jobsOffered()?(S.job?'<button class="seal" onclick="jobBackToWork()">Back to work</button> <button onclick="jobQuit()">Take up the road again</button>'+((typeof isMaritimeHere==='function'&&isMaritimeHere())?' <button onclick="openJobs()">Change work\u2026</button>':'')+' ':'<button onclick="openJobs()">Look for work</button>'):'')+
   '<button onclick="saveAndQuit()">Stay awhile (save &amp; quit)</button>'+
   '<button onclick="admireCity()">Admire the city</button>'+
   '<button onclick="tavern()">Tavern (3 s)</button>'+((typeof waitYearAvailable==='function'&&waitYearAvailable())?'<button class="seal" onclick="waitYearAsk()">Wait out the war \u2014 a year as trade factor</button>':'')+((typeof factorAvailable==='function'&&factorAvailable())?'<button class="seal" onclick="factorDesk()">Take a factor\u2019s desk to earn your passage</button>':'')+
@@ -9149,8 +9425,8 @@ function renderCity(m){
   (!S.job?'<button onclick="huntFood()">Hunt nearby (1 day)</button>':'')+
   (!S.job?'<button onclick="openOutfitter()">Outfitter</button>':'')+
   ((S.goods.slaves>0)?'<button onclick="openCoffle()">The coffle ('+S.goods.slaves+')</button>':'')+
-  (!S.job?'<button onclick="restCity()">Rest 3 days</button>':'')+
-  (!S.job?'<button onclick="waitMonth()">Wait a month</button>':'')+(typeof jobsOffered==='function'&&jobsOffered()?(S.job?'<button class="seal" onclick="jobBackToWork()">Back to work</button> <button onclick="jobQuit()">Take up the road again</button>'+((typeof isMaritimeHere==='function'&&isMaritimeHere())?' <button onclick="openJobs()">Change work\u2026</button>':'')+' ':'<button onclick="openJobs()">Look for work</button>'):'')+
+  (sackHere()?'<button class="seal" onclick="sackNight()">Wait out the night in the sacked town</button>':(!S.job?'<button onclick="restCity()">Rest 3 days</button>':''))+
+  (!S.job&&!sackHere()?'<button onclick="waitMonth()">Wait a month</button>':'')+(typeof jobsOffered==='function'&&jobsOffered()?(S.job?'<button class="seal" onclick="jobBackToWork()">Back to work</button> <button onclick="jobQuit()">Take up the road again</button>'+((typeof isMaritimeHere==='function'&&isMaritimeHere())?' <button onclick="openJobs()">Change work\u2026</button>':'')+' ':'<button onclick="openJobs()">Look for work</button>'):'')+
   '<button onclick="saveAndQuit()">Stay awhile (save &amp; quit)</button>'+
   '<button onclick="admireCity()">Admire the city</button>'+
   '<button onclick="tavern()">Tavern (3 s)</button>'+((typeof waitYearAvailable==='function'&&waitYearAvailable())?'<button class="seal" onclick="waitYearAsk()">Wait out the war \u2014 a year as trade factor</button>':'')+((typeof factorAvailable==='function'&&factorAvailable())?'<button class="seal" onclick="factorDesk()">Take a factor\u2019s desk to earn your passage</button>':'')+
@@ -10638,7 +10914,9 @@ function soulRegion(cityName){ if(cityName==='Zanzibar')return 'zanj'; if(cityNa
    if({'Hormuz':1,'Aden':1,'Socotra':1,'Kollam':1,'Puttalam':1,'Dhofar':1}[cityName]) return 'zanj'; }
  if(cityName==='Constantinople')return 'rum'; return 'central'; }
 function uniqName(nm,place){ if(!nm)return nm; var baseOf=function(x){return String(x||'').split(',')[0].trim();}; var mine=baseOf(nm); var used=[]; (S.party||[]).forEach(function(pp){used.push(baseOf(pp.name));}); try{ if(typeof souls==='function') souls().forEach(function(z){used.push(baseOf(z.name));}); }catch(e){} (S._issuedNames||[]).forEach(function(x){used.push(x);}); var _iss=function(r){ (S._issuedNames=S._issuedNames||[]).push(baseOf(r)); if(S._issuedNames.length>60)S._issuedNames.shift(); return r; }; if(used.indexOf(mine)<0) return _iss(nm); if(place){ var c=mine+' of '+place; if(used.indexOf(baseOf(c))<0) return _iss(c); } var EP=['the Bald','the Tall','the Younger','the Quiet','the Lame','the Elder','the Lucky','One-Eye','the Grey','the Silly']; var PF=['Big','Skinny','Little','Old']; for(var i=0;i<EP.length;i++){ var c2=mine+' '+EP[i]; if(used.indexOf(baseOf(c2))<0) return _iss(c2); } for(var j=0;j<PF.length;j++){ var c3=PF[j]+' '+mine; if(used.indexOf(baseOf(c3))<0) return _iss(c3); } return _iss(mine+' the '+(used.filter(function(x){return x===mine;}).length+1)+'th'); }
-function makeSoul(cityName){ const P=SOUL_POOLS[soulRegion(cityName)]||SOUL_POOLS.unknown;
+function makeSoul(cityName){
+  if(S&&S.sack&&S.sack.city===cityName&&typeof REFUGEES!=='undefined'&&REFUGEES.length){ var _r=REFUGEES[Math.floor(rnd()*REFUGEES.length)]; return { name:uniqName(_r.name,cityName), origin:_r.origin||('a resident of '+(typeof eraName==='function'?eraName(cityName):cityName)+', driven to the block in the sack'), age:pick(SOUL_AGES), note:pick(SOUL_NOTES), cond:'hale', hp:100, g:_r.g||(rnd()<0.5?'m':'f') }; }  /* sacked-city slaves are its own former residents (Kris) */
+  const P=SOUL_POOLS[soulRegion(cityName)]||SOUL_POOLS.unknown;
   return { name:uniqName(pick(P.names),cityName), origin:pick(P.origins), age:pick(SOUL_AGES), note:pick(SOUL_NOTES), cond:'hale', hp:100, g:(rnd()<0.5?'m':'f') }; }
 function soulsBuy(n,cityName){ const A=souls(); for(let i=0;i<n;i++){ var _s=makeSoul(cityName);
   if(GHOST_NAME){ _s.name=GHOST_NAME; _s.ghost=true; GHOST_NAME=null; try{STORE.set('silkroad_enslaved','');}catch(e){}
