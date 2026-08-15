@@ -1,26 +1,207 @@
-# Internal reference docs — kept locally, not published to GitHub
+# ============================================================================
+#  .gitignore - GitHub carries the PLAYABLE GAME ONLY (index.html + the runtime
+#  Maps/ image assets it loads + Pictures/). Everything below is work-in-progress:
+#  the map-making pipeline, its sources and intermediates, versioned dev builds,
+#  and diagnostics. It all lives in the main "Silk Road" working folder; it is
+#  kept locally but never published. (Oxus 8/12, per Kris.)
+# ============================================================================
+
+# --- internal reference docs (kept local) ---
 CHANGELOG.md
 COPILOT_ONBOARDING.md
 MAP_NOTES.md
+Maps/MAP_NOTES.md
 NOTES_1271_expansion.md
 NOTES_economy_radial.md
 
-# --- build & playtest artifacts — keep in the working folder, never publish ---
-# (Fadak's repo-hygiene pass; Zaiton 7/17: comments moved to their own lines —
-#  a trailing "#" is NOT a comment in gitignore, so these patterns never matched)
-
-# versioned DEV playtest builds
+# --- versioned dev / playtest builds ---
 Silk_Road_v*.html
+index_v*.html
 
-# diagnostic / preview / _tmp renders (NOT the named game chart assets)
-Maps/_*.png
-Maps/__pycache__/
+# --- python caches / numpy dumps ---
 __pycache__/
+Maps/__pycache__/
 *.pyc
 Maps/*.npy
 Maps/*.npz
-Maps/work/
 
-# Large baked master rasters (~220 MB of build intermediates). Uncomment to exclude:
-# Maps/master1271/
-# Maps/master_amber/
+# --- map-making PIPELINE (scripts + intermediate data) ---
+Maps/*.py
+Maps/*.json
+tools/
+
+# --- DEM tiles + baked master rasters (hundreds of MB of build source) ---
+Maps/work/
+Maps/master1271/
+Maps/master_amber/
+Maps/ne_lakes/
+
+# --- diagnostic / preview / seasonal-source renders (NOT the game chart assets) ---
+Maps/_*.png
+Maps/*_spring.png
+Maps/*_summer.png
+Maps/*_autumn.png
+Maps/*_winter.png
+
+# --- scratch / temp ---
+*.tmp
+Maps/placeholder.txt
+Maps/MAPNOTES.md
+
+# --- other pipeline source renders not caught by the patterns above ---
+Maps/_basra_chart_proof.jpg
+Maps/_bgd_married_demo.jpg
+Maps/anatolia762.png
+Maps/anatolia_relief_setout.png
+Maps/aridity_demo.jpg
+Maps/china_network_1271.jpg
+Maps/gulf_routes_1271.jpg
+Maps/karakorum_roads_1271.jpg
+Maps/sayram1271.png
+Maps/shiraz_setout_preview.jpg
+Maps/so1271_aksu_autumn_pre_lopext.jpg
+Maps/so1271_aksu_pre_lopext.jpg
+Maps/so1271_aksu_spring_pre_lopext.jpg
+Maps/so1271_aksu_summer_pre_lopext.jpg
+Maps/so1271_aksu_winter_pre_lopext.jpg
+Maps/so1271_andijan_autumn_pre_shardara.jpg
+Maps/so1271_andijan_pre_shardara.jpg
+Maps/so1271_andijan_spring_pre_shardara.jpg
+Maps/so1271_andijan_summer_pre_shardara.jpg
+Maps/so1271_andijan_winter_pre_shardara.jpg
+Maps/so1271_bukhara_autumn_pre_shardara.jpg
+Maps/so1271_bukhara_pre_shardara.jpg
+Maps/so1271_bukhara_spring_pre_shardara.jpg
+Maps/so1271_bukhara_summer_pre_shardara.jpg
+Maps/so1271_bukhara_winter_pre_shardara.jpg
+Maps/so1271_cambay_TEST.jpg
+Maps/so1271_chach_autumn_pre_shardara.jpg
+Maps/so1271_chach_pre_shardara.jpg
+Maps/so1271_chach_spring_pre_shardara.jpg
+Maps/so1271_chach_summer_pre_shardara.jpg
+Maps/so1271_chach_winter_pre_shardara.jpg
+Maps/so1271_lop_autumn_pre_lopext.jpg
+Maps/so1271_lop_pre_lopext.jpg
+Maps/so1271_lop_spring_pre_lopext.jpg
+Maps/so1271_lop_summer_pre_lopext.jpg
+Maps/so1271_lop_winter_pre_lopext.jpg
+Maps/so1271_luoyang.jpg
+Maps/so1271_luoyang_autumn.jpg
+Maps/so1271_luoyang_spring.jpg
+Maps/so1271_luoyang_summer.jpg
+Maps/so1271_luoyang_winter.jpg
+Maps/so1271_otrar_autumn_pre_shardara.jpg
+Maps/so1271_otrar_pre_shardara.jpg
+Maps/so1271_otrar_spring_pre_shardara.jpg
+Maps/so1271_otrar_summer_pre_shardara.jpg
+Maps/so1271_otrar_winter_pre_shardara.jpg
+Maps/so1271_samarkand_autumn_pre_shardara.jpg
+Maps/so1271_samarkand_pre_shardara.jpg
+Maps/so1271_samarkand_spring_pre_shardara.jpg
+Maps/so1271_samarkand_summer_pre_shardara.jpg
+Maps/so1271_samarkand_winter_pre_shardara.jpg
+Maps/so762amber_aldeigjuborg_autumn.jpg
+Maps/so762amber_aldeigjuborg_spring.jpg
+Maps/so762amber_aldeigjuborg_summer.jpg
+Maps/so762amber_aldeigjuborg_winter.jpg
+Maps/so762amber_atil_autumn.jpg
+Maps/so762amber_atil_spring.jpg
+Maps/so762amber_atil_summer.jpg
+Maps/so762amber_atil_winter.jpg
+Maps/so762amber_berezancamp_autumn.jpg
+Maps/so762amber_berezancamp_spring.jpg
+Maps/so762amber_berezancamp_summer.jpg
+Maps/so762amber_berezancamp_winter.jpg
+Maps/so762amber_birka_autumn.jpg
+Maps/so762amber_birka_spring.jpg
+Maps/so762amber_birka_summer.jpg
+Maps/so762amber_birka_winter.jpg
+Maps/so762amber_cherson_autumn.jpg
+Maps/so762amber_cherson_spring.jpg
+Maps/so762amber_cherson_summer.jpg
+Maps/so762amber_cherson_winter.jpg
+Maps/so762amber_gnezdovocamp_autumn.jpg
+Maps/so762amber_gnezdovocamp_spring.jpg
+Maps/so762amber_gnezdovocamp_summer.jpg
+Maps/so762amber_gnezdovocamp_winter.jpg
+Maps/so762amber_grobina_autumn.jpg
+Maps/so762amber_grobina_spring.jpg
+Maps/so762amber_grobina_summer.jpg
+Maps/so762amber_grobina_winter.jpg
+Maps/so762amber_hedeby_autumn.jpg
+Maps/so762amber_hedeby_spring.jpg
+Maps/so762amber_hedeby_summer.jpg
+Maps/so762amber_hedeby_winter.jpg
+Maps/so762amber_holmgardcamp_autumn.jpg
+Maps/so762amber_holmgardcamp_spring.jpg
+Maps/so762amber_holmgardcamp_summer.jpg
+Maps/so762amber_holmgardcamp_winter.jpg
+Maps/so762amber_kievhillfort_autumn.jpg
+Maps/so762amber_kievhillfort_spring.jpg
+Maps/so762amber_kievhillfort_summer.jpg
+Maps/so762amber_kievhillfort_winter.jpg
+Maps/so762amber_lejre_autumn.jpg
+Maps/so762amber_lejre_spring.jpg
+Maps/so762amber_lejre_summer.jpg
+Maps/so762amber_lejre_winter.jpg
+Maps/so762amber_lukicamp_autumn.jpg
+Maps/so762amber_lukicamp_spring.jpg
+Maps/so762amber_lukicamp_summer.jpg
+Maps/so762amber_lukicamp_winter.jpg
+Maps/so762amber_olduppsala_autumn.jpg
+Maps/so762amber_olduppsala_spring.jpg
+Maps/so762amber_olduppsala_summer.jpg
+Maps/so762amber_olduppsala_winter.jpg
+Maps/so762amber_paviken_autumn.jpg
+Maps/so762amber_paviken_spring.jpg
+Maps/so762amber_paviken_summer.jpg
+Maps/so762amber_paviken_winter.jpg
+Maps/so762amber_polotskcamp_autumn.jpg
+Maps/so762amber_polotskcamp_spring.jpg
+Maps/so762amber_polotskcamp_summer.jpg
+Maps/so762amber_polotskcamp_winter.jpg
+Maps/so762amber_sarskoyefort_autumn.jpg
+Maps/so762amber_sarskoyefort_spring.jpg
+Maps/so762amber_sarskoyefort_summer.jpg
+Maps/so762amber_sarskoyefort_winter.jpg
+Maps/so762amber_thebulgarcamps_autumn.jpg
+Maps/so762amber_thebulgarcamps_spring.jpg
+Maps/so762amber_thebulgarcamps_summer.jpg
+Maps/so762amber_thebulgarcamps_winter.jpg
+Maps/so762amber_theburtasshore_autumn.jpg
+Maps/so762amber_theburtasshore_spring.jpg
+Maps/so762amber_theburtasshore_summer.jpg
+Maps/so762amber_theburtasshore_winter.jpg
+Maps/so762amber_thekotoroslmouth_autumn.jpg
+Maps/so762amber_thekotoroslmouth_spring.jpg
+Maps/so762amber_thekotoroslmouth_summer.jpg
+Maps/so762amber_thekotoroslmouth_winter.jpg
+Maps/so762amber_themstaportagecamp_autumn.jpg
+Maps/so762amber_themstaportagecamp_spring.jpg
+Maps/so762amber_themstaportagecamp_summer.jpg
+Maps/so762amber_themstaportagecamp_winter.jpg
+Maps/so762amber_thenevalanding_autumn.jpg
+Maps/so762amber_thenevalanding_spring.jpg
+Maps/so762amber_thenevalanding_summer.jpg
+Maps/so762amber_thenevalanding_winter.jpg
+Maps/so762amber_thetvertsamouthcamp_autumn.jpg
+Maps/so762amber_thetvertsamouthcamp_spring.jpg
+Maps/so762amber_thetvertsamouthcamp_summer.jpg
+Maps/so762amber_thetvertsamouthcamp_winter.jpg
+Maps/so762amber_thevitbavillage_autumn.jpg
+Maps/so762amber_thevitbavillage_spring.jpg
+Maps/so762amber_thevitbavillage_summer.jpg
+Maps/so762amber_thevitbavillage_winter.jpg
+Maps/so762amber_truso_autumn.jpg
+Maps/so762amber_truso_spring.jpg
+Maps/so762amber_truso_summer.jpg
+Maps/so762amber_truso_winter.jpg
+Maps/so762amber_vadet_autumn.jpg
+Maps/so762amber_vadet_spring.jpg
+Maps/so762amber_vadet_summer.jpg
+Maps/so762amber_vadet_winter.jpg
+Maps/strip_04_relief.png
+
+# --- root-level pipeline data / dev exhibits (not the game) ---
+/routes_master.json
+/setout_charts_1271.json
