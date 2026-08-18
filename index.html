@@ -137,7 +137,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='3.4.121'; const BUILD='0815.zalozny'; /* build-stamp: version ghosts shall not pass */
+const VERSION='3.4.122'; const BUILD='0817.playtestBoard'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -4503,18 +4503,19 @@ function recordRun(outcome){
   if(!S.runId) S.runId = 'r'+Date.now()+Math.floor(rnd()*1000);
   const c=(typeof city==='function'&&city())||S.itin[S.idx]||S.itin[S.itin.length-1];
   const worth=(typeof estateWorth==='function')?estateWorth():Math.round(S.silver + GOODS.reduce((a,g)=>a+(S.goods[g.id]||0)*price(g,c),0) + (typeof herdValue==='function'?herdValue(c):0)); /* Oxus 8/04 (Kris): use the NaN-guarded estateWorth - a single undefined good (added after an old save) was making the whole sum NaN -> null on the board */
-  finalizeMerchantName(); saveScore({runId:S.runId, name:S.name, score:worth, days:S.day-1, outcome:(S.era==='1271'?outcome+' [1271]':outcome), route:S.route?(S.route==='n'?'N':'S'):'-', mode:((S.startSilver||900)<200?'donkey':'caravan'), start:Math.round(S.startSilver||900), version:VERSION, when:Date.now(), roundtrip:/round trip/i.test(outcome), won:/reached|concluded|round trip/i.test(outcome)});
+  finalizeMerchantName(); saveScore({runId:S.runId, name:S.name, score:worth, days:S.day-1, outcome:(S.era==='1271'?outcome+' [1271]':outcome), route:S.route?(S.route==='n'?'N':'S'):'-', mode:((S.startSilver||900)<200?'donkey':'caravan'), start:Math.round(S.startSilver||900), version:VERSION, when:Date.now(), pt:!!(S&&(S.playtest||(S.cheats&&Object.keys(S.cheats).length))), roundtrip:/round trip/i.test(outcome), won:/reached|concluded|round trip/i.test(outcome)});
 }
 const BOARD_VIEWS=[['all','All-time'],['caravan','Caravan'],['humble','Humble'],['fastest','Fastest return'],['recent','Most recent'],['era1271','1271']];
 let BOARD_VIEW='all';
 function setBoardView(v){ BOARD_VIEW=v; if($('board'))renderBoardInto($('board')); }
-function fairTop(list,n,cmp){ /* Kris: one player's flood may push others DOWN the plaques, never OFF them - every merchant's best line is guaranteed a nail in the wall */
+function fairTop(list,n,cmp){ /* Kris: one player's flood may push others DOWN the plaques, never OFF them; and a PLAYTEST run (pt) never pushes a real player off at all - it only fills nails the real merchants leave empty (Oxus 8/17) */
   cmp=cmp||function(a,b){return (b.score||0)-(a.score||0);};
   var sorted=list.slice().sort(cmp);
-  var seen={},first=[],rest=[];
-  sorted.forEach(function(e){ var k=(e&&e.name)||'?'; if(!seen[k]){ seen[k]=1; first.push(e); } else rest.push(e); });
-  var out=first.slice(0,n);
-  for(var i=0;i<rest.length&&out.length<n;i++) out.push(rest[i]);
+  function dedup(arr){ var seen={},first=[],rest=[]; arr.forEach(function(e){ var k=(e&&e.name)||'?'; if(!seen[k]){ seen[k]=1; first.push(e); } else rest.push(e); }); return first.concat(rest); }
+  var real=dedup(sorted.filter(function(e){ return !(e&&e.pt); }));   /* real players claim the wall first */
+  var pt  =dedup(sorted.filter(function(e){ return   e&&e.pt;  }));   /* playtests take only the leftover slots */
+  var out=real.slice(0,n);
+  for(var i=0;i<pt.length&&out.length<n;i++) out.push(pt[i]);
   return out.sort(cmp); }
 function annualROI(e){ /* Kris: total return scaled to a year - extrapolated up for short runs, averaged down for long ones (same arithmetic both ways) */
   var d=+((e&&e.days)||0); if(d<1) return '\u2014';
