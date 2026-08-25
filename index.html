@@ -137,7 +137,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='3.5.69'; const BUILD='0825.roundship'; /* build-stamp: version ghosts shall not pass */
+const VERSION='3.5.70'; const BUILD='0825.mapFallback'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -9058,7 +9058,7 @@ function renderForkChart(m){ var which=S._forkChart; var ch=CHARTS['so_balkh']; 
   var serai=!!(S.forkSerai&&S.forkSerai[which]);
   m.innerHTML='<h2>The crossroads <span class="sub">· the Oxus forks — set out</span></h2>'+
     '<div style="position:relative;max-width:880px;margin:6px auto;line-height:0">'+
-    '<img src="'+chartImg(ch)+'" alt="chart" style="width:100%;display:block;border:5px solid #6b4f2a;border-radius:3px" onerror="this.style.visibility=\'hidden\'">'+
+    '<img src="'+chartImg(ch)+'" data-base="'+ch.img+'" alt="chart" style="width:100%;display:block;border:5px solid #6b4f2a;border-radius:3px" onerror="if(!this._fb){this._fb=1;this.src=this.getAttribute(\'data-base\');}else{this.style.visibility=\'hidden\'}">'+
     '<svg viewBox="0 0 '+vbw+' '+vbh+'" preserveAspectRatio="xMidYMid meet" style="position:absolute;left:5px;top:5px;width:calc(100% - 10px);height:calc(100% - 10px)">'+legSvg+s+'</svg></div>'+
     '<p class="sub" style="text-align:center;max-width:840px;margin:6px auto">Click a road to take it from the fork'+(fwd?' — '+eraName(fwd)+' is the way you were going':'')+'.</p>'+
     '<div style="text-align:center;margin-top:8px">'+(serai?'<button class="seal" onclick="forkRabat()">Stay the night at the caravanserai (4 s)</button> ':'')+'<button onclick="S._forkChart=null;S.pendingEvent=oxusFork(\''+which+'\');S.screen=\'travel\';render()">Back to the road</button></div>';
@@ -10087,12 +10087,13 @@ function renderChart(m){
   var nx=(typeof nextCity==='function')?nextCity():null;
   var onward=((!S||S.era!=='1271') && !S.seaMode && nx&&!C[nx.name])?'<button class="seal" onclick="S.screen=\''+(S.seaMode?'port':'city')+'\';setOut(S.dir||1)">Set out on the road — toward '+nx.name+'</button> ':'';
   var off=(typeof seaEdges==='function'?seaEdges(here):[]).filter(function(e){return !C[e.to] && (typeof legAlwaysOpen!=='function'||legAlwaysOpen(here,e.to));});
+  var _destRow=Object.keys(okSet).length?('<div style="text-align:center;margin:6px auto;max-width:860px;line-height:1.95" class="sub"><span style="opacity:.65">Or click a destination:</span> '+Object.keys(okSet).map(function(dn){return '<button class="seal" style="padding:2px 9px;margin:2px" onclick="chartGo(&quot;'+dn+'&quot;)">'+eraName(dn)+'</button>';}).join('')+'</div>'):'';
   var offb=off.map(function(e){ var f=voyFare(here,e.to); return '<button class="seal" onclick="chartGo(\''+e.to.replace(/'/g,"\\'")+'\')">'+(e.terr==='land'?'Overland to ':'Take ship for ')+(e.lbl||eraName(e.to))+' <span class="sub">(~'+e.d+'d · '+f.total+' s)</span></button> '; }).join('');
   m.innerHTML='<h2>Leave '+(S.seaMode?eraName(S.portName):(city()?cityLabel(city()):'the city'))+' <span class="sub">· '+ch.title+'</span></h2>'+
     '<div id="c3dChartWrap" style="position:relative;max-width:880px;margin:6px auto;line-height:0">'+
-    '<img src="'+chartImg(ch)+'" alt="chart" style="width:100%;display:block;border:5px solid #6b4f2a;border-radius:3px" onerror="this.style.visibility=\'hidden\'">'+
+    '<img src="'+chartImg(ch)+'" data-base="'+ch.img+'" alt="chart" style="width:100%;display:block;border:5px solid #6b4f2a;border-radius:3px" onerror="if(!this._fb){this._fb=1;this.src=this.getAttribute(\'data-base\');}else{this.style.visibility=\'hidden\'}">'+
     '<svg viewBox="0 0 '+ch.vbw+' '+ch.vbh+'" preserveAspectRatio="xMidYMid meet" style="position:absolute;left:5px;top:5px;width:calc(100% - 10px);height:calc(100% - 10px)">'+legSvg+s+'</svg></div>'+
-    '<p class="sub" id="mapHint" style="text-align:center;max-width:840px;margin:6px auto">Click a destination to set out. Greyed places lie off your route from here just now.</p>'+
+    '<p class="sub" id="mapHint" style="text-align:center;max-width:840px;margin:6px auto">Click a destination to set out. Greyed places lie off your route from here just now.</p>'+_destRow+
     ((onward||offb)?'<div style="text-align:center;margin:6px auto;max-width:840px">'+onward+offb+'</div>':'')+
     '<div style="text-align:center;margin-top:8px"><button onclick="S.screen=\''+(S.seaMode?'port':'city')+'\';render()">Back to the '+(S.seaMode?((function(){var _es=seaEdges(here); return (_es.length&&_es.every(function(e){return e.terr==='land';}))?'caravan quarter':'harbour';})()):'bazaar')+'</button></div>';
   /* set-out stays the FLAT chart by design (Kris 8/17): the 3D lives on the road. M3.upgradeChart kept for possible return. */
@@ -11278,7 +11279,7 @@ var M3=(function(){
          'Fustat':1.57,'Asyut':1.5,'Qus':1.25,'Minya':1.5,'Urgench':0.6,'Otrar':1.15,'Khujand':0.8,
          'Yangzhou':0.8,'Kinsay':0.55,'Guangzhou':0.9,'Chittagong':1.3,'Delhi':0.85,'Lahore':0.9,
          'Patna':0.9,'Varanasi':0.95,'Kiev':1.5,'Kiev hillfort':1.5,'Bolghar':1.45,'Ukek':1.5,'Tmutarakan':[0.7,9],
-         'Constantinople':[1.05,8],'Hormuz':[0.35,12],'Aden':[0.9,11],'Kilwa':[0.6,10],'Zanzibar':[1.35,11],'Cambay':[1.15,13],'Kollam':[0.5,13],'Puttalam':[0.9,12],'Mantai':[0.6,12],'Dhofar':[1.2,12],
+         'Constantinople':[1.05,8],'Hormuz':[0.35,12],'Aden':[0.9,11],'Ragusa':[3.9,12],'Kilwa':[0.6,10],'Zanzibar':[1.35,11],'Cambay':[1.15,13],'Kollam':[0.5,13],'Puttalam':[0.9,12],'Mantai':[0.6,12],'Dhofar':[1.2,12],
          'Tumasik':[0,5.5],  /* the Johor strait: narrower than a DEM cell; the band lies north toward the mainland - with the DEM's open sea to the south and east this reads as the island off the peninsula tip (Kris) */
          'Muscat':[1.5,12]   /* dormant until a Muscat node exists - kept for the Ibn Battuta and 1500 eras (Kris: do not burn Muscat) */};
        var cityLLg=(typeof CITY_LL!=='undefined'&&CITY_LL[here])||null;
@@ -11314,7 +11315,7 @@ var M3=(function(){
        var isSea=false;
        if(rvDef!==undefined){
          var isStrait=Array.isArray(rvDef);
-         isSea=isStrait && !!({Hormuz:1,Aden:1,Kilwa:1,Zanzibar:1,Cambay:1,Kollam:1,Puttalam:1,Mantai:1,Dhofar:1}[here]);   /* Kris: open-ocean ports read as SEA-to-the-horizon on one side, not a strait band / river */
+         isSea=isStrait && !!({Hormuz:1,Aden:1,Kilwa:1,Zanzibar:1,Cambay:1,Kollam:1,Puttalam:1,Mantai:1,Dhofar:1,Ragusa:1}[here]);   /* Kris: open-ocean ports read as SEA-to-the-horizon on one side, not a strait band / river */
          var ra=isStrait?rvDef[0]:rvDef, rWid=isStrait?rvDef[1]:3.4, rWig=isStrait?0.8:3.2, rpts=[];
          var rOff=isSea?18:10+rWid*0.6;
          var rU=[Math.cos(ra),Math.sin(ra)], rM=[-Math.sin(ra),Math.cos(ra)];   /* along / TRUE normal - the old frame was skewed and wet() lied */
