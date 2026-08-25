@@ -137,7 +137,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='3.5.70'; const BUILD='0825.mapFallback'; /* build-stamp: version ghosts shall not pass */
+const VERSION='3.5.71'; const BUILD='0825.shipFraming'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -7516,12 +7516,12 @@ function evEphesus(){
 function renderSail(m){
   const s=S.sail; if(!s){ S.screen='city'; renderCity(m); return; }
   const pct=Math.round((1-s.daysLeft/s.total)*100);
-  m.innerHTML='<h2>At sea, bound for '+s.target+'</h2>'+
+  m.innerHTML='<div class="rpanel"><h2>At sea, bound for '+s.target+'</h2>'+
     '<p class="sub"><span id="sDay">Day '+S.day+'</span> · <span id="sLoc">'+seaLeg((s.total-s.daysLeft)/s.total, s.target)+'</span> · <span id="sRemain">'+s.daysLeft+' day'+(s.daysLeft!==1?'s':'')+' to '+s.target+'</span></p>'+
     '<div class="bar"><i id="sProg" style="width:'+pct+'%"></i></div>'+
     sailScene()+
-    '<p class="sub" style="margin-top:8px;border-left:2px solid var(--line);padding-left:10px">The coast is never long out of sight — the rugged mountains of Anatolia slide past to the north, and you are quietly glad you are not trying to drive a mule-train across them. The captain keeps the water-casks; your only cares are the food and the weather.</p>'+
-    '<button class="seal" onclick="skipSail()">Skip ahead</button>';
+    '<p class="sub" style="margin-top:8px;border-left:2px solid var(--line);padding-left:10px">The coast is never long out of sight — the rugged mountains of Anatolia slide past to the north, and you are quietly glad you are not trying to drive a mule-train across them. The captain keeps the water-casks; your only cares are the food and the weather.</p></div><div id="roadGap"></div><div class="rpanel">'+
+    '<button class="seal" onclick="skipSail()">Skip ahead</button></div>';
 }
 
 /* ============ BANDIT-HIDEOUT REVENGE (local store; mirrors the Supabase graves table) ============ */
@@ -11149,7 +11149,7 @@ var M3=(function(){
            try{ var ge=document.getElementById('roadGap');
              if(ge){ var r2=ge.getBoundingClientRect();
                if(r2.height>40){ var f=(r2.top+r2.height*0.55)/innerHeight;
-                 var offY=Math.round((0.5-Math.max(0.2,Math.min(0.85,f)))*innerHeight);
+                 var offY=Math.round((0.5-Math.max(0.2,Math.min(0.85,f)))*innerHeight); if(L.model) offY-=Math.round(innerHeight*0.13);   /* ships sit lower so the masts clear the top box (Kris) */
                  if(offY!==L._offY){ L._offY=offY; L.cam.setViewOffset(innerWidth,innerHeight,0,offY,innerWidth,innerHeight); L.cam.updateProjectionMatrix(); } } } }catch(e){} }
          try{ if(L.wx){
            var kmpu=L.rel.kmpu||6, elev=(L.tgt.y/6)*kmpu*1000;
