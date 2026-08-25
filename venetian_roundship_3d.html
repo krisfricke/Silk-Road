@@ -1,0 +1,464 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A round ship of Venice — the lagoon</title>
+<style>
+html,body{margin:0;height:100%;background:#0e0b07;overflow:hidden;font-family:Georgia,serif;color:#f0e6d2}
+#c{display:block;width:100vw;height:100vh}
+.ui{position:fixed;left:14px;top:12px;max-width:390px;z-index:5;text-shadow:0 1px 3px #000}
+.ui h1{font-size:19px;margin:0 0 2px;color:#f4e3b8}
+.ui p{font-size:12px;margin:2px 0;color:#cbb78e}
+.bar{position:fixed;left:14px;bottom:14px;z-index:5;display:flex;gap:8px;align-items:center;background:rgba(20,14,8,.6);padding:8px 10px;border:1px solid #6b4f2a;border-radius:6px}
+button{font-family:Georgia,serif;font-size:13px;background:#2c2116;color:#f0e6d2;border:1px solid #8a6a34;border-radius:4px;padding:6px 12px;cursor:pointer}
+button:hover{background:#3c2e1c}
+#note{font-size:12px;color:#cbb78e;max-width:430px}
+#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0e0b07;z-index:9;color:#cbb78e;font-size:15px}
+</style></head><body>
+<div id="load">flooding the lagoon&hellip;</div>
+<canvas id="c"></canvas>
+<div class="ui">
+  <h1>&#10086; A round ship of Venice</h1>
+  <p>The <i>nave tonda</i> in her own lagoon. The banner shows the wind; the lateens sheet themselves to it, and she will not lie closer than six points to the bora &mdash; press her too high and she goes up in irons, sails all a-shiver.</p>
+  <p style="color:#8f7a52">&larr; &rarr; helm &middot; drag to orbit &middot; wheel to zoom</p>
+</div>
+<div class="bar">
+  <button id="wind">the wind freshens</button>
+  <span id="note"></span>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* THE ROUNDSHIP, SECOND BUILD (Fadak; Kris's brief): a navigable sandbox - the Venice lagoon.
+   Real point-of-sail model: wind shown by the flags, lateens sheeted at trim angles (never square
+   to the wind), a no-go cone ~65 deg either side of the wind's eye (in irons = luffing, way falls
+   off), leeway downwind, grounding on the banks. Helm on the arrow keys; the camera follows. */
+let scene,camera,renderer,t0=Date.now(),tPrev=0;
+let camR=64,camTheta=2.3,camPhi=0.24;
+let windBtn=false,wind=0;                    // 0 calm..1 fresh (the button)
+let sea,seaBase,ship,skiff,towline,wake,spray,gulls=[];
+let sailL=[],flagL=[],anchorsWS=[];
+let sunLight,hemi;
+const S={x:60,z:60,heading:Math.PI/2,v:0,windFrom:Math.PI-0.3,aground:0};
+const NOGO=1.13;                             // ~65 deg: six points off the eye of the wind
+const PORTS=[
+ {x:-60,z:-120,r:41,n:'Venice — the mole of San Marco, the Republic herself'},
+ {x:30,z:-170,r:20,n:'Murano — the glass furnaces never cool'},
+ {x:110,z:-150,r:16,n:'Torcello — the old campanile over the marshes'},
+ {x:60,z:200,r:22,n:'Chioggia — salt-pans and eel-boats'},
+ {x:178,z:-14,r:14,n:'the Lido — the long bar against the sea'},
+];
+const BANKS=[{x:-120,z:60,r:18},{x:0,z:60,r:12},{x:-40,z:150,r:15},{x:170,z:-80,r:14},{x:185,z:40,r:14},{x:180,z:100,r:14},{x:150,z:160,r:13}];
+function wrapA(a){ while(a>Math.PI)a-=2*Math.PI; while(a<-Math.PI)a+=2*Math.PI; return a; }
+const lerp=(a,b,q)=>a+(b-a)*q;
+function softSprite(){
+  const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const cx=cv.getContext('2d'), gr=cx.createRadialGradient(32,32,2,32,32,30);
+  gr.addColorStop(0,'rgba(255,255,255,0.9)'); gr.addColorStop(0.5,'rgba(255,255,255,0.35)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+  cx.fillStyle=gr; cx.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(cv);
+}
+function mat(c,extra){ return new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:0.9,metalness:0},extra||{})); }
+
+function water(){
+  const g=new THREE.PlaneGeometry(760,760,90,90); g.rotateX(-Math.PI/2);
+  seaBase=g.attributes.position.array.slice();
+  sea=new THREE.Mesh(g,mat(0x37626a,{roughness:0.5,metalness:0.22}));
+  sea.receiveShadow=true; scene.add(sea);
+}
+function lagoon(){
+  const sand=mat(0xb5a578,{flatShading:true}), reed=mat(0x6d7a48,{flatShading:true});
+  const brick=mat(0x9c5a40), ochre=mat(0xc2a06a), cream=mat(0xd8cbaa), roof=mat(0x8a3b2a);
+  function bank(x,z,r,green){
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r*1.25,1.6,11),green?reed:sand);
+    m.position.set(x,0.35,z); m.rotation.y=Math.random()*3; scene.add(m); }
+  for(const b of BANKS) bank(b.x,b.z,b.r,Math.random()<0.4);
+  function campanile(x,z,h){
+    const t=new THREE.Mesh(new THREE.BoxGeometry(2.2,h,2.2),brick); t.position.set(x,0.8+h/2,z); t.castShadow=true; scene.add(t);
+    const belf=new THREE.Mesh(new THREE.BoxGeometry(2.6,1.6,2.6),cream); belf.position.set(x,0.8+h+0.8,z); scene.add(belf);
+    const cap=new THREE.Mesh(new THREE.ConeGeometry(1.9,2.4,4),roof); cap.position.set(x,0.8+h+2.8,z); cap.rotation.y=Math.PI/4; scene.add(cap); }
+  function venice(cx,cz){
+    /* Venice, 1271, in miniature: the Grand Canal's reverse-S, San Marco's five lead domes and
+       great campanile, the OLD Byzantine ducal palace (the Gothic one is a century off), the two
+       granite columns on the molo, the first wooden Rialto (~1264), Veneto-Byzantine palazzi with
+       arcaded canal fronts, funnel chimneys, parish campanili, and the walled Arsenale. */
+    const rng=(sd=>()=>(sd=(sd*16807)%2147483647)/2147483647)(424242);
+    // the island: two lobes; fondamenta rim
+    for(const [ox,oz,r] of [[-9,-6,26],[10,7,24],[2,-16,18],[-16,10,17]]){
+      const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r*1.2,1.6,13),sand);
+      m.position.set(cx+ox,0.35,cz+oz); m.rotation.y=rng()*3; scene.add(m); }
+    // THE GRAND CANAL: reverse-S across the island, NE to SW
+    const cpts=[[-30,-24],[-14,-14],[-2,-16],[8,-8],[6,2],[-2,8],[2,18],[14,26]].map(q=>new THREE.Vector3(cx+q[0],1.22,cz+q[1]));
+    const canal=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(cpts),50,2.6,5,false),mat(0x3f6a72,{roughness:0.35,metalness:0.2}));
+    canal.scale.y=0.06; canal.position.y=1.2*0.94; scene.add(canal);
+    const canalCurve=new THREE.CatmullRomCurve3(cpts);
+    function nearCanal(x,z,d){ let md=99;
+      for(let i=0;i<=24;i++){ const q=canalCurve.getPoint(i/24); md=Math.min(md,Math.hypot(x-q.x,z-q.z)); }
+      return md<d; }
+    // THE PIAZZA + THE MOLO (the south face, toward the approach)
+    const px=cx+2, pz=cz+13;                       // piazza center
+    const piazza=new THREE.Mesh(new THREE.BoxGeometry(12,0.35,7.5),mat(0xc6b490)); piazza.position.set(px,1.15,pz); scene.add(piazza);
+    const molo=new THREE.Mesh(new THREE.BoxGeometry(20,0.5,3),mat(0xbfae88)); molo.position.set(px+1,1.1,pz+5.6); scene.add(molo);
+    // the two columns: the winged Lion and San Todaro
+    for(const [dx,which] of [[-1.6,'lion'],[1.6,'todaro']]){
+      const col=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.26,2.8,8),mat(0x9aa0a6));
+      col.position.set(px+dx,1.35+1.4,pz+6.4); scene.add(col);
+      const cap=new THREE.Mesh(new THREE.BoxGeometry(0.6,0.25,0.6),cream); cap.position.set(px+dx,1.35+2.9,pz+6.4); scene.add(cap);
+      const fig=new THREE.Mesh(which==='lion'?new THREE.BoxGeometry(0.8,0.35,0.3):new THREE.CylinderGeometry(0.12,0.16,0.55,6),
+        which==='lion'?new THREE.MeshStandardMaterial({color:0xb08d3e,metalness:0.5,roughness:0.5}):mat(0x8f8f95));
+      fig.position.set(px+dx,1.35+3.2,pz+6.4); scene.add(fig); }
+    // SAN MARCO: greek cross, five lead domes, the horses' facade toward the piazza
+    const bas=new THREE.Group(), lead=mat(0x8e9799,{roughness:0.6}), marble=mat(0xd9d0b8);
+    const nave=new THREE.Mesh(new THREE.BoxGeometry(6.4,2.2,4.6),marble); nave.position.y=1.1; bas.add(nave);
+    const tran=new THREE.Mesh(new THREE.BoxGeometry(4.2,2.2,6.6),marble); tran.position.y=1.1; bas.add(tran);
+    for(const [dx,dz] of [[0,0],[2.2,0],[-2.2,0],[0,2.2],[0,-2.2]]){
+      const dr=new THREE.Mesh(new THREE.CylinderGeometry(0.95,1.05,0.55,10),marble); dr.position.set(dx,2.45,dz); bas.add(dr);
+      const dm=new THREE.Mesh(new THREE.SphereGeometry(1.0,10,7,0,6.29,0,1.35),lead); dm.position.set(dx,2.7,dz); bas.add(dm);
+      const ln=new THREE.Mesh(new THREE.ConeGeometry(0.14,0.5,6),lead); ln.position.set(dx,3.75,dz); bas.add(ln); }
+    const face=new THREE.Mesh(new THREE.BoxGeometry(6.8,2.6,0.5),mat(0xcbb894)); face.position.set(0,1.3,-2.5); bas.add(face);
+    for(let h=0;h<4;h++){ const horse=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.3,0.18),new THREE.MeshStandardMaterial({color:0xb08d3e,metalness:0.55,roughness:0.45}));
+      horse.position.set(-1.2+h*0.8,2.15,-2.8); bas.add(horse); }   // the four bronze horses, Constantinople's loss
+    bas.position.set(px+7.8,1.3,pz+0.6); bas.rotation.y=Math.PI/2; bas.traverse(o=>{o.castShadow=true;}); scene.add(bas);
+    // THE CAMPANILE, freestanding
+    const cam=new THREE.Mesh(new THREE.BoxGeometry(1.9,10.5,1.9),brick); cam.position.set(px-4.6,1.3+5.25,pz+2.6); cam.castShadow=true; scene.add(cam);
+    const belf2=new THREE.Mesh(new THREE.BoxGeometry(2.2,1.3,2.2),cream); belf2.position.set(px-4.6,1.3+11.3,pz+2.6); scene.add(belf2);
+    const cap2=new THREE.Mesh(new THREE.ConeGeometry(1.6,2.2,4),roof); cap2.position.set(px-4.6,1.3+13,pz+2.6); cap2.rotation.y=Math.PI/4; scene.add(cap2);
+    // THE OLD DUCAL PALACE: the Byzantine castle-block between basilica and molo, corner towers
+    const pal=new THREE.Group();
+    const blk=new THREE.Mesh(new THREE.BoxGeometry(6.2,2.8,4.6),mat(0xc9a887)); blk.position.y=1.4; pal.add(blk);
+    for(const [tx,tz] of [[-2.8,-2.0],[2.8,-2.0],[-2.8,2.0],[2.8,2.0]]){
+      const tw=new THREE.Mesh(new THREE.CylinderGeometry(0.6,0.7,3.8,8),mat(0xbb9878)); tw.position.set(tx,1.9,tz); pal.add(tw); }
+    const arc=new THREE.Mesh(new THREE.BoxGeometry(6.2,0.7,0.3),mat(0x4a3a2c)); arc.position.set(0,0.55,2.2); pal.add(arc);  // the arcaded front
+    pal.position.set(px+8.6,1.3,pz+4.2); pal.traverse(o=>{o.castShadow=true;}); scene.add(pal);
+    // THE RIALTO: the wooden bridge over the canal's waist (~1264)
+    const rq=canalCurve.getPoint(0.52), rq2=canalCurve.getPoint(0.56);
+    const rang=Math.atan2(rq2.x-rq.x,rq2.z-rq.z);
+    const bridge=new THREE.Group();
+    const spanB=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.22,7.2),mat(0x6a4e2e)); spanB.position.y=2.05; bridge.add(spanB);
+    for(const sgn of [-1,1]){ const ramp=new THREE.Mesh(new THREE.BoxGeometry(1.6,0.2,2.6),mat(0x6a4e2e));
+      ramp.position.set(0,1.75,sgn*4.6); ramp.rotation.x=sgn*0.25; bridge.add(ramp);
+      for(const px2 of [-0.7,0.7]){ const post=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.9,5),mat(0x4a3826));
+        post.position.set(px2,2.55,sgn*2.6); bridge.add(post); } }
+    bridge.position.set(rq.x,0,rq.z); bridge.rotation.y=rang+Math.PI/2; bridge.traverse(o=>{o.castShadow=true;}); scene.add(bridge);
+    // THE ARSENALE: walled enclosure NE, two gabled sheds and a basin
+    const ars=new THREE.Group(), wallM=mat(0xa8886a);
+    for(const [wx,wz,sx,sz] of [[0,-4.2,9,0.5],[0,4.2,9,0.5],[-4.5,0,0.5,8.4],[4.5,0,0.5,8.4]]){
+      const w2=new THREE.Mesh(new THREE.BoxGeometry(sx,1.8,sz),wallM); w2.position.set(wx,0.9,wz); ars.add(w2); }
+    for(const [tx,tz] of [[-4.5,-4.2],[4.5,-4.2],[-4.5,4.2],[4.5,4.2]]){
+      const tw=new THREE.Mesh(new THREE.CylinderGeometry(0.55,0.65,2.6,7),brick); tw.position.set(tx,1.3,tz); ars.add(tw); }
+    for(const sx of [-2,1.6]){ const shed=new THREE.Mesh(new THREE.BoxGeometry(2.6,1.3,5.6),mat(0xb59a76)); shed.position.set(sx,0.65,0); ars.add(shed);
+      const gr=new THREE.Mesh(new THREE.ConeGeometry(1.85,1.0,4),roof); gr.scale.z=1.6; gr.position.set(sx,1.75,0); gr.rotation.y=Math.PI/4; ars.add(gr); }
+    const basin=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.2,3.6),mat(0x3f6a72,{roughness:0.35})); basin.position.set(3.4,0.35,0.6); ars.add(basin);
+    ars.position.set(cx+16,1.15,cz-16); ars.traverse(o=>{o.castShadow=true;}); scene.add(ars);
+    // PALAZZI: dense fabric along the canal and the streets; arcades on the canal fronts, funnel chimneys
+    let placed=0, tries=0;
+    while(placed<46&&tries<400){ tries++;
+      const a=rng()*6.283, rr=3+rng()*23;
+      const x=cx+Math.cos(a)*rr, z=cz+Math.sin(a)*rr*0.86;
+      if(Math.hypot(x-px,z-pz)<8.5) continue;                               // the piazza stays open
+      if(Math.hypot(x-(px+8.2),z-(pz+2))<5.5) continue;                     // basilica + palace precinct
+      if(Math.hypot(x-(cx+16),z-(cz-16))<7) continue;                       // the Arsenale
+      if(nearCanal(x,z,2.6)) continue;                                      // nothing IN the canal
+      const onCanal=nearCanal(x,z,4.6);
+      const w=1.5+rng()*1.9, d=1.5+rng()*1.9, h=1.4+rng()*(onCanal?2.4:1.6);
+      const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),rng()<0.45?ochre:(rng()<0.5?cream:mat(0xb98a63)));
+      b.position.set(x,1.3+h/2,z); b.rotation.y=onCanal?0:(rng()*3);
+      b.castShadow=true; scene.add(b);
+      const rf=new THREE.Mesh(new THREE.ConeGeometry(Math.max(w,d)*0.72,0.7,4),roof);
+      rf.position.set(x,1.3+h+0.35,z); rf.rotation.y=Math.PI/4; scene.add(rf);
+      if(onCanal){ const arc2=new THREE.Mesh(new THREE.BoxGeometry(w*1.02,h*0.24,d*1.02),mat(0x4a3a2c));
+        arc2.position.set(x,1.3+h*0.12,z); scene.add(arc2); }               // veneto-byzantine arcaded foot
+      if(rng()<0.4){ const ch=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.09,0.8,5),brick);
+        ch.position.set(x+(rng()-0.5)*w*0.6,1.3+h+0.75,z+(rng()-0.5)*d*0.6); scene.add(ch);
+        const fun=new THREE.Mesh(new THREE.ConeGeometry(0.22,0.3,6),brick); fun.rotation.x=Math.PI;
+        fun.position.set(ch.position.x,ch.position.y+0.5,ch.position.z); scene.add(fun); }   // the funnel chimney-pots
+      placed++;
+    }
+    // parish campanili
+    for(const [ox,oz,hh] of [[-16,-12,6],[12,14,5],[-8,16,5.5],[16,-4,6.5]]) campanile(cx+ox,cz+oz,hh);
+    // boats: black hulls moored at the molo and in the canal
+    for(let i=0;i<9;i++){
+      const q=canalCurve.getPoint(0.1+0.8*rng()); const off=(rng()<0.5?-1:1)*2.0;
+      const bt=new THREE.Mesh(new THREE.SphereGeometry(0.8,7,5,0,6.29,0,1.57),mat(0x1d1a16));
+      bt.scale.set(0.32,0.3,1.5); bt.rotation.x=Math.PI;
+      if(i<5){ bt.position.set(px-6+i*2.6,1.35,pz+7.6); bt.rotation.y=0.2*(rng()-0.5); }
+      else { bt.position.set(q.x+off,1.32,q.z); bt.rotation.y=rang; }
+      scene.add(bt); }
+  }
+  function town(x,z,r,n){
+    bank(x,z,r,false);
+    for(let i=0;i<n;i++){ const a=Math.random()*6.28, rr=Math.random()*r*0.62;
+      const w=1.8+Math.random()*2.6, h=1.6+Math.random()*2.6;
+      const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,1.8+Math.random()*2),Math.random()<0.5?ochre:cream);
+      b.position.set(x+Math.cos(a)*rr,0.8+h/2,z+Math.sin(a)*rr); b.rotation.y=Math.random()*3; b.castShadow=true; scene.add(b);
+      const rf=new THREE.Mesh(new THREE.ConeGeometry(w*0.75,0.9,4),roof); rf.position.set(b.position.x,0.8+h+0.45,b.position.z); rf.rotation.y=Math.PI/4; scene.add(rf); }
+  }
+  venice(-60,-120);                                                   // the Republic herself, in detail
+  town(30,-170,20,10); campanile(34,-166,6);                          // Murano
+  bank(110,-150,16,true); campanile(110,-150,10);                     // Torcello: the lone tower
+  town(60,200,22,12); campanile(64,204,7);                            // Chioggia
+  // the Lido: the long bar is the BANKS at x~170-185 (with the porto gap at z~-40)
+  // bricole: paired leaning channel-posts, Venice toward the porto
+  const bric=mat(0x4a3826);
+  for(let i=0;i<7;i++){ const q=i/6, bx=lerp(-30,160,q), bz=lerp(-100,-44,q);
+    for(const sgn of [-1,1]){ const p=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.3,5,6),bric);
+      p.position.set(bx+sgn*3,2.0,bz+sgn*1.2); p.rotation.z=sgn*0.12; p.rotation.x=0.06; scene.add(p); } }
+}
+function hull(){
+  ship=new THREE.Group();
+  const planks=mat(0x6b4b2e), pitch=mat(0x33241a), trim=mat(0x8a2f26), pale=mat(0xc9b489);
+  const prof=[];
+  for(let i=0;i<=10;i++){ const q=i/10;
+    const y=q*6.4, r=0.9+Math.sin(Math.pow(q,0.75)*Math.PI*0.52)*4.4;
+    prof.push(new THREE.Vector2(r,y)); }
+  const body=new THREE.Mesh(new THREE.LatheGeometry(prof,20),planks); body.scale.set(1,1,2.6); body.castShadow=true; ship.add(body);
+  const bottom=new THREE.Mesh(new THREE.LatheGeometry(prof.slice(0,6),20),pitch); bottom.scale.set(1.02,1,2.65); ship.add(bottom);
+  const keel=new THREE.Mesh(new THREE.BoxGeometry(0.5,1.1,21),pitch); keel.position.y=0.2; ship.add(keel);
+  // strakes: the wale in red, planking lines below
+  for(const [rr,yy,mm,th] of [[4.6,4.7,trim,0.28],[4.9,5.6,pale,0.2],[4.75,3.6,pitch,0.14],[4.5,2.7,pitch,0.14]]){
+    const w=new THREE.Mesh(new THREE.TorusGeometry(rr,th,6,26),mm);
+    w.rotation.x=Math.PI/2; w.scale.set(1,2.6,1); w.position.y=yy; ship.add(w); }
+  // SHEER: bulwark strakes rising toward bow and stern (Kris: more hull shape)
+  for(const sgn of [1,-1]){ for(const side of [1,-1]){
+    const pts=[]; for(let i=0;i<=8;i++){ const q=i/8;
+      pts.push(new THREE.Vector3(side*4.35*(1-q*q*0.88), 6.4+q*q*2.6, sgn*(1.5+q*9.9))); }
+    const rail=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),12,0.3,6,false),planks);
+    rail.castShadow=true; ship.add(rail); } }
+  for(const sgn of [1,-1]){
+    const pts=[]; for(let i=0;i<=8;i++){ const q=i/8;
+      pts.push(new THREE.Vector3(0, 2+q*7.5, sgn*(11.2+Math.sin(q*1.2)*2.4*q))); }
+    const post=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),12,0.42,6,false),planks);
+    post.castShadow=true; ship.add(post); }
+  const deck=new THREE.Mesh(new THREE.CylinderGeometry(4.4,4.4,0.4,18),pale);
+  deck.scale.set(1,1,2.5); deck.position.y=6.2; ship.add(deck);
+  function castle(z,w,d,h,lvl){
+    const c=new THREE.Group();
+    const fl=new THREE.Mesh(new THREE.BoxGeometry(w,0.35,d),pale); fl.position.y=h; c.add(fl);
+    const skirt=new THREE.Mesh(new THREE.BoxGeometry(w*0.92,h+0.35,d*0.92),planks); skirt.position.y=(h+0.35)/2; c.add(skirt);
+    const pw=0.22, ph=1.0+0.3*lvl;
+    for(const [px,pz,sx,sz] of [[0,-d/2,w,pw],[0,d/2,w,pw],[-w/2,0,pw,d],[w/2,0,pw,d]]){
+      const wall=new THREE.Mesh(new THREE.BoxGeometry(sx,ph,sz),trim); wall.position.set(px,h+ph/2,pz); c.add(wall); }
+    for(let m2=0;m2<=Math.round(w)-1;m2++){ for(const sgn of [-1,1]){
+      const mer=new THREE.Mesh(new THREE.BoxGeometry(0.45,0.4,0.26),trim);
+      mer.position.set(-w/2+0.6+m2,h+ph+0.2,sgn*(d/2)); c.add(mer); } }
+    c.position.set(0,6.2,z); c.traverse(o=>{o.castShadow=true;}); ship.add(c); return c;
+  }
+  castle(-8.8,6.6,5.4,1.1,2); castle(9.2,5.4,4.2,0.9,1);
+  for(const sgn of [-1,1]){
+    const oar=new THREE.Group();
+    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.18,7.5,6),planks); shaft.position.y=-2.2; oar.add(shaft);
+    const blade=new THREE.Mesh(new THREE.BoxGeometry(0.25,3.2,1.15),planks); blade.position.y=-5.6; oar.add(blade);
+    oar.position.set(sgn*4.6,6.4,-7.6); oar.rotation.x=0.28; oar.rotation.z=sgn*0.18; ship.add(oar); }
+  for(const sgn of [-1,1]){
+    const a=new THREE.Group();
+    const sh=new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,2.0,6),pitch); a.add(sh);
+    const fl2=new THREE.Mesh(new THREE.TorusGeometry(0.55,0.1,6,10,Math.PI),pitch); fl2.position.y=-1.0; fl2.rotation.z=Math.PI; a.add(fl2);
+    a.position.set(sgn*4.3,4.9,8.6); a.rotation.z=sgn*0.25; ship.add(a); }
+  scene.add(ship);
+}
+function rig(){
+  const wood=mat(0x5d452a), sailM=mat(0xe8ddc2,{side:THREE.DoubleSide,roughness:1});
+  const line=new THREE.LineBasicMaterial({color:0x2f2417});
+  /* each lateen lives in a TRIM GROUP at the mast foot; rotating the group about y sheets the
+     whole sail. Geometry is local: bow = +z. Yard low-end forward, peak high aft. */
+  function lateen(zMast,hgt,A,B,C){
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.42,hgt,8),wood);
+    m.position.set(0,6.2+hgt/2,zMast); m.rotation.x=0.10; m.castShadow=true; ship.add(m);
+    const topY=6.2+hgt*0.96, topZ=zMast+hgt*0.10;
+    for(const sgn of [-1,1]){ for(const dz of [-1.6,0,1.6]){
+      const g2=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,topY,topZ),new THREE.Vector3(sgn*4.5,6.6,zMast+dz)]);
+      ship.add(new THREE.Line(g2,line)); } }
+    const trimG=new THREE.Group(); trimG.position.set(0,0,zMast); ship.add(trimG);
+    const vA=new THREE.Vector3(A[0],A[1],A[2]), vB=new THREE.Vector3(B[0],B[1],B[2]), vC=new THREE.Vector3(C[0],C[1],C[2]);
+    const yard=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([vA,vB]),2,0.17,6,false),wood);
+    yard.castShadow=true; trimG.add(yard);
+    const NX=10,NY=8, vs=[],idx=[],base=[];
+    for(let iy=0;iy<=NY;iy++){ for(let ix=0;ix<=NX;ix++){
+      const qx=ix/NX, qy=iy/NY;
+      const v=vA.clone().lerp(vB,qx).lerp(vA.clone().lerp(vC,qx),qy);
+      vs.push(v.x,v.y,v.z); base.push(v.x,v.y,v.z); }}
+    for(let iy=0;iy<NY;iy++){ for(let ix=0;ix<NX;ix++){
+      const a=iy*(NX+1)+ix, b=a+1, c2=a+NX+1, d=c2+1; idx.push(a,c2,b,b,c2,d); }}
+    const sg=new THREE.BufferGeometry();
+    sg.setAttribute('position',new THREE.Float32BufferAttribute(vs,3)); sg.setIndex(idx); sg.computeVertexNormals();
+    const sail=new THREE.Mesh(sg,sailM); sail.castShadow=true; trimG.add(sail);
+    sailL.push({sail,base,NX,NY,trimG});
+    // masthead anchor for a world-space flag
+    const anc=new THREE.Object3D(); anc.position.set(0,topY+0.4,topZ); ship.add(anc); anchorsWS.push(anc);
+    return anc;
+  }
+  // fore: yard from over the bow horn, peak high; foot raised CLEAR of the forecastle (top ~8.8)
+  lateen(4.5,16, [0,9.6,9.5],[0,23.5,-11.0],[0,8.4,-8.5]);
+  // aft: smaller; clew held high over the aft castle (top ~9.3)
+  lateen(-4.8,11.5, [0,9.3,5.4],[0,17.5,-6.5],[0,9.9,-3.2]);
+  // world-space flags: they obey the WIND, not the ship
+  function flag(w,h,col,withLion){
+    const g=new THREE.Group();
+    const cloth=new THREE.Mesh(new THREE.PlaneGeometry(w,h,10,2),mat(col,{side:THREE.DoubleSide}));
+    cloth.position.x=w/2; g.add(cloth);
+    if(withLion){ const lion=new THREE.Mesh(new THREE.CircleGeometry(h*0.28,10),new THREE.MeshBasicMaterial({color:0xd9a94a,side:THREE.DoubleSide}));
+      lion.position.set(w*0.4,0,0.02); g.add(lion); }
+    scene.add(g); flagL.push({g,cloth}); return g;
+  }
+  flag(3.2,1.6,0x9a2a20,true);   // the Republic at the great masthead
+  flag(2.2,0.5,0x8a2f26,false);  // pennant at the after masthead
+}
+function boats(){
+  skiff=new THREE.Group();
+  const sh=new THREE.Mesh(new THREE.SphereGeometry(1.6,10,8,0,Math.PI*2,0,Math.PI/2),mat(0x6b4b2e));
+  sh.scale.set(0.55,0.5,1.3); sh.rotation.x=Math.PI; sh.position.y=0.85; skiff.add(sh);
+  skiff.position.set(S.x-12,0.2,S.z); scene.add(skiff);
+  const lg=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3()]);
+  towline=new THREE.Line(lg,new THREE.LineBasicMaterial({color:0x2f2417})); scene.add(towline);
+  for(let i=0;i<4;i++){
+    const g=new THREE.Group();
+    for(const sgn of [-1,1]){ const w=new THREE.Mesh(new THREE.PlaneGeometry(1.0,0.28),mat(0xf2f0e8,{side:THREE.DoubleSide}));
+      w.position.x=sgn*0.5; g.add(w); }
+    scene.add(g); gulls.push(g); }
+}
+function sprayWake(){
+  const N=240, p=new Float32Array(N*3), age=new Float32Array(N);
+  for(let i=0;i<N;i++){ p[i*3]=S.x; p[i*3+1]=0.25; p[i*3+2]=S.z; age[i]=Math.random()*6; }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3));
+  wake=new THREE.Points(g,new THREE.PointsMaterial({map:softSprite(),color:0xdfeef0,size:1.5,transparent:true,opacity:0.45,depthWrite:false}));
+  wake.userData.age=age; scene.add(wake);
+  const M=140, q=new Float32Array(M*3);
+  for(let i=0;i<M;i++){ q[i*3]=S.x; q[i*3+1]=0.3; q[i*3+2]=S.z; }
+  const g2=new THREE.BufferGeometry(); g2.setAttribute('position',new THREE.BufferAttribute(q,3));
+  spray=new THREE.Points(g2,new THREE.PointsMaterial({map:softSprite(),color:0xeef6f8,size:1.0,transparent:true,opacity:0,depthWrite:false}));
+  scene.add(spray);
+}
+function skyDome(){
+  const sky=new THREE.Mesh(new THREE.SphereGeometry(1000,16,10),new THREE.MeshBasicMaterial({color:0xbcd3dc,side:THREE.BackSide,fog:false}));
+  scene.add(sky);
+  const sun=new THREE.Mesh(new THREE.CircleGeometry(24,20),new THREE.MeshBasicMaterial({color:0xfff6d8,fog:false}));
+  sun.position.set(-460,340,280); sun.lookAt(0,0,0); scene.add(sun);
+}
+const keys={};
+function addEvents(){
+  let drag=false,lx=0,ly=0; const c=document.getElementById('c');
+  c.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY;});
+  addEventListener('mouseup',()=>drag=false);
+  addEventListener('mousemove',e=>{ if(!drag)return;
+    camTheta-=(e.clientX-lx)*0.005; camPhi=Math.max(0.08,Math.min(1.3,camPhi-(e.clientY-ly)*0.004)); lx=e.clientX; ly=e.clientY; });
+  c.addEventListener('wheel',e=>{ camR=Math.max(18,Math.min(220,camR*(e.deltaY>0?1.09:0.92))); e.preventDefault(); },{passive:false});
+  addEventListener('keydown',e=>{ keys[e.key]=true; if(e.key.startsWith('Arrow'))e.preventDefault(); });
+  addEventListener('keyup',e=>{ keys[e.key]=false; });
+  addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+  document.getElementById('wind').addEventListener('click',()=>{ windBtn=!windBtn;
+    document.getElementById('wind').textContent=windBtn?'the wind eases':'the wind freshens'; });
+}
+function init(){
+  scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0xbcd3dc,0.0017);
+  camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,2200);
+  renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+  renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  hemi=new THREE.HemisphereLight(0xe8f2f6,0x2e4a50,0.85); scene.add(hemi);
+  sunLight=new THREE.DirectionalLight(0xfff2d0,1.2); sunLight.position.set(-60,80,40);
+  sunLight.castShadow=true; sunLight.shadow.mapSize.set(2048,2048);
+  const sc=sunLight.shadow.camera; sc.left=-50; sc.right=50; sc.top=50; sc.bottom=-50; sc.far=320;
+  scene.add(sunLight);
+  skyDome(); water(); lagoon(); hull(); rig(); boats(); sprayWake();
+  addEvents(); document.getElementById('load').style.display='none'; loop();
+}
+function loop(){
+  requestAnimationFrame(loop);
+  const t=(Date.now()-t0)/1000, dt=Math.min(0.05,t-tPrev||0.016); tPrev=t;
+  wind=Math.max(0,Math.min(1,wind+(windBtn?0.007:-0.007)));
+  S.windFrom+=Math.sin(t*0.05)*0.00045;                     // the bora wanders a little
+  const windTo=S.windFrom+Math.PI;
+  // ---- SAILING MODEL ----
+  const awa=wrapA(S.windFrom-S.heading);                    // wind's eye relative to the bow
+  const off=Math.abs(awa), irons=off<NOGO;
+  let pol=0;
+  if(!irons){                                                // the polar: reach best, run good, close-hauled slow
+    if(off<Math.PI/2) pol=lerp(0.35,0.7,(off-NOGO)/(Math.PI/2-NOGO));
+    else if(off<2.1) pol=lerp(0.7,1.0,(off-Math.PI/2)/(2.1-Math.PI/2));
+    else pol=lerp(1.0,0.72,(off-2.1)/(Math.PI-2.1));
+  }
+  const vTgt=(6.5+4.5*wind)*pol;
+  S.v+=(vTgt-S.v)*(S.v>vTgt?0.35:0.12)*dt*3; if(S.aground>0){ S.v=0; S.aground-=dt; }
+  // helm: she answers by her way through the water
+  const rud=(keys.ArrowLeft?1:0)-(keys.ArrowRight?1:0);
+  S.heading+=rud*dt*(0.25+0.5*Math.min(1,S.v/6));
+  const fwdX=Math.sin(S.heading), fwdZ=Math.cos(S.heading);
+  S.x+=fwdX*S.v*dt; S.z+=fwdZ*S.v*dt;
+  S.x+=Math.sin(windTo)*S.v*0.045*dt; S.z+=Math.cos(windTo)*S.v*0.045*dt;   // leeway
+  // grounding: the banks, the towns, the lagoon rim
+  let note='';
+  for(const g of PORTS.concat(BANKS)){ const d=Math.hypot(S.x-g.x,S.z-g.z);
+    if(d<g.r+7){ const nx=(S.x-g.x)/d, nz=(S.z-g.z)/d; S.x=g.x+nx*(g.r+7); S.z=g.z+nz*(g.r+7);
+      if(S.v>0.5){ S.aground=1.2; note='She takes the ground — bear away and let her gather way.'; } S.v=Math.min(S.v,0.4); }
+    else if(g.n&&d<g.r+30&&!note) note='Off '+g.n+'.';
+  }
+  const dO=Math.hypot(S.x,S.z);
+  if(dO>330){ S.x*=330/dO; S.z*=330/dO; S.v=Math.min(S.v,0.4); note='The open sea is another scene — the lagoon ends here.'; }
+  if(irons) note='IN IRONS — she will not lie this close to the wind; the sails shiver. Bear away.';
+  document.getElementById('note').textContent=note;
+  // ---- the sea ----
+  const amp=lerp(0.32,1.1,wind), spd=lerp(0.7,1.2,wind);
+  const p=sea.geometry.attributes.position;
+  for(let i=0;i<p.count;i++){
+    const x=seaBase[i*3], z=seaBase[i*3+2];
+    p.setY(i, Math.sin(x*0.06+t*spd)*amp + Math.sin(z*0.052-t*spd*0.8)*amp*0.8 + Math.sin((x+z)*0.023+t*spd*0.55)*amp*0.55);
+  }
+  p.needsUpdate=true; sea.geometry.computeVertexNormals();
+  sea.position.x=S.x; sea.position.z=S.z;                    // the water travels with her (the lagoon is bigger than the mesh)
+  // ---- the ship rides ----
+  const leeSide=awa>0?-1:1;                                  // sails swing away from the wind's eye
+  ship.position.set(S.x,-2.5+Math.sin(t*spd*0.7)*amp*0.5,S.z);
+  ship.rotation.y=S.heading;
+  ship.rotation.x=Math.sin(t*spd*0.8)*(0.015+0.02*wind);
+  ship.rotation.z=Math.sin(t*spd*0.62+1.3)*(0.02+0.04*wind)+leeSide*(S.v/11)*(0.06+0.06*wind);
+  // ---- trim: sheet the lateens to the wind ----
+  const trimMag=irons?0.12:lerp(0.35,1.35,Math.max(0,(off-NOGO))/(Math.PI-NOGO));
+  for(const SL of sailL){
+    SL.trimG.rotation.y+= (leeSide*trimMag - SL.trimG.rotation.y)*0.06;
+    const pp=SL.sail.geometry.attributes.position;
+    for(let iy=0;iy<=SL.NY;iy++){ for(let ix=0;ix<=SL.NX;ix++){
+      const k=iy*(SL.NX+1)+ix, qx=ix/SL.NX, qy=iy/SL.NY;
+      let belly;
+      if(irons) belly=Math.sin(t*13+qx*9+qy*5)*0.35*Math.sin(qx*Math.PI);      // luffing: all a-shiver
+      else belly=-leeSide*Math.sin(qx*Math.PI)*Math.sin(qy*Math.PI)*(1.0+1.6*wind+0.6*pol);
+      pp.setX(k, SL.base[k*3]+belly+(irons?0:Math.sin(t*3+qx*5)*0.05));
+    }}
+    pp.needsUpdate=true; SL.sail.geometry.computeVertexNormals();
+  }
+  // ---- flags obey the wind ----
+  for(let i=0;i<flagL.length;i++){
+    const anc=anchorsWS[i]; const wp=new THREE.Vector3(); anc.getWorldPosition(wp);
+    flagL[i].g.position.copy(wp);
+    flagL[i].g.rotation.y=windTo-Math.PI/2;
+    const pp=flagL[i].cloth.geometry.attributes.position;
+    for(let k=0;k<pp.count;k++){ const q=(pp.getX(k)+1.6)/3.2;
+      pp.setZ(k,Math.sin(t*(5+5*wind)+q*6)*q*(0.22+0.5*wind)); }
+    pp.needsUpdate=true;
+  }
+  // ---- wake + spray ----
+  const w=wake.geometry.attributes.position, ages=wake.userData.age;
+  for(let i=0;i<w.count;i++){ ages[i]+=dt;
+    if(ages[i]>6){ ages[i]=0; w.setX(i,S.x-fwdX*10+(Math.random()-0.5)*2.5); w.setZ(i,S.z-fwdZ*10+(Math.random()-0.5)*2.5); w.setY(i,0.25); } }
+  w.needsUpdate=true; wake.material.opacity=0.12+0.4*Math.min(1,S.v/8);
+  const sPr=spray.geometry.attributes.position;
+  for(let i=0;i<sPr.count;i++){ let y=sPr.getY(i)+0.1;
+    if(y>3.5){ y=0.3; sPr.setX(i,S.x+fwdX*10.5+(Math.random()-0.5)*3); sPr.setZ(i,S.z+fwdZ*10.5+(Math.random()-0.5)*3); }
+    sPr.setY(i,y); }
+  sPr.needsUpdate=true; spray.material.opacity=Math.min(0.65,S.v/9)*lerp(0.4,1,wind);
+  // ---- the skiff follows on its line ----
+  const tgt=new THREE.Vector3(S.x-fwdX*15,0,S.z-fwdZ*15);
+  skiff.position.x+=(tgt.x-skiff.position.x)*0.9*dt*2; skiff.position.z+=(tgt.z-skiff.position.z)*0.9*dt*2;
+  skiff.position.y=0.2+Math.sin(t*spd*0.9+2.2)*amp*0.6;
+  skiff.rotation.y=Math.atan2(S.x-skiff.position.x,S.z-skiff.position.z);
+  skiff.rotation.z=Math.sin(t*spd*0.8+2.6)*(0.05+0.1*wind);
+  towline.geometry.setFromPoints([new THREE.Vector3(S.x-fwdX*9.5,3.6,S.z-fwdZ*9.5),skiff.position.clone().add(new THREE.Vector3(0,0.8,0))]);
+  // gulls about the ship
+  for(let i=0;i<gulls.length;i++){ const g=gulls[i];
+    const a=t*0.5+i*1.7; g.position.set(S.x+Math.cos(a)*(30+i*4),18+Math.sin(t*1.3+i)*2,S.z+Math.sin(a)*(30+i*4));
+    g.rotation.y=-a+Math.PI/2;
+    g.children[0].rotation.z=Math.sin(t*7+i)*0.5; g.children[1].rotation.z=-Math.sin(t*7+i)*0.5; }
+  // camera follows her
+  const ct=new THREE.Vector3(S.x,7,S.z);
+  camera.position.set(ct.x+camR*Math.cos(camPhi)*Math.cos(camTheta), ct.y+camR*Math.sin(camPhi), ct.z+camR*Math.cos(camPhi)*Math.sin(camTheta));
+  camera.lookAt(ct);
+  renderer.render(scene,camera);
+}
+init();
+</script></body></html>

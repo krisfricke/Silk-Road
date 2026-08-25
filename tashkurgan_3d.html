@@ -1,0 +1,259 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tashkurgan — the Stone Tower</title>
+<style>
+html,body{margin:0;height:100%;background:#0e0b07;overflow:hidden;font-family:Georgia,serif;color:#f0e6d2}
+#c{display:block;width:100vw;height:100vh}
+.ui{position:fixed;left:14px;top:12px;max-width:380px;z-index:5;text-shadow:0 1px 3px #000}
+.ui h1{font-size:19px;margin:0 0 2px;color:#f4e3b8}
+.ui p{font-size:12px;margin:2px 0;color:#cbb78e}
+.bar{position:fixed;left:14px;bottom:14px;z-index:5;display:flex;gap:8px;align-items:center;background:rgba(20,14,8,.6);padding:8px 10px;border:1px solid #6b4f2a;border-radius:6px}
+button{font-family:Georgia,serif;font-size:13px;background:#2c2116;color:#f0e6d2;border:1px solid #8a6a34;border-radius:4px;padding:6px 12px;cursor:pointer}
+button:hover{background:#3c2e1c}
+#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0e0b07;z-index:9;color:#cbb78e;font-size:15px}
+</style></head><body>
+<div id="load">raising the roof of the world&hellip;</div>
+<canvas id="c"></canvas>
+<div class="ui">
+  <h1>&#10086; Tashkurgan</h1>
+  <p><i>Ta&#351;-kurgan</i> &mdash; the Stone Tower. The old fort on its bluff above the Sarikol meadows, two farsakhs of grazing where every caravan fattens its beasts before the passes; north over the valley stands Muztagh Ata, the Father of Ice Mountains.</p>
+  <p style="color:#8f7a52">drag to orbit &middot; wheel to zoom</p>
+</div>
+<div class="bar">
+  <button id="night">night falls</button>
+  <span id="nightnote" style="font-size:12px;color:#8f7a52"></span>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* TASHKURGAN - a little scene (Fadak, Barid's genre: single file, r128, hand-rolled orbit, parchment UI).
+   Counterpart to dizak_3d: high cold valley instead of hot steppe; the button brings NIGHT -
+   alpenglow catches Muztagh Ata on the way down, then the high-altitude stars come out. */
+const R=(s=>()=> (s=(s*16807)%2147483647)/2147483647)(7654321);
+let scene,camera,renderer,t0=Date.now();
+let camR=132,camTheta=1.38,camPhi=0.30,camTarget;
+let night=0,nightOn=false;
+let sunLight,moonLight,hemi,sky,sunDisc,stars,fireLight,muztagh,snowcaps=[],pennants=[],smokePts;
+
+function softSprite(){
+  const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const cx=cv.getContext('2d'), gr=cx.createRadialGradient(32,32,2,32,32,30);
+  gr.addColorStop(0,'rgba(255,255,255,0.9)'); gr.addColorStop(0.5,'rgba(255,255,255,0.35)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+  cx.fillStyle=gr; cx.fillRect(0,0,64,64);
+  return new THREE.CanvasTexture(cv);
+}
+function mat(c,extra){ return new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:1,metalness:0},extra||{})); }
+
+function ground(){
+  const g=new THREE.PlaneGeometry(800,800,150,150); g.rotateX(-Math.PI/2);
+  const p=g.attributes.position, col=[];
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),z=p.getZ(i);
+    let y=Math.sin(x*0.02)*Math.cos(z*0.016)*1.2+Math.sin(x*0.09+z*0.06)*0.35;
+    const edge=Math.max(0,(Math.abs(x)-150)/130);      // valley floor flat, rising scree at the walls
+    y+=edge*edge*13;
+    p.setY(i,y);
+    // wet gold meadow along the river plain (x 0..70), curing to tan scree at the edges
+    const dRiv=Math.abs(x-35);
+    const meadow=Math.max(0,1-dRiv/70);
+    const r=0.58-0.16*meadow+0.08*edge, gg=0.52+0.02*meadow+0.04*edge, b=0.30+0.02*edge;
+    const n=0.93+R()*0.14;
+    col.push(r*n,gg*n,b*n);
+  }
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  g.computeVertexNormals();
+  const m=new THREE.Mesh(g,mat(0xffffff,{vertexColors:true})); m.receiveShadow=true; scene.add(m);
+  // braided channels - the river splits and rejoins across the meadow
+  const braid=mat(0x6e8d99,{roughness:0.25,metalness:0.1});
+  for(const [xo,amp,ph] of [[26,9,0],[38,12,1.7],[47,7,3.1],[33,16,4.4]]){
+    const pts=[]; for(let z=-360;z<=360;z+=14) pts.push(new THREE.Vector3(xo+Math.sin(z*0.014+ph)*amp,0.16,z));
+    const tg=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),90,1.1,5,false); tg.scale(1,0.07,1);
+    scene.add(new THREE.Mesh(tg,braid));
+  }
+  // the road: one worn band along the meadow's west edge, past the fort - Kashgar behind, the passes ahead
+  const rPts=[[-6,-360],[-10,-160],[-16,-40],[-22,10],[-18,80],[-8,200],[-4,360]].map(c=>new THREE.Vector3(c[0],0.14,c[1]));
+  const rg=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rPts),90,1.8,5,false); rg.scale(1,0.07,1);
+  scene.add(new THREE.Mesh(rg,mat(0x8f7f60)));
+  // grass tufts + stones
+  const tuft=new THREE.ConeGeometry(0.45,1.1,5), tm=mat(0x7e7a45);
+  const stone=new THREE.DodecahedronGeometry(0.7), sm=mat(0x77706a);
+  for(let i=0;i<380;i++){ const x=(R()-0.5)*420,z=(R()-0.5)*560;
+    if(Math.hypot(x+40,z)<30) continue;
+    const isT=R()<0.7&&Math.abs(x-35)<80;
+    const o=new THREE.Mesh(isT?tuft:stone,isT?tm:sm);
+    o.position.set(x,0.4,z); o.scale.setScalar(0.5+R()*1.2); o.rotation.y=R()*6.28; scene.add(o); }
+}
+function walls(){
+  const rock=mat(0x6f6055,{flatShading:true});
+  function ridge(x,z,s,sy,ry,snow){
+    const m=new THREE.Mesh(new THREE.DodecahedronGeometry(18,1),rock);
+    m.position.set(x,2,z); m.scale.set(s,sy,s*0.8); m.rotation.y=ry; scene.add(m);
+    if(snow){ const c=new THREE.Mesh(new THREE.DodecahedronGeometry(18,1),mat(0xe8ecf0,{flatShading:true}));
+      c.position.set(x,2+sy*9.5,z); c.scale.set(s*0.72,sy*0.5,s*0.6); c.rotation.y=ry+0.3; scene.add(c); snowcaps.push(c); } }   // seated INTO the peak - no floating pancakes
+  for(let i=0;i<11;i++){ const q=i/10; ridge(-255+(R()-0.5)*40, -380+q*760, 3.6+R()*1.4, 2.0+R()*1.5, R()*3, i%2===0); }
+  for(let i=0;i<11;i++){ const q=i/10; ridge( 265+(R()-0.5)*40, -380+q*760, 3.8+R()*1.5, 2.2+R()*1.6, R()*3, i%2===1); }
+  // MUZTAGH ATA - the Father of Ice Mountains, the great white dome north over the valley
+  muztagh=new THREE.Group();
+  const dome=new THREE.Mesh(new THREE.SphereGeometry(120,14,9,0,Math.PI*2,0,Math.PI/2),mat(0xf2f4f6,{flatShading:true}));
+  dome.scale.set(1.4,0.62,1); dome.rotation.y=0.3; muztagh.add(dome);
+  const shoulder=new THREE.Mesh(new THREE.DodecahedronGeometry(80,1),mat(0xdfe5ea,{flatShading:true}));
+  shoulder.position.set(-110,-18,20); shoulder.scale.set(1.3,0.6,1); muztagh.add(shoulder);
+  const base=new THREE.Mesh(new THREE.DodecahedronGeometry(95,1),rock);
+  base.position.set(60,-55,10); base.scale.set(1.6,0.7,1.2); muztagh.add(base);
+  muztagh.position.set(90,0,-590); scene.add(muztagh);
+}
+function fort(){
+  // the Stone Tower: a rough rubble circuit on a bluff over the meadow - older and wearier than any neat rabat
+  const bluff=new THREE.Mesh(new THREE.DodecahedronGeometry(30,1),mat(0x7c6f5e,{flatShading:true}));
+  bluff.scale.set(0.82,0.22,0.72); bluff.position.set(-58,2.2,0); scene.add(bluff);
+  const g=new THREE.Group(), stone=mat(0x877d6e,{flatShading:true}), dark=mat(0x655e53);
+  const N=30, rad=17;
+  for(let i=0;i<N;i++){
+    const a=i/N*Math.PI*2;
+    if(a>0.35&&a<0.85) continue;                          // the fallen stretch - the gap faces the meadow
+    const h=3.3+R()*2.0;                                  // broken teeth, no two alike
+    const w=new THREE.Mesh(new THREE.BoxGeometry(4.9,h,2.6),stone);
+    w.position.set(Math.cos(a)*rad,h/2,Math.sin(a)*rad);
+    w.rotation.y=-a; w.castShadow=true; g.add(w);
+  }
+  for(const a of [2.4,4.0,5.5]){                          // three squat drum towers
+    const t=new THREE.Mesh(new THREE.CylinderGeometry(3.2,4.0,7.0+R()*1.4,8),dark);
+    t.position.set(Math.cos(a)*rad,3.6,Math.sin(a)*rad); t.castShadow=true; g.add(t);
+  }
+  // tumbled blocks below the fallen stretch
+  for(let i=0;i<14;i++){ const b=new THREE.Mesh(new THREE.BoxGeometry(1.6,1.2,1.4),stone);
+    const a=0.5+(R()-0.5)*0.7, rr=rad+3+R()*10;
+    b.position.set(Math.cos(a)*rr,0.6,Math.sin(a)*rr); b.rotation.y=R()*3; g.add(b); }
+  // the keep + a lance pennant
+  const keep=new THREE.Mesh(new THREE.BoxGeometry(7,8,6),stone); keep.position.set(-5,4,-4); keep.castShadow=true; g.add(keep);
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,4),mat(0x5d452a)); mast.position.set(-5,10,-4); g.add(mast);
+  const flag=new THREE.Mesh(new THREE.PlaneGeometry(2.0,0.7,8,1),mat(0x9a3b2e,{side:THREE.DoubleSide}));
+  flag.position.set(-4,11.1,-4); g.add(flag); pennants.push(flag);
+  g.position.set(-58,5.2,0); scene.add(g);
+  // a cairn by the road below
+  let ch=0.35;
+  for(const s of [1.1,0.9,0.7,0.5,0.34]){ const st=new THREE.Mesh(new THREE.DodecahedronGeometry(s,0),mat(0x84796f,{flatShading:true}));
+    st.position.set(-21,ch,26); st.scale.y=0.6; scene.add(st); ch+=s*0.62; }
+}
+function yak(x,z,ry){
+  const g=new THREE.Group(), shag=mat(0x2c241c), horn=mat(0xcfc4ae);
+  const body=new THREE.Mesh(new THREE.BoxGeometry(3.0,1.6,1.5),shag); body.position.y=1.7; g.add(body);
+  const skirt=new THREE.Mesh(new THREE.BoxGeometry(3.2,1.1,1.7),shag); skirt.position.y=1.0; g.add(skirt);
+  const humpY=new THREE.Mesh(new THREE.BoxGeometry(1.2,0.5,1.3),shag); humpY.position.set(0.9,2.55,0); g.add(humpY);
+  const head=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.8,0.9),shag); head.position.set(1.9,1.4,0); g.add(head);
+  for(const sgn of [-1,1]){ const h=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.11,0.9,5),horn);
+    h.position.set(2.05,1.95,sgn*0.55); h.rotation.z=0.9; h.rotation.x=sgn*0.7; g.add(h); }
+  for(const [lx,lz] of [[-1.1,-0.5],[-1.1,0.5],[1.1,-0.5],[1.1,0.5]]){
+    const l=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.12,1.0,5),shag); l.position.set(lx,0.5,lz); g.add(l); }
+  const tail=new THREE.Mesh(new THREE.ConeGeometry(0.22,1.0,5),shag); tail.position.set(-1.65,1.4,0); tail.rotation.z=2.6; g.add(tail);
+  g.position.set(x,0,z); g.rotation.y=ry; g.traverse(o=>{o.castShadow=true;}); scene.add(g);
+}
+function bactrian(x,z,ry,sitting){
+  const g=new THREE.Group(), hide=mat(0x6e5236);
+  const body=new THREE.Mesh(new THREE.SphereGeometry(1.15,10,8),hide); body.scale.set(1.5,0.95,0.58); body.position.y=sitting?1.0:1.9; g.add(body);
+  for(const hx of [-0.62,0.5]){ const hump=new THREE.Mesh(new THREE.SphereGeometry(0.5,8,6),hide);
+    hump.position.set(hx,(sitting?1.0:1.9)+0.9,0); hump.scale.set(0.85,1.2,0.72); g.add(hump); }
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.27,0.4,1.9,7),hide); neck.rotation.z=0.7; neck.position.set(1.55,(sitting?1.5:2.4),0); g.add(neck);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.35,8,6),hide); head.scale.set(1.5,0.8,0.8); head.position.set(2.3,(sitting?2.1:3.05),0); g.add(head);
+  if(!sitting){ for(const [lx,lz] of [[-0.9,-0.45],[-0.9,0.45],[0.9,-0.45],[0.9,0.45]]){
+    const l=new THREE.Mesh(new THREE.CylinderGeometry(0.16,0.13,1.9,6),hide); l.position.set(lx,0.95,lz); g.add(l); } }
+  const bale=new THREE.Mesh(new THREE.BoxGeometry(0.85,0.6,1.5),mat(0x7d6236)); bale.position.set(-0.06,(sitting?2.0:2.9),0); g.add(bale);
+  g.position.set(x,0,z); g.rotation.y=ry; g.traverse(o=>{o.castShadow=true;}); scene.add(g);
+}
+function camp(){
+  const yurt=new THREE.Group();
+  const wall=new THREE.Mesh(new THREE.CylinderGeometry(2.6,2.6,1.7,12),mat(0xd8cdb2)); wall.position.y=0.85; yurt.add(wall);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(2.85,1.5,12),mat(0xbfb298)); roof.position.y=2.45; yurt.add(roof);
+  const dvo=new THREE.Mesh(new THREE.BoxGeometry(0.2,1.2,0.9),mat(0x241a10)); dvo.position.set(-2.55,0.6,0); yurt.add(dvo);
+  yurt.position.set(-30,0,44); yurt.traverse(o=>{o.castShadow=true;}); scene.add(yurt);
+  bactrian(-36,36,2.2,true); bactrian(-40,42,2.8,true); bactrian(-25,33,1.1,false);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.7,0.16,6,10),mat(0x6d6155)); ring.rotation.x=Math.PI/2; ring.position.set(-33,0.2,39); scene.add(ring);
+  fireLight=new THREE.PointLight(0xff8c3a,1.0,26,2); fireLight.position.set(-33,1.1,39); scene.add(fireLight);
+  const fl=new THREE.Mesh(new THREE.ConeGeometry(0.4,0.9,6),new THREE.MeshBasicMaterial({color:0xffa54d})); fl.position.set(-33,0.65,39); fl.name='flame'; scene.add(fl);
+  const sN=40, sp=new Float32Array(sN*3);
+  for(let i=0;i<sN;i++){ sp[i*3]=-33+(R()-0.5); sp[i*3+1]=1+R()*7; sp[i*3+2]=39+(R()-0.5); }
+  const sgm=new THREE.BufferGeometry(); sgm.setAttribute('position',new THREE.BufferAttribute(sp,3));
+  smokePts=new THREE.Points(sgm,new THREE.PointsMaterial({map:softSprite(),color:0x9c9484,size:1.1,transparent:true,opacity:0.3,depthWrite:false}));
+  scene.add(smokePts);
+  // yaks out on the meadow
+  const yp=[[18,-60,0.4],[34,-30,2.2],[52,10,1.0],[24,55,2.9],[44,90,0.2],[60,-95,1.6],[12,120,2.5],[70,60,0.8],[-2,68,1.9],[10,84,0.6]];
+  for(const [x,z,r] of yp) yak(x,z,r);
+}
+function skyDome(){
+  sky=new THREE.Mesh(new THREE.SphereGeometry(900,16,10),new THREE.MeshBasicMaterial({color:0xb9d0dd,side:THREE.BackSide,fog:false}));
+  scene.add(sky);
+  sunDisc=new THREE.Mesh(new THREE.CircleGeometry(20,20),new THREE.MeshBasicMaterial({color:0xfffbe8,fog:false}));
+  sunDisc.position.set(480,300,-380); sunDisc.lookAt(0,0,0); scene.add(sunDisc);
+  // the stars, waiting behind the day
+  const N=1400, p=new Float32Array(N*3);
+  for(let i=0;i<N;i++){ const th=R()*Math.PI*2, ph=Math.acos(1-R()); const r=860;
+    p[i*3]=r*Math.sin(ph)*Math.cos(th); p[i*3+1]=Math.abs(r*Math.cos(ph))*0.95+30; p[i*3+2]=r*Math.sin(ph)*Math.sin(th); }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3));
+  stars=new THREE.Points(g,new THREE.PointsMaterial({map:softSprite(),color:0xeef2ff,size:3.2,transparent:true,opacity:0,fog:false,depthWrite:false}));
+  scene.add(stars);
+}
+function init(){
+  scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0xb9d0dd,0.0016);
+  camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,0.1,2200);
+  camTarget=new THREE.Vector3(-18,8,-20);
+  renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+  renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  hemi=new THREE.HemisphereLight(0xdfeaf2,0x5a5748,0.8); scene.add(hemi);
+  sunLight=new THREE.DirectionalLight(0xfff4dc,1.25); sunLight.position.set(120,150,-60);
+  sunLight.castShadow=true; sunLight.shadow.mapSize.set(2048,2048);
+  const sc=sunLight.shadow.camera; sc.left=-110; sc.right=110; sc.top=110; sc.bottom=-110; sc.far=600;
+  scene.add(sunLight);
+  moonLight=new THREE.DirectionalLight(0xa9bdd6,0.0); moonLight.position.set(-80,120,60); scene.add(moonLight);
+  skyDome(); ground(); walls(); fort(); camp();
+  addEvents(); document.getElementById('load').style.display='none'; loop();
+}
+function addEvents(){
+  let drag=false,lx=0,ly=0; const c=document.getElementById('c');
+  c.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY;});
+  addEventListener('mouseup',()=>drag=false);
+  addEventListener('mousemove',e=>{ if(!drag)return;
+    camTheta-=(e.clientX-lx)*0.005; camPhi=Math.max(0.10,Math.min(1.35,camPhi-(e.clientY-ly)*0.004)); lx=e.clientX; ly=e.clientY; });
+  c.addEventListener('wheel',e=>{ camR=Math.max(20,Math.min(300,camR*(e.deltaY>0?1.09:0.92))); e.preventDefault(); },{passive:false});
+  addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+  document.getElementById('night').addEventListener('click',()=>{ nightOn=!nightOn;
+    document.getElementById('night').textContent=nightOn?'morning comes':'night falls';
+    document.getElementById('nightnote').textContent=nightOn?'The last light climbs Muztagh Ata and goes out rose; then more stars than any lowland sky has ever owned.':''; });
+}
+const lerp=(a,b,q)=>a+(b-a)*q;
+function loop(){
+  requestAnimationFrame(loop);
+  const t=(Date.now()-t0)/1000;
+  night=Math.max(0,Math.min(1,night+(nightOn?0.006:-0.006)));
+  const glow=Math.sin(Math.PI*Math.min(1,night*1.15));            // alpenglow peaks mid-transition
+  const skyC=new THREE.Color(0xb9d0dd).lerp(new THREE.Color(0x070b16),night);
+  sky.material.color.copy(skyC); scene.fog.color.copy(skyC);
+  scene.fog.density=lerp(0.0016,0.0007,night);                    // the air only gets clearer
+  renderer.setClearColor(skyC);
+  sunLight.intensity=lerp(1.25,0.0,Math.min(1,night*1.25));
+  sunLight.color.setHex(night>0.15?0xffb37a:0xfff4dc);
+  hemi.intensity=lerp(0.8,0.16,night);
+  moonLight.intensity=lerp(0,0.28,Math.max(0,(night-0.5)*2));
+  sunDisc.material.color.setHex(night>0.2?0xff9a55:0xfffbe8);
+  sunDisc.position.y=lerp(300,-80,night); sunDisc.lookAt(0,0,0);
+  stars.material.opacity=Math.max(0,(night-0.55)*2.2);
+  stars.rotation.y=t*0.004;                                        // the sky wheels, slowly
+  // alpenglow: the dome and the snowcaps catch rose as the light leaves the valley
+  if(muztagh){ muztagh.children[0].material.emissive=new THREE.Color(0xff6a4a).multiplyScalar(glow*0.45);
+    muztagh.children[1].material.emissive=new THREE.Color(0xff6a4a).multiplyScalar(glow*0.3); }
+  for(const c of snowcaps) c.material.emissive=new THREE.Color(0xff6a4a).multiplyScalar(glow*0.3);
+  for(const f of pennants){ const pp=f.geometry.attributes.position;
+    for(let i=0;i<pp.count;i++){ const q=(pp.getX(i)+1.0)/2.0; pp.setZ(i,Math.sin(t*4.5+q*5)*q*0.2); }
+    pp.needsUpdate=true; }
+  if(fireLight){ fireLight.intensity=(0.9+Math.sin(t*11)*0.25+Math.sin(t*23)*0.12)*lerp(1,1.8,night); }
+  const fl=scene.getObjectByName('flame'); if(fl){ fl.scale.y=0.8+Math.sin(t*13)*0.2; }
+  if(smokePts){ const p=smokePts.geometry.attributes.position;
+    for(let i=0;i<p.count;i++){ let y=p.getY(i)+0.03; if(y>8){ y=1; } p.setY(i,y); }
+    p.needsUpdate=true; }
+  camera.position.set(camTarget.x+camR*Math.cos(camPhi)*Math.cos(camTheta),
+                      camTarget.y+camR*Math.sin(camPhi),
+                      camTarget.z+camR*Math.cos(camPhi)*Math.sin(camTheta));
+  camera.lookAt(camTarget);
+  renderer.render(scene,camera);
+}
+init();
+</script></body></html>

@@ -1,0 +1,239 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dizak — the rabat on the Hungry Steppe</title>
+<style>
+html,body{margin:0;height:100%;background:#0e0b07;overflow:hidden;font-family:Georgia,serif;color:#f0e6d2}
+#c{display:block;width:100vw;height:100vh}
+.ui{position:fixed;left:14px;top:12px;max-width:360px;z-index:5;text-shadow:0 1px 3px #000}
+.ui h1{font-size:19px;margin:0 0 2px;color:#f4e3b8}
+.ui p{font-size:12px;margin:2px 0;color:#cbb78e}
+.bar{position:fixed;left:14px;bottom:14px;z-index:5;display:flex;gap:8px;align-items:center;background:rgba(20,14,8,.6);padding:8px 10px;border:1px solid #6b4f2a;border-radius:6px}
+button{font-family:Georgia,serif;font-size:13px;background:#2c2116;color:#f0e6d2;border:1px solid #8a6a34;border-radius:4px;padding:6px 12px;cursor:pointer}
+button:hover{background:#3c2e1c}
+#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0e0b07;z-index:9;color:#cbb78e;font-size:15px}
+</style></head><body>
+<div id="load">raising the rabat&hellip;</div>
+<canvas id="c"></canvas>
+<div class="ui">
+  <h1>&#10086; Dizak</h1>
+  <p><i>Diz</i> &mdash; a fort; <i>Dizak</i> &mdash; the little fort. The rabat at the edge of the Hungry Steppe, on the road between Samarkand and Khujand; behind it the hills part at the defile men will one day call the Gates of Tamerlane.</p>
+  <p style="color:#8f7a52">drag to orbit &middot; wheel to zoom</p>
+</div>
+<div class="bar">
+  <button id="wind">the karaburan comes</button>
+  <span id="windnote" style="font-size:12px;color:#8f7a52"></span>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* DIZAK - a little scene (Fadak, after Barid's method: single file, r128, hand-rolled orbit, the game's palette).
+   All geometry procedural - no data blob. The delight: press the button and the black wind comes. */
+const R=(s=>()=> (s=(s*16807)%2147483647)/2147483647)(1234567);   // deterministic - same steppe every load
+let scene,camera,renderer,t0=Date.now();
+let camR=78,camTheta=-0.25,camPhi=0.33,camTarget;
+let storm=0,stormOn=false;           // karaburan blend 0..1
+let dust,fireLight,pennants=[],sunLight,hemi,sky,sunDisc,smokePts;
+
+function ground(){
+  const g=new THREE.PlaneGeometry(800,800,150,150);
+  g.rotateX(-Math.PI/2);
+  const p=g.attributes.position, col=[];
+  for(let i=0;i<p.count;i++){
+    const x=p.getX(i),z=p.getZ(i);
+    let y=Math.sin(x*0.021)*Math.cos(z*0.017)*1.5+Math.sin(x*0.11+z*0.07)*0.4;
+    y+=Math.max(0,1-Math.hypot(x,z)/34)*-0.4;                        // trodden hollow at the rabat
+    const dGate=Math.hypot(x+150,z-95);                              // the Gates: rock shoulders far NW... placed at (-150,95)
+    p.setY(i,y);
+    // dry straw steppe, greener along the stream (a lazy sine off the east side)
+    const sx=Math.sin(z*0.024)*14+58;  const dStream=Math.abs(x-sx);
+    const green=Math.max(0,1-dStream/26);
+    const r=0.62-0.10*green, gg=0.55+0.06*green, b=0.34+0.02*green;
+    const n=0.94+R()*0.12;
+    col.push(r*n,gg*n,b*n);
+  }
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));
+  g.computeVertexNormals();
+  const m=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,metalness:0}));
+  m.receiveShadow=true; scene.add(m);
+  // the stream itself
+  const sPts=[]; for(let z=-210;z<=210;z+=6) sPts.push(new THREE.Vector3(Math.sin(z*0.024)*14+58,0.18,z));
+  const sc=new THREE.CatmullRomCurve3(sPts);
+  const sg=new THREE.TubeGeometry(sc,80,1.6,5,false); sg.scale(1,0.12,1);
+  scene.add(new THREE.Mesh(sg,new THREE.MeshStandardMaterial({color:0x5f7d86,roughness:0.25,metalness:0.1})));
+  // the road: two rutted strips, Samarkand (through the Gates, NW) to Khujand (SE)
+  { const ctrl=[[-150,95],[-70,42],[-34,12],[-16,0],[0,-26],[30,-80],[80,-175]];   // the road bends to the gate, as roads bend for rabats
+    const rPts=ctrl.map(c=>new THREE.Vector3(c[0],0.14,c[1]));
+    const rg=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rPts),80,1.9,5,false); rg.scale(1,0.07,1);
+    scene.add(new THREE.Mesh(rg,new THREE.MeshStandardMaterial({color:0x9d855c,roughness:1})));   // one worn band (Kris: the twin ruts read as rails)
+  }
+  // grass tufts + stones
+  const tuft=new THREE.ConeGeometry(0.5,1.4,5), tm=new THREE.MeshStandardMaterial({color:0x9a8b52,roughness:1});
+  const stone=new THREE.DodecahedronGeometry(0.7), sm=new THREE.MeshStandardMaterial({color:0x7b6f5e,roughness:1});
+  for(let i=0;i<420;i++){ const x=(R()-0.5)*380,z=(R()-0.5)*380; if(Math.hypot(x,z)<26) continue;
+    const o=new THREE.Mesh(R()<0.85?tuft:stone,R()<0.85?tm:sm);
+    o.position.set(x,0.4,z); o.scale.setScalar(0.5+R()*1.1); o.rotation.y=R()*6.28; scene.add(o); }
+}
+function mud(c){ return new THREE.MeshStandardMaterial({color:c,roughness:1,metalness:0}); }
+function rabat(){
+  const g=new THREE.Group(), W=22, H=5.2, mudW=mud(0xb59a6b), mudD=mud(0xa3875a);
+  // battered curtain walls (slightly wider at foot)
+  for(const [x,z,rx,rz] of [[0,-W/2,W,1.6],[0,W/2,W,1.6],[-W/2,0,1.6,W],[W/2,0,1.6,W]]){
+    const wall=new THREE.Mesh(new THREE.BoxGeometry(rx,H,rz),mudW);
+    wall.position.set(x,H/2,z); wall.scale.y=1; wall.castShadow=wall.receiveShadow=true; g.add(wall);
+    const foot=new THREE.Mesh(new THREE.BoxGeometry(rx*1.06,1.2,rz*1.5),mudD); foot.position.set(x,0.6,z); g.add(foot);
+  }
+  // merlons
+  const mer=new THREE.BoxGeometry(1.1,0.9,1.1);
+  for(let i=-4;i<=4;i++){ for(const [x,z] of [[i*2.4,-W/2],[i*2.4,W/2],[-W/2,i*2.4],[W/2,i*2.4]]){
+    const m=new THREE.Mesh(mer,mudW); m.position.set(x,H+0.45,z); g.add(m); } }
+  // round corner towers
+  for(const [x,z] of [[-W/2,-W/2],[W/2,-W/2],[-W/2,W/2],[W/2,W/2]]){
+    const t=new THREE.Mesh(new THREE.CylinderGeometry(2.6,3.2,H+2.2,10),mudD);
+    t.position.set(x,(H+2.2)/2,z); t.castShadow=true; g.add(t);
+    const cap=new THREE.Mesh(new THREE.CylinderGeometry(2.9,2.9,0.7,10),mudW); cap.position.set(x,H+2.4,z); g.add(cap);
+  }
+  // iwan gate on the road side (NW face): portal block + arch
+  const portal=new THREE.Mesh(new THREE.BoxGeometry(7,H+2.8,3),mudD); portal.position.set(-W/2,(H+2.8)/2,0); portal.castShadow=true; g.add(portal);
+  const arch=new THREE.Mesh(new THREE.CylinderGeometry(1.9,1.9,3.4,14,1,false,0,Math.PI),mud(0x241a10));
+  arch.rotation.z=Math.PI/2; arch.rotation.y=Math.PI/2; arch.position.set(-W/2-0.06,2.5,0); g.add(arch);
+  const doorway=new THREE.Mesh(new THREE.BoxGeometry(3.6,2.6,3.4),mud(0x241a10)); doorway.position.set(-W/2-0.05,1.28,0); g.add(doorway);
+  // courtyard: the well + hujra cells along the inner east wall
+  const wellR=new THREE.Mesh(new THREE.CylinderGeometry(1.2,1.3,1.0,10),mud(0x8f8070)); wellR.position.set(2,0.5,1.5); g.add(wellR);
+  const beam=new THREE.Mesh(new THREE.BoxGeometry(0.18,2.4,0.18),mud(0x5d452a)); beam.position.set(2.9,1.6,1.5); g.add(beam);
+  const cross=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.14,0.14),mud(0x5d452a)); cross.position.set(2,2.7,1.5); g.add(cross);
+  for(let i=0;i<4;i++){ const cell=new THREE.Mesh(new THREE.BoxGeometry(3.4,2.4,3.0),mudW);
+    cell.position.set(W/2-2.6,1.2,-7.5+i*5); g.add(cell);
+    const dv=new THREE.Mesh(new THREE.BoxGeometry(0.6,1.5,1.4),mud(0x241a10)); dv.position.set(W/2-4.3,0.8,-7.5+i*5); g.add(dv); }
+  // pennant over the gate
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,3.4),mud(0x5d452a)); mast.position.set(-W/2,H+4.2,0); g.add(mast);
+  const flagG=new THREE.PlaneGeometry(2.2,0.8,8,1);
+  const flag=new THREE.Mesh(flagG,new THREE.MeshStandardMaterial({color:0x9a3b2e,side:THREE.DoubleSide,roughness:1}));
+  flag.position.set(-W/2+1.15,H+5.2,0); g.add(flag); pennants.push(flag);
+  scene.add(g);
+}
+function camel(x,z,ry,sitting){
+  const g=new THREE.Group(), hide=mud(0xa9855a);
+  const body=new THREE.Mesh(new THREE.SphereGeometry(1.15,10,8),hide); body.scale.set(1.5,1,0.8); body.position.y=sitting?1.0:1.9; g.add(body);
+  const hump=new THREE.Mesh(new THREE.SphereGeometry(0.62,8,6),hide); hump.position.set(-0.1,(sitting?1.0:1.9)+0.85,0); g.add(hump);
+  const neck=new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.4,1.9,7),hide); neck.rotation.z=0.7; neck.position.set(1.5,(sitting?1.5:2.4),0); g.add(neck);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.36,8,6),hide); head.scale.set(1.5,0.8,0.8); head.position.set(2.25,(sitting?2.1:3.05),0); g.add(head);
+  if(!sitting){ const leg=new THREE.CylinderGeometry(0.16,0.13,1.9,6);
+    for(const [lx,lz] of [[-0.9,-0.45],[-0.9,0.45],[0.9,-0.45],[0.9,0.45]]){
+      const l=new THREE.Mesh(leg,hide); l.position.set(lx,0.95,lz); g.add(l); } }
+  const bale=new THREE.Mesh(new THREE.BoxGeometry(0.9,0.7,1.5),mud(0x7d6236)); bale.position.set(-0.2,(sitting?1.9:2.75),0); bale.rotation.y=0.1; g.add(bale);
+  g.position.set(x,0,z); g.rotation.y=ry; g.traverse(o=>{o.castShadow=true;}); scene.add(g);
+}
+function camp(){
+  // a yurt, a fire, camels couched outside the gate
+  const yurt=new THREE.Group();
+  const wall=new THREE.Mesh(new THREE.CylinderGeometry(2.6,2.6,1.7,12),mud(0xcfc3a4)); wall.position.y=0.85; yurt.add(wall);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(2.85,1.5,12),mud(0xb8ab8b)); roof.position.y=2.45; yurt.add(roof);
+  const dvo=new THREE.Mesh(new THREE.BoxGeometry(0.2,1.2,0.9),mud(0x241a10)); dvo.position.set(-2.55,0.6,0); yurt.add(dvo);
+  yurt.position.set(-27,0,15); yurt.traverse(o=>{o.castShadow=true;}); scene.add(yurt);
+  camel(-22,11,2.4,true); camel(-26,8.5,2.9,true); camel(-31,17,2.1,false); camel(-20,16,1.2,false);
+  // the fire
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.7,0.16,6,10),mud(0x6d6155)); ring.rotation.x=Math.PI/2; ring.position.set(-24,0.2,14); scene.add(ring);
+  fireLight=new THREE.PointLight(0xff8c3a,1.1,26,2); fireLight.position.set(-24,1.1,14); scene.add(fireLight);
+  const fg=new THREE.ConeGeometry(0.4,0.9,6);
+  const fm=new THREE.MeshBasicMaterial({color:0xffa54d}); const fl=new THREE.Mesh(fg,fm); fl.position.set(-24,0.65,14); fl.name='flame'; scene.add(fl);
+  // smoke
+  const sN=40, sp=new Float32Array(sN*3);
+  for(let i=0;i<sN;i++){ sp[i*3]=-24+(R()-0.5); sp[i*3+1]=1+R()*7; sp[i*3+2]=14+(R()-0.5); }
+  const sgm=new THREE.BufferGeometry(); sgm.setAttribute('position',new THREE.BufferAttribute(sp,3));
+  smokePts=new THREE.Points(sgm,new THREE.PointsMaterial({map:softSprite(),color:0x9c9484,size:1.1,transparent:true,opacity:0.3,depthWrite:false}));
+  scene.add(smokePts);
+}
+function gates(){
+  // the defile far NW: two rock shoulders and the hill line behind
+  const rock=new THREE.MeshStandardMaterial({color:0x8a6f58,roughness:1,flatShading:true});
+  function shoulder(x,z,s,ry){ const m=new THREE.Mesh(new THREE.DodecahedronGeometry(16,1),rock);
+    m.position.set(x,4,z); m.scale.set(s,s*0.62,s*0.8); m.rotation.y=ry; m.castShadow=true; scene.add(m); }
+  shoulder(-162,78,1.5,0.4); shoulder(-138,112,1.3,1.9);
+  for(let i=0;i<9;i++){ const h=new THREE.Mesh(new THREE.DodecahedronGeometry(14,1),rock);
+    const q=i/8; h.position.set(-205+q*130+(R()-0.5)*16, 2.5, 150-q*30+(R()-0.5)*20);
+    h.scale.set(1.6+R(),0.5+R()*0.5,1.2+R()); h.rotation.y=R()*3; scene.add(h); }
+}
+function skyDome(){
+  sky=new THREE.Mesh(new THREE.SphereGeometry(900,16,10),
+    new THREE.MeshBasicMaterial({color:0xd9b98a,side:THREE.BackSide,fog:false}));
+  scene.add(sky);
+  sunDisc=new THREE.Mesh(new THREE.CircleGeometry(26,20),new THREE.MeshBasicMaterial({color:0xffe9b0,fog:false}));
+  sunDisc.position.set(-560,150,-430); sunDisc.lookAt(0,0,0); scene.add(sunDisc);
+}
+function softSprite(){
+  const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const cx=cv.getContext('2d'), gr=cx.createRadialGradient(32,32,2,32,32,30);
+  gr.addColorStop(0,'rgba(255,255,255,0.9)'); gr.addColorStop(0.5,'rgba(255,255,255,0.35)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+  cx.fillStyle=gr; cx.fillRect(0,0,64,64);
+  const t=new THREE.CanvasTexture(cv); return t;
+}
+function dustStorm(){
+  const N=2600, p=new Float32Array(N*3);
+  for(let i=0;i<N;i++){ p[i*3]=(R()-0.5)*380; p[i*3+1]=R()*34; p[i*3+2]=(R()-0.5)*380; }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3));
+  dust=new THREE.Points(g,new THREE.PointsMaterial({map:softSprite(),color:0x8c6f45,size:2.2,transparent:true,opacity:0,depthWrite:false}));
+  scene.add(dust);
+}
+function init(){
+  scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0xd9b98a,0.0021);
+  camera=new THREE.PerspectiveCamera(52,innerWidth/innerHeight,0.1,2000);
+  camTarget=new THREE.Vector3(-4,3,0);
+  renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+  renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  hemi=new THREE.HemisphereLight(0xf2dcae,0x6b5a3a,0.75); scene.add(hemi);
+  sunLight=new THREE.DirectionalLight(0xffd9a0,1.15); sunLight.position.set(-90,70,-60);
+  sunLight.castShadow=true; sunLight.shadow.mapSize.set(2048,2048);
+  const sc=sunLight.shadow.camera; sc.left=-70; sc.right=70; sc.top=70; sc.bottom=-70; sc.far=400;
+  scene.add(sunLight);
+  skyDome(); ground(); rabat(); camp(); gates(); dustStorm();
+  addEvents(); document.getElementById('load').style.display='none'; loop();
+}
+function addEvents(){
+  let drag=false,lx=0,ly=0; const c=document.getElementById('c');
+  c.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY;});
+  addEventListener('mouseup',()=>drag=false);
+  addEventListener('mousemove',e=>{ if(!drag)return;
+    camTheta-=(e.clientX-lx)*0.005; camPhi=Math.max(0.12,Math.min(1.35,camPhi-(e.clientY-ly)*0.004)); lx=e.clientX; ly=e.clientY; });
+  c.addEventListener('wheel',e=>{ camR=Math.max(18,Math.min(240,camR*(e.deltaY>0?1.09:0.92))); e.preventDefault(); },{passive:false});
+  addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+  document.getElementById('wind').addEventListener('click',()=>{ stormOn=!stormOn;
+    document.getElementById('wind').textContent=stormOn?'the wind passes':'the karaburan comes';
+    document.getElementById('windnote').textContent=stormOn?'KARABURAN — the black wind. The camels kneel and the world goes the colour of a bruise.':''; });
+}
+const lerp=(a,b,q)=>a+(b-a)*q;
+function loop(){
+  requestAnimationFrame(loop);
+  const t=(Date.now()-t0)/1000;
+  storm=Math.max(0,Math.min(1,storm+(stormOn?0.008:-0.008)));
+  // sky, fog, light ride the storm blend
+  const skyC=new THREE.Color(0xd9b98a).lerp(new THREE.Color(0x4a3423),storm);
+  sky.material.color.copy(skyC); scene.fog.color.copy(skyC);
+  scene.fog.density=lerp(0.0021,0.011,storm);
+  sunLight.intensity=lerp(1.15,0.18,storm); hemi.intensity=lerp(0.75,0.32,storm);
+  sunDisc.material.color.setHex(storm>0.4?0xa8683c:0xffe9b0);
+  sunDisc.material.opacity=1; renderer.setClearColor(skyC);
+  if(dust){ dust.material.opacity=storm*0.85;
+    const p=dust.geometry.attributes.position;
+    for(let i=0;i<p.count;i++){ let x=p.getX(i)+ (1.4+storm*2.2); let y=p.getY(i)+Math.sin(t*2+i)*0.05;
+      if(x>190) x=-190; p.setX(i,x); p.setY(i,Math.max(0.3,Math.min(36,y))); }
+    p.needsUpdate=true; }
+  // pennant streams harder in the wind
+  for(const f of pennants){ const pp=f.geometry.attributes.position;
+    for(let i=0;i<pp.count;i++){ const q=(pp.getX(i)+1.1)/2.2;
+      pp.setZ(i,Math.sin(t*(4+6*storm)+q*5)*q*(0.12+0.5*storm)); }
+    pp.needsUpdate=true; }
+  // fire gutters in the storm
+  if(fireLight){ fireLight.intensity=(0.9+Math.sin(t*11)*0.25+Math.sin(t*23)*0.12)*lerp(1,0.4,storm); }
+  const fl=scene.getObjectByName('flame'); if(fl){ fl.scale.y=0.8+Math.sin(t*13)*0.2; fl.visible=storm<0.85; }
+  if(smokePts){ const p=smokePts.geometry.attributes.position;
+    for(let i=0;i<p.count;i++){ let y=p.getY(i)+0.03; let x=p.getX(i)+0.01+storm*0.5;
+      if(y>8||x>-11){ y=1; x=-24; } p.setY(i,y); p.setX(i,x); }
+    p.needsUpdate=true; smokePts.material.opacity=0.35*lerp(1,0.3,storm); }
+  camera.position.set(camTarget.x+camR*Math.cos(camPhi)*Math.cos(camTheta),
+                      camTarget.y+camR*Math.sin(camPhi),
+                      camTarget.z+camR*Math.cos(camPhi)*Math.sin(camTheta));
+  camera.lookAt(camTarget);
+  renderer.render(scene,camera);
+}
+init();
+</script></body></html>

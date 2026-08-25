@@ -1,0 +1,188 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A dhow of the monsoon sea</title>
+<style>
+html,body{margin:0;height:100%;background:#0e0b07;overflow:hidden;font-family:Georgia,serif;color:#f0e6d2}
+#c{display:block;width:100vw;height:100vh}
+.ui{position:fixed;left:14px;top:12px;max-width:380px;z-index:5;text-shadow:0 1px 3px #000}
+.ui h1{font-size:19px;margin:0 0 2px;color:#f4e3b8}
+.ui p{font-size:12px;margin:2px 0;color:#cbb78e}
+.bar{position:fixed;left:14px;bottom:14px;z-index:5;display:flex;gap:8px;align-items:center;background:rgba(20,14,8,.6);padding:8px 10px;border:1px solid #6b4f2a;border-radius:6px}
+button{font-family:Georgia,serif;font-size:13px;background:#2c2116;color:#f0e6d2;border:1px solid #8a6a34;border-radius:4px;padding:6px 12px;cursor:pointer}
+button:hover{background:#3c2e1c}
+#load{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#0e0b07;z-index:9;color:#cbb78e;font-size:15px}
+</style></head><body>
+<div id="load">sewing the planks&hellip;</div>
+<canvas id="c"></canvas>
+<div class="ui">
+  <h1>&#10086; A dhow of the monsoon sea</h1>
+  <p>The sewn ship of the Arab sea-roads &mdash; not a nail in her; planks stitched with coir cord and payed with fish-oil. One great settee sail, a raked stem for the surf, and the monsoon at her back from Aden to Kollam and home again.</p>
+  <p style="color:#8f7a52">drag to orbit &middot; wheel to zoom</p>
+</div>
+<div class="bar">
+  <button id="wind">the monsoon freshens</button>
+  <span id="windnote" style="font-size:12px;color:#8f7a52"></span>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+/* THE DHOW (Fadak, fleet scene 2 of 4). Turquoise monsoon water, flying fish when it blows. */
+let scene,camera,renderer,t0=Date.now();
+let camR=46,camTheta=2.4,camPhi=0.22,camTarget;
+let wind=0,windOn=false;
+let sea,seaBase,ship,sailL=[],flagL=[],anchorsWS=[],wake,spray,fish=[];
+function softSprite(){ const cv=document.createElement('canvas'); cv.width=cv.height=64;
+  const cx=cv.getContext('2d'), gr=cx.createRadialGradient(32,32,2,32,32,30);
+  gr.addColorStop(0,'rgba(255,255,255,0.9)'); gr.addColorStop(0.5,'rgba(255,255,255,0.35)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+  cx.fillStyle=gr; cx.fillRect(0,0,64,64); return new THREE.CanvasTexture(cv); }
+function mat(c,extra){ return new THREE.MeshStandardMaterial(Object.assign({color:c,roughness:0.9,metalness:0},extra||{})); }
+function water(){
+  const g=new THREE.PlaneGeometry(700,700,90,90); g.rotateX(-Math.PI/2);
+  seaBase=g.attributes.position.array.slice();
+  sea=new THREE.Mesh(g,mat(0x2a7f86,{roughness:0.45,metalness:0.3}));
+  sea.receiveShadow=true; scene.add(sea);
+}
+function hull(){
+  ship=new THREE.Group();
+  const planks=mat(0x8a6a42), pitch=mat(0x4a3826), pale=mat(0xc9b489);
+  const prof=[];
+  for(let i=0;i<=10;i++){ const q=i/10;
+    prof.push(new THREE.Vector2(0.7+Math.sin(Math.pow(q,0.8)*Math.PI*0.5)*3.4,q*5.2)); }
+  const body=new THREE.Mesh(new THREE.LatheGeometry(prof,18),planks); body.scale.set(1,1,3.2); body.castShadow=true; ship.add(body);
+  const bottom=new THREE.Mesh(new THREE.LatheGeometry(prof.slice(0,6),18),pitch); bottom.scale.set(1.02,1,3.24); ship.add(bottom);
+  /* sewn seams: thin dark strake lines */
+  for(const yy of [2.2,3.1,3.9,4.6]){
+    const w=new THREE.Mesh(new THREE.TorusGeometry(0.7+Math.sin(Math.pow(yy/5.2,0.8)*Math.PI*0.5)*3.4,0.06,5,22),mat(0x3a2c1c));
+    w.rotation.x=Math.PI/2; w.scale.set(1,3.2,1); w.position.y=yy; ship.add(w); }
+  /* the long raked stem and stern */
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.34,8,7),planks); stem.rotation.x=0.9; stem.position.set(0,6.2,12.2); stem.castShadow=true; ship.add(stem);
+  const stern=new THREE.Mesh(new THREE.CylinderGeometry(0.24,0.34,5,7),planks); stern.rotation.x=-0.55; stern.position.set(0,5.6,-10.6); ship.add(stern);
+  const deck=new THREE.Mesh(new THREE.CylinderGeometry(3.3,3.3,0.35,16),pale); deck.scale.set(1,1,3.0); deck.position.y=5.0; ship.add(deck);
+  /* small poop platform, no castles */
+  const poop=new THREE.Mesh(new THREE.BoxGeometry(3.4,0.7,3),planks); poop.position.set(0,5.5,-7.5); ship.add(poop);
+  /* quarter steering oar */
+  const oar=new THREE.Group();
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.15,6.5,6),planks); shaft.position.y=-2; oar.add(shaft);
+  const blade=new THREE.Mesh(new THREE.BoxGeometry(0.2,2.6,1.0),planks); blade.position.y=-5; oar.add(blade);
+  oar.position.set(1.9,5.6,-8.6); oar.rotation.x=0.3; oar.rotation.z=0.14; ship.add(oar);
+  /* water jars + cargo */
+  for(let i=0;i<4;i++){ const jar=new THREE.Mesh(new THREE.SphereGeometry(0.5,7,6),mat(0xa3875a));
+    jar.scale.y=1.3; jar.position.set(-1.5+i,5.5,1.5-i*1.2); ship.add(jar); }
+  scene.add(ship);
+}
+function rig(){
+  const wood=mat(0x5d452a), sailM=mat(0xefe8d2,{side:THREE.DoubleSide,roughness:1});
+  const line=new THREE.LineBasicMaterial({color:0x2f2417});
+  const m=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.45,15,8),wood);
+  m.position.set(0,5+7.5,0.5); m.rotation.x=0.12; m.castShadow=true; ship.add(m);
+  const top=new THREE.Vector3(0,19.6,2.2);
+  for(const sgn of [-1,1]){ for(const dz of [-2,0,2]){
+    const g2=new THREE.BufferGeometry().setFromPoints([top.clone(),new THREE.Vector3(sgn*3.2,5.2,0.5+dz)]);
+    ship.add(new THREE.Line(g2,line)); } }
+  /* the great settee sail: yard from bow-low to peak high aft, short luff edge */
+  const vA=new THREE.Vector3(0,7.4,11.5), vB=new THREE.Vector3(0,21.5,-8.5), vC=new THREE.Vector3(0,6.6,-7.8), vD=new THREE.Vector3(0,6.9,9.2);
+  const yard=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([vA,vB]),2,0.2,6,false),wood);
+  yard.castShadow=true; ship.add(yard);
+  const NX=10,NY=8,vs=[],idx=[],base=[];
+  for(let iy=0;iy<=NY;iy++){ for(let ix=0;ix<=NX;ix++){
+    const qx=ix/NX, qy=iy/NY;
+    const onYard=vA.clone().lerp(vB,qx);
+    const foot=vD.clone().lerp(vC,qx);
+    const v=onYard.lerp(foot,qy);
+    vs.push(v.x,v.y,v.z); base.push(v.x,v.y,v.z); }}
+  for(let iy=0;iy<NY;iy++){ for(let ix=0;ix<NX;ix++){
+    const a=iy*(NX+1)+ix,b=a+1,c2=a+NX+1,d2=c2+1; idx.push(a,c2,b,b,c2,d2); }}
+  const sg=new THREE.BufferGeometry();
+  sg.setAttribute('position',new THREE.Float32BufferAttribute(vs,3)); sg.setIndex(idx); sg.computeVertexNormals();
+  const sail=new THREE.Mesh(sg,sailM); sail.castShadow=true; ship.add(sail);
+  sailL.push({sail,base,NX,NY});
+  const pen=new THREE.Mesh(new THREE.PlaneGeometry(2.6,0.6,8,1),mat(0x2a6f5a,{side:THREE.DoubleSide}));
+  scene.add(pen); flagL.push({g:pen,anchor:top});
+}
+function sprayWake(){
+  const N=200,p=new Float32Array(N*3),age=new Float32Array(N);
+  for(let i=0;i<N;i++){ p[i*3+1]=0.25; age[i]=Math.random()*5; }
+  const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(p,3));
+  wake=new THREE.Points(g,new THREE.PointsMaterial({map:softSprite(),color:0xdff2ef,size:1.4,transparent:true,opacity:0.5,depthWrite:false}));
+  wake.userData.age=age; scene.add(wake);
+  /* flying fish burst out ahead when it blows */
+  for(let i=0;i<6;i++){ const f=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.9,5),mat(0xbfd8dc));
+    f.rotation.z=Math.PI/2; f.visible=false; scene.add(f); fish.push(f); }
+}
+function skyDome(){
+  const sky=new THREE.Mesh(new THREE.SphereGeometry(900,16,10),new THREE.MeshBasicMaterial({color:0xcfe0e2,side:THREE.BackSide,fog:false}));
+  scene.add(sky);
+  const sun=new THREE.Mesh(new THREE.CircleGeometry(26,20),new THREE.MeshBasicMaterial({color:0xfff8e0,fog:false}));
+  sun.position.set(300,420,-260); sun.lookAt(0,0,0); scene.add(sun);
+}
+function init(){
+  scene=new THREE.Scene();
+  scene.fog=new THREE.FogExp2(0xcfe0e2,0.0018);
+  camera=new THREE.PerspectiveCamera(50,innerWidth/innerHeight,0.1,2000);
+  camTarget=new THREE.Vector3(0,6,0);
+  renderer=new THREE.WebGLRenderer({canvas:document.getElementById('c'),antialias:true});
+  renderer.setSize(innerWidth,innerHeight); renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+  renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+  scene.add(new THREE.HemisphereLight(0xf2f6f0,0x2a4a48,0.9));
+  const sun=new THREE.DirectionalLight(0xfff4d8,1.25); sun.position.set(60,90,-40);
+  sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+  const sc=sun.shadow.camera; sc.left=-40; sc.right=40; sc.top=40; sc.bottom=-40; sc.far=300; scene.add(sun);
+  skyDome(); water(); hull(); rig(); sprayWake();
+  addEvents(); document.getElementById('load').style.display='none'; loop();
+}
+function addEvents(){
+  let drag=false,lx=0,ly=0; const c=document.getElementById('c');
+  c.addEventListener('mousedown',e=>{drag=true;lx=e.clientX;ly=e.clientY;});
+  addEventListener('mouseup',()=>drag=false);
+  addEventListener('mousemove',e=>{ if(!drag)return;
+    camTheta-=(e.clientX-lx)*0.005; camPhi=Math.max(0.06,Math.min(1.3,camPhi-(e.clientY-ly)*0.004)); lx=e.clientX; ly=e.clientY; });
+  c.addEventListener('wheel',e=>{ camR=Math.max(14,Math.min(200,camR*(e.deltaY>0?1.09:0.92))); e.preventDefault(); },{passive:false});
+  addEventListener('resize',()=>{ camera.aspect=innerWidth/innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth,innerHeight); });
+  document.getElementById('wind').addEventListener('click',()=>{ windOn=!windOn;
+    document.getElementById('wind').textContent=windOn?'the monsoon eases':'the monsoon freshens';
+    document.getElementById('windnote').textContent=windOn?'The kaskazi settles into her sail like a hand in the small of the back; flying fish burst from the bow-wave.':''; });
+}
+const lerp=(a,b,q)=>a+(b-a)*q;
+function loop(){
+  requestAnimationFrame(loop);
+  const t=(Date.now()-t0)/1000, dt=0.016;
+  wind=Math.max(0,Math.min(1,wind+(windOn?0.007:-0.007)));
+  const amp=lerp(0.5,1.6,wind), spd=lerp(0.75,1.2,wind);
+  const p=sea.geometry.attributes.position;
+  for(let i=0;i<p.count;i++){
+    const x=seaBase[i*3], z=seaBase[i*3+2];
+    p.setY(i, Math.sin(x*0.06+t*spd)*amp + Math.sin(z*0.052-t*spd*0.8)*amp*0.8 + Math.sin((x+z)*0.023+t*spd*0.55)*amp*0.55);
+  }
+  p.needsUpdate=true; sea.geometry.computeVertexNormals();
+  ship.rotation.x=Math.sin(t*spd*0.8)*(0.02+0.03*wind);
+  ship.rotation.z=Math.sin(t*spd*0.62+1.3)*(0.03+0.05*wind)+wind*0.08;
+  ship.position.y=-2.0+Math.sin(t*spd*0.7+0.4)*amp*0.5;
+  for(const S of sailL){
+    const pp=S.sail.geometry.attributes.position;
+    for(let iy=0;iy<=S.NY;iy++){ for(let ix=0;ix<=S.NX;ix++){
+      const k=iy*(S.NX+1)+ix, qx=ix/S.NX, qy=iy/S.NY;
+      const belly=Math.sin(qx*Math.PI)*Math.sin(qy*Math.PI)*(1.4+2.0*wind);
+      pp.setX(k,S.base[k*3]+belly+Math.sin(t*3+qx*5)*0.06); }}
+    pp.needsUpdate=true; S.sail.geometry.computeVertexNormals(); }
+  for(const f of flagL){ const wp=f.anchor.clone().applyMatrix4(ship.matrixWorld);
+    f.g.position.copy(wp).add(new THREE.Vector3(1.2,0.4,0));
+    f.g.rotation.y=0.4;
+    const pp=f.g.geometry.attributes.position;
+    for(let k2=0;k2<pp.count;k2++){ const q=(pp.getX(k2)+1.3)/2.6; pp.setZ(k2,Math.sin(t*(5+5*wind)+q*6)*q*0.3); }
+    pp.needsUpdate=true; }
+  const w=wake.geometry.attributes.position, ages=wake.userData.age;
+  for(let i=0;i<w.count;i++){ ages[i]+=dt;
+    if(ages[i]>5){ ages[i]=0; w.setX(i,(Math.random()-0.5)*2.5); w.setZ(i,-11-Math.random()*2); w.setY(i,0.25); }
+    else { w.setZ(i,w.getZ(i)-(0.1+0.25*wind)); } }
+  w.needsUpdate=true; wake.material.opacity=0.3+0.35*wind;
+  for(let i=0;i<fish.length;i++){ const f=fish[i];
+    if(wind>0.5){ const q=((t*0.7+i*0.37)%1);
+      f.visible=q<0.45;
+      const a=q/0.45*Math.PI;
+      f.position.set(3+i*1.2+q*8,0.3+Math.sin(a)*2.2,13+i*2-q*6);
+      f.rotation.z=Math.PI/2-Math.cos(a)*0.8; }
+    else f.visible=false; }
+  camera.position.set(camTarget.x+camR*Math.cos(camPhi)*Math.cos(camTheta), camTarget.y+camR*Math.sin(camPhi), camTarget.z+camR*Math.cos(camPhi)*Math.sin(camTheta));
+  camera.lookAt(camTarget);
+  renderer.render(scene,camera);
+}
+init();
+</script></body></html>

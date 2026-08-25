@@ -1,0 +1,126 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MAP3D self-test</title>
+<style>
+body{background:#171310;color:#f0e6d2;font-family:Georgia,serif;max-width:860px;margin:20px auto;padding:0 14px}
+h1{color:#f4e3b8;font-size:22px}
+.row{display:flex;align-items:center;gap:12px;padding:10px 12px;margin:8px 0;border:1px solid #4a3826;border-radius:6px;background:#221b12;font-size:15px}
+.st{font-weight:bold;min-width:130px;font-size:17px}
+.wait{color:#9a8a6a}.pass{color:#7fc97a}.fail{color:#e06050}.warn{color:#e0b050}
+#verdict{margin:18px 0;padding:14px;border-radius:6px;border:2px solid #4a3826;font-size:17px;line-height:1.5}
+#r3d{width:100%;height:300px;border:4px solid #6b4f2a;border-radius:4px;background:#0e0b07;margin-top:8px}
+.sub{color:#9a8a6a;font-size:13px}
+</style></head><body>
+<h1>&#10086; MAP3D self-test</h1>
+<p class="sub">Runs the whole 3D-map pipeline right here, in this browser, with the same files the game uses. Each stage reports below; the verdict tells you what (if anything) to do.</p>
+<div id="rows"></div>
+<div id="verdict" class="wait">Running&hellip;</div>
+<canvas id="r3d"></canvas>
+<script>
+var R={}; var rowsEl=document.getElementById('rows');
+function row(id,label){ var d=document.createElement('div'); d.className='row';
+  d.innerHTML='<span class="st wait" id="st_'+id+'">WAIT</span><span>'+label+'</span><span class="sub" id="nx_'+id+'"></span>';
+  rowsEl.appendChild(d); }
+function setRow(id,cls,txt,note){ var e=document.getElementById('st_'+id); e.className='st '+cls; e.textContent=txt;
+  if(note)document.getElementById('nx_'+id).textContent=note; R[id]=cls; }
+row('three','Load the 3D engine (Maps/js3d/three.min.js)');
+row('dem','Load the height data (Maps/js3d/dem_master.js)');
+row('webgl','Open a WebGL context');
+row('demdec','Decode the heightmap');
+row('direct','Local chart image straight into a canvas');
+row('payload','Embedded chart copy (Maps/js3d/img/…js)');
+row('render','Render a living relief below');
+function verdict(html,cls){ var v=document.getElementById('verdict'); v.className=cls; v.innerHTML=html; }
+function fail(id,note,vhtml){ setRow(id,'fail','FAIL',note); verdict(vhtml,'fail'); }
+var s1=document.createElement('script'); s1.src='Maps/js3d/three.min.js';
+s1.onerror=function(){ fail('three','not found beside this file',
+  '<b>Maps/js3d/three.min.js is missing next to this page.</b> This self-test (and the game) must sit in the Silk Road folder that contains the Maps folder. You are probably opening a copy of the game from somewhere else.'); };
+s1.onload=function(){ setRow('three','pass','PASS');
+ var s2=document.createElement('script'); s2.src='Maps/js3d/dem_master.js';
+ s2.onerror=function(){ fail('dem','not found','<b>Maps/js3d/dem_master.js is missing.</b> Same cause as above: this folder does not have the js3d assets. Open the game from the real Silk Road folder.'); };
+ s2.onload=function(){ setRow('dem','pass','PASS'); stage3(); };
+ document.head.appendChild(s2); };
+document.head.appendChild(s1);
+function stage3(){
+  var cv=document.createElement('canvas'); var gl=cv.getContext('webgl')||cv.getContext('experimental-webgl');
+  if(!gl){ fail('webgl','no context',
+    '<b>WebGL is switched off in this browser.</b> Open the browser settings, find <i>System &rarr; Use hardware acceleration</i>, turn it ON, close the browser completely and reopen. (Or use the <b>Play with 3D maps.bat</b> next to the game.)'); return; }
+  var info=''; try{ var dbg=gl.getExtension('WEBGL_debug_renderer_info'); if(dbg) info=gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL); }catch(e){}
+  setRow('webgl','pass','PASS',info);
+  var D=window.MAP3D_DEM, im=new Image();
+  im.onload=function(){ try{
+      var c2=document.createElement('canvas'); c2.width=D.GW; c2.height=D.GH;
+      var cx=c2.getContext('2d'); cx.drawImage(im,0,0); window.__dem=cx.getImageData(0,0,D.GW,D.GH).data;
+      setRow('demdec','pass','PASS'); stage5();
+    }catch(e){ fail('demdec',e.name,'<b>The heightmap would not decode:</b> '+e.message); } };
+  im.onerror=function(){ fail('demdec','image error','<b>The heightmap image failed to load.</b> The dem_master.js file may be corrupt - re-copy the Maps/js3d folder.'); };
+  im.src=D.hm;
+}
+function stage5(){
+  var img=new Image();
+  img.onload=function(){
+    var cv=document.createElement('canvas'); cv.width=64; cv.height=64;
+    var cx=cv.getContext('2d'); cx.drawImage(img,0,0,64,64);
+    try{ cx.getImageData(0,0,1,1); setRow('direct','pass','PASS','this browser allows local images directly'); window.__directOK=true; }
+    catch(e){ setRow('direct','warn','TAINTED','normal for strict browsers - embedded copies take over'); window.__directOK=false; }
+    stage6();
+  };
+  img.onerror=function(){ setRow('direct','warn','MISSING','Maps/so1271_venice.jpg not found - odd, but embedded copies may still serve'); window.__directOK=false; stage6(); };
+  img.src='Maps/so1271_venice.jpg';
+}
+function stage6(){
+  var sc=document.createElement('script'); sc.src='Maps/js3d/img/so1271_venice.jpg.js';
+  sc.onload=function(){ var u=window.MAP3D_IMG&&MAP3D_IMG['Maps/so1271_venice.jpg'];
+    if(u){ setRow('payload','pass','PASS'); stage7(u); }
+    else { fail('payload','loaded but empty','<b>The embedded copy loaded but held no data.</b> Re-run Maps/gen_js3d.py.'); } };
+  sc.onerror=function(){
+    if(window.__directOK){ setRow('payload','warn','MISSING','not needed - direct images work here'); stage7(null); }
+    else fail('payload','not found',
+      '<b>Maps/js3d/img/ payload files are missing AND this browser refuses direct local images.</b> Copy the full Maps/js3d folder (including img/) from the main Silk Road folder, or play via <b>Play with 3D maps.bat</b>.'); };
+  document.head.appendChild(sc);
+}
+function stage7(payloadURI){
+  try{
+    var W=11.74,E=18.71,S0=42.12,N=45.95, vbw=1400,vbh=1070;
+    var D=window.MAP3D_DEM, px=window.__dem;
+    function elev(lon,lat){ var fx=Math.max(0,Math.min(D.GW-1.001,(lon-D.W)/(D.E-D.W)*(D.GW-1)));
+      var fy=Math.max(0,Math.min(D.GH-1.001,(D.N-lat)/(D.N-D.S)*(D.GH-1)));
+      var x0=fx|0,y0=fy|0;
+      return D.minH+(px[(y0*D.GW+x0)*4]/255)*(D.maxH-D.minH); }
+    var cnv=document.getElementById('r3d');
+    var renderer=new THREE.WebGLRenderer({canvas:cnv,antialias:true});
+    renderer.setSize(cnv.clientWidth,300,false);
+    var scene=new THREE.Scene(); scene.background=new THREE.Color(0x171310);
+    scene.add(new THREE.HemisphereLight(0xf2ead8,0x3a3128,1.0));
+    var NX=140,NY=70, cw=140,ch=107;
+    var g=new THREE.PlaneGeometry(cw,ch,NX,NY); g.rotateX(-Math.PI/2);
+    var p=g.attributes.position;
+    for(var iy=0;iy<=NY;iy++)for(var ix=0;ix<=NX;ix++){
+      var e=elev(W+(E-W)*ix/NX, N-(N-S0)*iy/NY);
+      p.setY(iy*(NX+1)+ix, e<=1?0:(e/1000)*1.1); }
+    g.computeVertexNormals();
+    function finish(tex){
+      var m=new THREE.Mesh(g,tex?new THREE.MeshBasicMaterial({map:tex}):new THREE.MeshStandardMaterial({color:0x8a7a5a}));
+      m.position.set(cw/2,0,ch/2); scene.add(m);
+      var cam=new THREE.PerspectiveCamera(50,cnv.clientWidth/300,0.1,1200);
+      var t0=Date.now();
+      (function loop(){ requestAnimationFrame(loop);
+        var t=(Date.now()-t0)/1000;
+        cam.position.set(cw/2+Math.cos(t*0.2)*95,55,ch/2+Math.sin(t*0.2)*95);
+        cam.lookAt(cw/2,0,ch/2); renderer.render(scene,cam); })();
+      setRow('render','pass','PASS','you should see the Adriatic turning below');
+      var direct=window.__directOK;
+      verdict('<b>Everything works in this browser.</b> The game WILL show 3D maps here'+(direct?'':' (via embedded copies)')+'.<br><br>If the game still looks flat, then the game file you are opening is an OLD BUILD or another copy: open <b>index.html</b> in THIS folder, check the top bar says <b>v3.5.7 or later</b>, and press <b>Ctrl+F5</b> once to defeat the browser cache. The ledger will print a MAP3D line saying ON.','pass');
+    }
+    function texFrom(src,tryDirectFallback){
+      var img=new Image();
+      img.onload=function(){ var cv2=document.createElement('canvas'); cv2.width=800; cv2.height=Math.round(800*vbh/vbw);
+        var cx2=cv2.getContext('2d'); cx2.drawImage(img,0,0,cv2.width,cv2.height);
+        try{ cx2.getImageData(0,0,1,1); }catch(e){ if(tryDirectFallback){ finish(null); return; } }
+        try{ var t=new THREE.CanvasTexture(cv2); finish(t); }catch(e2){ finish(null); } };
+      img.onerror=function(){ finish(null); };
+      img.src=src; }
+    if(payloadURI) texFrom(payloadURI,false);
+    else texFrom('Maps/so1271_venice.jpg',true);
+  }catch(e){ fail('render',e.name,'<b>The final render threw:</b> '+e.message); }
+}
+</script></body></html>
