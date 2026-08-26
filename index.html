@@ -137,7 +137,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.1.1'; const BUILD='0825.roadsTalk'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.1.6'; const BUILD='0826.banditUnclamp'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -478,7 +478,7 @@ const ERA1271_NET={
  {name:'Ispijab', ll:[69.75,42.30], tier:'dlg',
   note:"The road runs through Ispijab \u2014 Sayram, the little white-walled mart under the mountains, a day's easy ride from Otrar and hardly worth unloading for. But its bazaar-lane sells bread, dried apricots and pack-beasts to every caravan that passes, and its people, who have been sacked by everyone worth being sacked by, are unfailingly practical about it."},
  {name:'Tashkurgan', ll:[75.23,37.77], tier:'dlg',
-  note:"<img src='Pictures/Tashkurgan.png' style='width:100%;border:1px solid #5a4326;border-radius:4px;margin:2px 0 8px'>You come up onto the roof of the world by the Sarikol meadows and pass beneath the ruined square fort of Tashkurgan \u2014 the Stone Tower, some traders insist, where the silk caravans of the old world met the men of the west halfway; others say the Tower stood elsewhere and will fight about it. The wind takes no side. Yaks graze in the ruin."},
+  note:"<img src='Pictures/Tashkurgan.png' style='width:100%;border:1px solid #5a4326;border-radius:4px;margin:2px 0 8px'>You come up onto the roof of the world by the Sarikol meadows and pass beneath the ruined square fort of Tashkurgan. Some traders swear this is the very Stone Tower the old geographer Ptolemy wrote of \u2014 the halfway point where the silk caravans of the East once met the men of the West; others insist Ptolemy meant some other ruin entirely, and will argue the point for as long as you let them. The wind takes no side. Yaks graze in the ruin."},
  {name:'Charchan', ll:[85.50,38.10], tier:'dlg',
   note:"Charchan, a green stitch in the desert hem \u2014 jasper and chalcedony in its river, and sand in everything else. Caravans load five days of water here and speak kindly to their camels."},
  {name:'Lop', ll:[88.40,39.50], tier:'minor',
@@ -1782,6 +1782,7 @@ function consumeDay(travelling, terrOverride){
 function armAfterWait(ev){ /* Kris's ice, round two: a wait-choice that re-arms its own dialog must NOT stomp an urgent interrupt passDays just raised. If something urgent is standing, the re-arm waits its turn in _resumeEvent. */
  if(!ev||!S)return; if(S.pendingEvent&&S.pendingEvent!==ev){ if(S._resumeEvent==null)S._resumeEvent=ev; } else { S.pendingEvent=ev; } }
 function passDays(n){for(let i=0;i<n&&!S.dead;i++){consumeDay(false);
+  if(!S.pendingEvent && typeof waitCheckHoliday==='function') waitCheckHoliday(); /* Kris: same bulk-wait festival fix as waitDays() - a snowbound wait-out-the-season can otherwise blow straight through Dec 25 unnoticed */
   if((S.deathQueue&&S.deathQueue.length)||(S.food<foodNeed()&&(S.foodGrace||0)<=S.day)||S.pendingEvent)break; /* Kris: the moment the larder empties or someone falls, the wait is OVER - even two days into a week */
  }
   /* DEATHS OUTRANK PATIENCE (Kris waited weekly at the ice while the party starved in the log):
@@ -3022,7 +3023,7 @@ function evSandstorm(){
   ]};
 }
 function banditRep(freqMult,sizeDelta){
-  S.banditFreq=clamp((S.banditFreq||1)*freqMult, .3, 3);
+  S.banditFreq=(S.banditFreq||1)*freqMult;   /* unclamped (Kris): earn your quiet roads by winning; be swarmed if you always pay - both self-correct */
   S.banditMod=(S.banditMod||0)+(sizeDelta||0);   // uncapped on purpose: repeated victories build toward ever-larger bands (final count floored at 1)
 }
 const RAIDER_LEGS=new Set(['Bukhara|Merv','Merv|Nishapur','Aleppo|Baghdad','Baghdad|Rey','Baghdad|Damascus']); // the Karakum rim and the Syrian desert; the deep Taklamakan stays empty of men
@@ -3041,10 +3042,10 @@ function evCamelRaidersMeet(n,demand,drom,horses,shadowed){
   var str=combatStrength();
   var odds = str>=n*2?'You could scatter them':str>=n?'It would be a near thing':'You are badly outmatched';
   return {h:(shadowed?'THE RAIDERS RETURN':'RIDERS OF THE SANDS'), t:(shadowed?'The dust you refused yesterday has found friends. ':'')+"Camel-riders lift out of the ground-haze where no ground should hide them — "+n+" of them, raiders of the desert on their own terrain, and their beasts are fresh. Their leader names a toll of "+demand+" silver for the wells and the passage. "+odds+".", ch:[
-   {l:'Pay the toll ('+demand+' s)',f(){ if(S.silver>=demand){ S.silver-=demand; banditRep(1.10,-1); log('You pay, and the riders wheel away with the easy insolence of men who own the horizon.'); } else { var t=banditTender(demand); banditRep(1.10,-1); if(t.covered){ if(t.freed) log('Your purse falls short at '+t.paid+' s. The riders insist they will accept nothing less than the release of all your slaves'+(t.items.length?', and even then they are not satisfied until you have also parted with '+t.items.join(' and ')+'.':', but fortunately seem satisfied to leave it at that.')+' Your relieved former slaves gather behind the riders\u2019 camels and watch reproachfully as the caravan moves on.'); else log((t.paid>0?('You give them all your remaining silver \u2014 '+t.paid+' s \u2014 and they are still not satisfied. '):'You have not a coin left to give. ')+'You hand over '+t.items.join(' and ')+', and the riders wheel away satisfied.'); } else { var lost=loseRandomGoods(.2); if(t.freed) log('The riders insist on nothing less than the release of all your slaves'+(t.items.length?', and '+t.items.join(' and ')+' besides':'')+' \u2014 and still it is not enough. They take '+lost+' more and leave you the road.'); else log('Purse and packs together cannot cover it.'+(t.items.length?' They strip out '+t.items.join(', ')+', then':' They')+' take '+lost+' besides, and leave you the road.'); } } }},
+   {l:'Pay the toll ('+demand+' s)',f(){ if(S.silver>=demand){ S.silver-=demand; banditRep(1/0.9,-1); log('You pay, and the riders wheel away with the easy insolence of men who own the horizon.'); } else { var t=banditTender(demand); banditRep(1/0.9,-1); if(t.covered){ if(t.freed) log('Your purse falls short at '+t.paid+' s. The riders insist they will accept nothing less than the release of all your slaves'+(t.items.length?', and even then they are not satisfied until you have also parted with '+t.items.join(' and ')+'.':', but fortunately seem satisfied to leave it at that.')+' Your relieved former slaves gather behind the riders\u2019 camels and watch reproachfully as the caravan moves on.'); else log((t.paid>0?('You give them all your remaining silver \u2014 '+t.paid+' s \u2014 and they are still not satisfied. '):'You have not a coin left to give. ')+'You hand over '+t.items.join(' and ')+', and the riders wheel away satisfied.'); } else { var lost=loseRandomGoods(.2); if(t.freed) log('The riders insist on nothing less than the release of all your slaves'+(t.items.length?', and '+t.items.join(' and ')+' besides':'')+' \u2014 and still it is not enough. They take '+lost+' more and leave you the road.'); else log('Purse and packs together cannot cover it.'+(t.items.length?' They strip out '+t.items.join(', ')+', then':' They')+' take '+lost+' besides, and leave you the road.'); } } }},
    {l:'Stand and fight',f(){ var _cS=Math.round(S.silver),_cG=Object.assign({},S.goods); enterBattle({n:n, sea:false, cache:{silver:_cS,goods:_cG}}); }},
    {l:'Run for it',f(){ var esc=0.18+0.09*Math.min(6,drom)-0.04*Math.min(4,horses); esc=clamp(esc,0.08,0.7); // on sand the camel outlasts the horse
-     if(rnd()<esc){ banditRep(1.05,-1); log('You drive '+(drom?'the camels':'the caravan')+' hard across the soft ground'+(horses?', the horses labouring where the camels swim,':'')+' and lose them among the dunes.'); dsLearn(true); }
+     if(rnd()<esc){ banditRep(1/0.9,-1); log('You drive '+(drom?'the camels':'the caravan')+' hard across the soft ground'+(horses?', the horses labouring where the camels swim,':'')+' and lose them among the dunes.'); dsLearn(true); }
      else { S.hp-=8; var lost=loseRandomGoods(.15); S.raiderShadow=S.day+2; log('They pace you without hurry — on this ground their beasts are better than yours. You shed '+lost+' to buy distance, and their dust hangs behind you at dusk like a promise.'); } }},
   ]}; }
 function evBandits(){
@@ -3055,8 +3056,8 @@ function evBandits(){
   return {h:'RIDERS',t:(bandits===1?"A lone horseman appears":"About "+bandits+" horsemen appear")+" on the ridgeline"+banditKind()+" with the unhurried confidence of "+(bandits===1?"a man who has":"men who have")+" done this before. "+(bandits===1?"He admires":"Their leader admires")+" your caravan loudly and demands a toll of "+demand+" silver. "+odds+".",
   ch:[
    {l:'Pay the "toll" ('+demand+' s)',f(){
-     if(S.silver>=demand){ S.silver-=demand; banditRep(1.10,-1); log("You pay. "+(bandits===1?"He wishes":"The leader wishes")+" you a safe journey with apparently genuine warmth."); }
-     else { const t=banditTender(demand); banditRep(1.10,-1);
+     if(S.silver>=demand){ S.silver-=demand; banditRep(1/0.9,-1); log("You pay. "+(bandits===1?"He wishes":"The leader wishes")+" you a safe journey with apparently genuine warmth."); }
+     else { const t=banditTender(demand); banditRep(1/0.9,-1);
        if(t.covered){
          if(t.freed) log("The purse comes up short at "+t.paid+" s. "+(bandits===1?"The horseman insists he":"The bandits insist they")+" will accept nothing less than the release of all your slaves"+(t.items.length?", and even then "+(bandits===1?"he is":"they are")+" not satisfied until you have also parted with "+t.items.join(' and ')+".":", but fortunately "+(bandits===1?"seems":"seem")+" satisfied to leave it at that.")+" Your relieved former slaves gather behind "+(bandits===1?"the horseman":"the bandits")+" and watch reproachfully as you turn to continue your journey.");
          else log((t.paid>0?("You give "+(bandits===1?"him":"them")+" all your remaining silver \u2014 "+t.paid+" s \u2014 and "+(bandits===1?"he is":"they are")+" still not satisfied. "):"You have not a coin left to give. ")+"You hand over "+t.items.join(' and ')+", and "+(bandits===1?"he wishes":"the leader wishes")+" you a safe journey with apparently genuine warmth."); }
@@ -3070,8 +3071,8 @@ function evBandits(){
      }
    }},
    {l:'Stand and fight',f(){ const _cacheS=Math.round(S.silver), _cacheG=Object.assign({},S.goods); enterBattle({n:bandits, sea:false, cache:{silver:_cacheS,goods:_cacheG}}); }},
-   {l:'Throw down your arms and yield',f(){ banditRep(1.10,-1); var keep=0.15; for(const g of GOODS){ S.goods[g.id]=Math.round((S.goods[g.id]||0)*keep); if(S.goods[g.id]<=0)S.basis[g.id]=0; } S.silver=Math.round(S.silver*keep); var lost=stripGear(); log("You order the caravan to yield. The riders take their pick of the cargo, your purse, and the very blades from your people\u2019s belts"+(lost.length?" \u2014 "+lost.join(', ')+" gone with them":"")+", then leave you your lives and a tenth of your goods. It is a long, quiet road on from here."); }},
-   {l:'Run for it',f(){ if((S.goods.slaves||0)>0){ const _ns=S.goods.slaves; S.goods.slaves=0; S.basis.slaves=0; banditRep(1.10,-1); outcomeBox('THE COFFLE CUT LOOSE',"The riders barely glance at your goods \u2014 they make straight for the slave-coffle, cut the ropes, and scatter your captives into the broken country. In the confusion you and the caravan slip clean away. You have lost "+_ns+" "+(_ns>1?'souls':'soul')+" and the silver they cost, and you ride off with a strange splinter under the ribs: were the bandits, today, the better men?"); render(); return; } banditRep(1.10,-1);
+   {l:'Throw down your arms and yield',f(){ banditRep(1/0.9,-1); var keep=0.15; for(const g of GOODS){ S.goods[g.id]=Math.round((S.goods[g.id]||0)*keep); if(S.goods[g.id]<=0)S.basis[g.id]=0; } S.silver=Math.round(S.silver*keep); var lost=stripGear(); log("You order the caravan to yield. The riders take their pick of the cargo, your purse, and the very blades from your people\u2019s belts"+(lost.length?" \u2014 "+lost.join(', ')+" gone with them":"")+", then leave you your lives and a tenth of your goods. It is a long, quiet road on from here."); }},
+   {l:'Run for it',f(){ if((S.goods.slaves||0)>0){ const _ns=S.goods.slaves; S.goods.slaves=0; S.basis.slaves=0; banditRep(1/0.9,-1); outcomeBox('THE COFFLE CUT LOOSE',"The riders barely glance at your goods \u2014 they make straight for the slave-coffle, cut the ropes, and scatter your captives into the broken country. In the confusion you and the caravan slip clean away. You have lost "+_ns+" "+(_ns>1?'souls':'soul')+" and the silver they cost, and you ride off with a strange splinter under the ribs: were the bandits, today, the better men?"); render(); return; } banditRep(1/0.9,-1);
      var _ft=(typeof legTerr==='function')?legTerr():''; var _sandy=(_ft==='desert'||_ft==='harsh');
      var _total=totalAnimals();
      if(_total<=0){ var _tg=GOODS.some(g=>S.goods[g.id]>0)?loseRandomGoods(.15):null; S.hp-=8; outcomeBox('YOU BREAK AWAY',"You scatter into the broken ground on foot"+(_tg?", shedding "+_tg+" to buy distance,":"")+" and lose the riders."); render(); return; }
@@ -3223,7 +3224,10 @@ function evSnowedIn(){
   ch:[
    {l:'Dig in and wait it out',f(){ const days=4+ri(6); passDays(days); S.hp-=Math.round(8*(1-0.6*coldShield())); if(!S.dead){S.water=waterMax(); let m="You wait "+days+" frozen days for a break in the weather, melting snow for water and stamping the feeling back into your feet. Everyone is cold and short of temper."; if(S.food < foodNeed()*days){ m+=" Food runs low, and tempers lower with it."; } else if(livingComps()>0){ const who=someoneName(); m += (rnd()<.5)?(" "+who+" builds a frankly excellent snowman to pass the time."):(" A snowball fight breaks out and briefly thaws the mood; "+who+" wins, and is insufferable about it."); } log(m);} }},
    {l:'Force the pass now',f(){ var cs=coldShield(); var deadly=(d>=.85&&passSeverity()>=.9); S.hp-=Math.round((deadly?34:22)*(1-0.6*cs)); let s=(cs>=0.75?"The fur coats earn their price on the high traverse. ":(deadly?"Without furs, the cold is a blade. ":"")); var killP=(deadly?.8:.5)*d*(1-0.7*cs); if(rnd()<killP){ const who=casualty(true,true); if(who){s+=who+" is lost to the cold on the high traverse. ";} } if(deadly&&rnd()<killP*.7){ const who2=casualty(true,true); if(who2){s+=who2+" does not come down off the mountain either. ";} } if(rnd()<(deadly?.7:.4)&&totalAnimals()>1){ s+=cap1(loseAnimal())+" and its load vanish into a drift. "; if(deadly&&totalAnimals()>1&&rnd()<.5){ s+=cap1(loseAnimal())+" follows it under the snow. "; } } if(S.hp<=0){S.cause='the cold';die();s+="And then the cold takes you, too.";} else { s+="You come down the far side fewer than you went up, and changed."; } if(!S.dead)S.water=waterMax(); outcomeBox('THE HIGH PASS',s); }},
-  ].concat((S.dir||1)>0?[{l:'Turn back, and wait out the season below',f(){ const dd=S.dir||1, x=S.legKm; S.idx+=dd; S.dir=-dd; S.legKm=Math.max(0,legDist()-x); const back=nextCity(); log("You will not die in this drift. You turn the caravan and retrace your steps toward "+(back?back.name:'the last town')+", to wait out the worst of the winter under a roof."); }}]:[])};
+  ].concat((S.dir||1)>0?[{l:'Turn back, and wait out the season below',f(){ /* Kris 8/26: this used to hand-roll the idx/dir/legKm flip inline, and skipped the S.dash.pPrev reset that turnBack() knows to do - so the frame flipped but the halt/dlg crossing-tracker (checkHajjStops) still held the OLD pre-flip fraction as pPrev. On the very next tick, p (now near the far end of the reversed leg) read as having crossed every threshold between the two, phantom-firing Bamiyan (or whatever halt sits on the leg) one day out from where you turned around. turnBack(true) is the game's own battle-tested turn-around - reuse it instead of re-diverging. */
+    log("You will not die in this drift — better to lose the season than the caravan, and wait out the worst of the winter under a roof.");
+    if(typeof turnBack==='function') turnBack(true);
+  }}]:[])};
 }
 function evInspect(){
   const fee=Math.max(5,Math.round(S.silver*.05));
@@ -3954,7 +3958,34 @@ function factorOutcome(gain,wages,sold,here,tgt){
   if(Math.round(S.silver)>=tgt) t+=' You have '+Math.round(S.silver)+' s put by now — enough to pay your passage from '+eraName(here)+' whenever you choose.';
   return {h:'A MONTH’S RECKONING', t:t, ch:[{l:'Close the ledger',f:function(){}}]};
 }
-function waitOutcome(d,here){ var t=(typeof monthPassLog==='function')?monthPassLog(d):('A month in '+eraName(here)+'.'); if(d>=30) t+=' The caravan is rested, the beasts fat, and you are ready for the road.'; return {h:'A MONTH GONE', t:t, ch:[{l:'Take up the road',f:function(){}}]}; }
+function waitOutcome(d,here){ /* Kris 8/26: the old ending was unconditional - 'ready for the road' even in the dead of a Balkh winter with the passes still shut. Now it reads the season and, more specifically, whether the road actually AHEAD of you needs a pass that's still sealed. */
+  var mainLabel='Take up the road';
+  var t=(typeof monthPassLog==='function')?monthPassLog(d):('A month in '+eraName(here)+'.');
+  if(d>=30){
+    var mtnBlocked = (typeof upcomingMountain==='function' && upcomingMountain()) && (typeof passWord==='function' && /sealed|treacherous/.test(passWord()));
+    if(mtnBlocked){
+      t+=' The caravan is rested, the beasts fat — but snow still sits in '+((typeof rangeName==='function')?rangeName():'the passes ahead')+'.';
+      mainLabel='Wait out the passes';
+    } else {
+      var m=(typeof monthNum==='function')?monthNum():0;
+      if(m===11||m===12||m===1||m===2){
+        t+=' The caravan is rested, the beasts fat, but the snow still sits in drifts.';
+      } else {
+        t+=' The caravan is rested, the beasts fat, and you are ready for the road.';
+      }
+    }
+  }
+  /* Kris 8/26: dismissing used to be the only option, but coming off a month (or a cut-short wait) is exactly
+     when the caravan wants another pass at the bazaar - provisions run down over a long stay, and a slow local
+     good (rubies and the like) may finally have rebuilt to where it's worth buying. Give both as one-click
+     options here rather than making the player hunt for the same buttons back on the city screen. */
+  var ch=[
+    {l:mainLabel,f:function(){}},
+    {l:'Wait another month',f:function(){ if(typeof waitRunMonth==='function') waitRunMonth(); }},
+    {l:'See to provisions and the bazaar',f:function(){ if(typeof buyFood==='function') buyFood(); }}
+  ];
+  return {h:'A MONTH GONE', t:t, ch:ch};
+}
 function factorMonth(){
   var paid=(S.party||[]).filter(function(p){return p.alive&&(p.kind==='guard'||p.freedman);});
   if(paid.length && S._facHands==null){
@@ -5474,7 +5505,7 @@ function evPirates(){
     : (cap1(pirateVessel())+" runs out from a headland, perhaps "+pirates+" armed men crowding her rail");
   return {h:'PIRATES', t:desc+". They lay alongside \u2014 perhaps "+pirates+" of them against the "+mine+" aboard your ship ("+_dl.txt+"). There is no hailing them and no toll to buy them off \u2014 they mean to have the ship and all in it. "+odds+"."+(_intanStrait?" Intan leans at the ship\u2019s rail and spits once over the side \u2014 she has crewed with raiders cut from this same cloth, and by her count, seeing she stands on your deck and not theirs, they are a hand short of a full boat tonight.":""),
    ch:[
-    {l:'Surrender the cargo',f(){ const mine=S.silver>0||GOODS.some(g=>S.goods[g.id]>0); if(!mine){ S.pendingEvent=piratesJoinOffer(); return; } var _pp=piratePlunder(); banditRep(1.05,-1); log(piratePlunderMsg(_pp,'pirates')); }},
+    {l:'Surrender the cargo',f(){ const mine=S.silver>0||GOODS.some(g=>S.goods[g.id]>0); if(!mine){ S.pendingEvent=piratesJoinOffer(); return; } var _pp=piratePlunder(); banditRep(1/0.9,-1); log(piratePlunderMsg(_pp,'pirates')); }},
     {l:'Fight them off',f(){ const _cacheS=Math.round(S.silver), _cacheG=Object.assign({},S.goods); enterBattle({n:pirates, sea:true, cache:{silver:_cacheS,goods:_cacheG}}); }},
     {l:'Try to run',f(){ if(marmara && rnd()<0.25){ banditRep(1.0,0); outcomeBox('THE ROMAN NAVY',"You crowd on sail — and out of the haze comes a Roman dromon, oars beating like a heart, bearing down on the pirates, who scatter for the shore. The Empire's navy has its uses."); return; } if(rnd()<0.50){ const tossed=GOODS.some(g=>S.goods[g.id]>0)?loseRandomGoods(.5):null; banditRep(1.0,0); outcomeBox('LOST AMONG THE ISLANDS',"You run before the wind and lose them among the islands"+(tossed?", though you heave "+tossed+" over the side to lighten the ship":"")+"."); } else { log("They are faster than they looked; grapnels bite, and there is no running now."); var _cS=Math.round(S.silver),_cG=Object.assign({},S.goods); enterBattle({n:pirates, sea:true, cache:{silver:_cS,goods:_cG}}); } }},
    ]};
@@ -5491,7 +5522,7 @@ function evCaspianRus(){
     : ("A long, low ship runs out from behind a spit of reed and sand — a striped sail coming down, oars biting the water in time. Rus, off the Volga, shields ranked along her rail and perhaps "+raiders+" fair-haired northmen crowding her; they have rowed the length of the river to plunder this sea, and the walled strand-towns of the coast keep their beacons lit for exactly this");
   return {h:'<span class="red">RUS LONGSHIPS</span>', t:desc+". They lay alongside — perhaps "+raiders+" of them against the "+mine+" aboard your ship ("+_dl.txt+"). There is no parley across that water \u2014 they have come to take the ship and all in it. "+odds+".",
    ch:[
-    {l:'Surrender the cargo',f(){ const has=S.silver>0||GOODS.some(g=>S.goods[g.id]>0); if(!has){ S.pendingEvent=piratesJoinOffer(); return; } var _pp=piratePlunder(); banditRep(1.05,-1); log(piratePlunderMsg(_pp,'Rus')); }},
+    {l:'Surrender the cargo',f(){ const has=S.silver>0||GOODS.some(g=>S.goods[g.id]>0); if(!has){ S.pendingEvent=piratesJoinOffer(); return; } var _pp=piratePlunder(); banditRep(1/0.9,-1); log(piratePlunderMsg(_pp,'Rus')); }},
     {l:'Fight them off',f(){ const _cS=Math.round(S.silver), _cG=Object.assign({},S.goods); enterBattle({n:raiders, sea:true, cache:{silver:_cS,goods:_cG}}); }},
     {l:'Try to run',f(){ if(rnd()<0.30){ banditRep(1.0,0); outcomeBox('UNDER THE WALLS',"You crowd the oars for the nearest shore — and the raiders sheer off as a fortified strand-town looms up, watchmen already ringing the alarm and manning the mole. The Caspian coast has learned to keep its walls high and its beacons ready; you slip in under the guns of a wary harbour."); return; } if(rnd()<0.45){ const tossed=GOODS.some(g=>S.goods[g.id]>0)?loseRandomGoods(.5):null; banditRep(1.0,0); outcomeBox('INTO THE SHALLOWS',"You draw them over the shoals where your shallower hull swims and their sea-going longship dares not follow"+(tossed?", though you heave "+tossed+" over the side to lighten the ship":"")+". By dusk they are a smudge on the northern water."); } else { log("Their longship is built for exactly this water and they close the gap in a dozen strokes; grapnels bite, and there is no running now."); var _cS=Math.round(S.silver),_cG=Object.assign({},S.goods); enterBattle({n:raiders, sea:true, cache:{silver:_cS,goods:_cG}}); } }},
    ]};
@@ -5767,7 +5798,7 @@ function evWarband(ambush){
     var win=rnd()<str/(str+vstr); var out='';
     var hurt=Math.max(win?0:1,Math.round((win?0.4:1.4)+rnd()*(win?1.4:2.2)));
     for(var i2=0;i2<hurt;i2++){ var v2=(typeof casualty==='function')&&casualty(rnd()<(win?0.2:0.45),false); if(v2)out+=v2+(rnd()<0.5?' is bloodied. ':' falls and does not rise. '); }
-    if(win){ S.wbWins=(S.wbWins||0)+1; ach('banditsBeaten'); S.banditFreq=Math.max(0.6,(S.banditFreq||1)*0.95); var lt=10+ri(30); S.silver+=lt;
+    if(win){ S.wbWins=(S.wbWins||0)+1; ach('banditsBeaten'); S.banditFreq=(S.banditFreq||1)*0.95; var lt=10+ri(30); S.silver+=lt;
       out='They break when the line holds \u2014 these are men with homes to run to, not men defending them. '+out+'You strip '+lt+' silver from the field. Word of it will make you famous, and their next muster bigger.'; }
     else { for(var gk2 in (S.goods||{})){ if(S.goods[gk2]>0)S.goods[gk2]-=Math.ceil(S.goods[gk2]*0.15); } out='The line breaks \u2014 yours. '+out+'They take what they can carry and let the rest of you run, which is its own message.'; }
     outcomeBox(win?'THE FIELD IS YOURS':'DRIVEN OFF',out); }
@@ -6348,6 +6379,7 @@ function wagonDayTick(){ try{
     if(rnd()<(hitchedOf('buffalo')>0?0.05:0.09)){ var _bg=evBogged(); if(_bg){ S.journeying=false; clearJourney(); S.pendingEvent=_bg; render(); return true; } }   /* a true bogging is a dialogue, cooldown-gated like the snowbound event - not every day */
     else if(!S._mudNote||S.day-S._mudNote>=12){ S._mudNote=S.day; log('The monsoon is on the country \u2014 mud to the axles and the wheels dragging; the day\u2019s march is a short one.'); }
   }
+  else if(terr==='desert' && (!S._sandNote||S.day-S._sandNote>=12)){ S._sandNote=S.day; log('The track has gone to loose, wind-piled sand \u2014 the wheels bite in and sink to the felloe with every turn, and the beasts lean hard into the traces. The '+(sv.wagon?'wagon':'cart')+' crawls here; a string of pack animals would not.'); } /* Kris: wagons in dune sand are already a hard speed penalty (wagonSpdMult desert=.25) - this just says why, once every dozen days rather than silently */
   var _wear={mountain:2.6,rugged:2.2,harsh:1.6,desert:1.5,marsh:1.4,forest:1.3,steppe:1.2,settled:0.7}[terr]||1;   /* rough ground eats wheels and axles; smooth road spares them (Kris) */
   if(rnd()<0.0044*_wear){
     var part=['wheel','axle'][Math.floor(rnd()*2)];
@@ -8588,7 +8620,7 @@ function check1271Arrival(nm){ if(!S||S.era!=='1271'||S.pendingEvent)return;
 }
 function evRuinVoice(name){
   var rec=null; for(var i=0;i<ERA1271_NET.cities.length;i++){ if(ERA1271_NET.cities[i].name===name){ rec=ERA1271_NET.cities[i]; break; } }
-  var txt=(rec&&rec.note)||('You pass '+name+' on the way.'); if(name==='the Khyber Pass') txt="The Khyber \u2014 the great gash in the mountains where the road out of Kabul pours down toward the rivers of Hind, and every empire that ever coveted India has come through it. The walls stand sheer and close; the Afridi hillmen hold the heights and take their toll of every caravan without a word wasted; and no one who knows the road lingers here. You water the beasts, keep the column tight, and are through the gate and down onto the Peshawar plain before the light goes.";
+  var txt=(rec&&rec.note)||('You pass '+name+' on the way.'); if(name==='the Khyber Pass') txt="The Khyber \u2014 the great gash in the mountains where the road out of Kabul pours down toward the rivers of Hind, and every empire that ever coveted India has come through it. The walls stand sheer and close and dry; the Afridi hillmen hold the heights above you, unseen but never in doubt, and no one who knows this road lingers here to find out how many. A man comes down to name the toll before you have gone another hundred paces.";
   if(name==='Ani') txt="Ani \u2014 once the capital of the Armenian kings, the City of a Thousand and One Churches, a rival of Baghdad and Constantinople in its day. The Mongols stormed it a generation ago and put its people to the sword; what stands now is a wilderness of magnificent ruin \u2014 the great cathedral of Trdat still roofed against the sky, palaces and scores of churches open to the wind \u2014 and among the fallen stones a meagre huddle of Armenians scratch a living in the shadow of what their grandfathers built. They keep a little bread and a few beasts for travellers, and a great deal of sorrow.";
   var ch=[];
   if(name==='Ispijab'){
@@ -8604,7 +8636,20 @@ function evRuinVoice(name){
   }
   if(name==='Gorgan'){ txt="GORGAN \u2014 the silk-city of the Caspian corner, that the Mongols broke in your fathers\u2019 time. The silk-city of the Caspian corner is a waste of roofless brick and mulberry gone wild, fifty years abandoned; only the great tomb-tower of the Ziyarid kings still stands whole over the wreck, a lance of baked brick against the sky, too tall and too well-made for even the Mongols to trouble with. And out across the plain, running from the sea into the mountains, marches an older ruin still: the WALL OF THE KINGS \u2014 the Red Snake, a rampart of fired brick the Persians raised against the steppe-riders eight hundred years ago and let go to grass six hundred back. Its towers are stumps and its ditch a green line in the barley now, but you cross it on the road and feel, for a mile, how much older this country\u2019s fear of the north is than your own errand.";
   }
-  ch.push({l:(name==='Antioch')?'Ride on in silence':'Press on',f:function(){}});
+  if(name==='the Khyber Pass'){
+    var khyV=0; for(var khyG in (S.goods||{})){ var khyGg=null; for(var khyI=0;khyI<GOODS.length;khyI++)if(GOODS[khyI].id===khyG){khyGg=GOODS[khyI];break;} if(khyGg&&S.goods[khyG]>0){ var khyC=city(); khyV+=S.goods[khyG]*(khyC?price(khyGg,khyC):10); } }
+    var khyDue=Math.max(3,Math.min(28,Math.round(khyV*0.02)));
+    ch.push({l:'Pay the Afridi toll ('+khyDue+' s)',f:function(){
+      S.tollRoads=S.day+30; S.tollDodge=0;
+      if(S.silver>=khyDue){ S.silver-=khyDue; log('You pay without haggling, as every caravan-master before you has learned to do. The hillmen melt back into the rock, and you keep the column tight through the gate and down onto the Peshawar plain before the light goes.'); }
+      else { var khyT=Math.min(S.silver,khyDue); S.silver-=khyT; log('You have not the full toll. The hillmen take what silver you carry ('+khyT+' s) and eye the packs besides \u2014 this time they let it go at that, and you are through the gate before the light goes.'); }
+    }});
+    ch.push({l:'Refuse to pay',f:function(){
+      if(rnd()<0.25){ S.tollDodge=S.day+30; S.tollRoads=0; log('You push through before the toll-man finishes speaking \u2014 bluff, luck, or both. No shot follows you down to the Peshawar plain, though you do not look back to ask why \u2014 nor to whom word of it travels.'); }
+      else { var khyLoss=Math.min(S.silver,khyDue*2); S.silver-=khyLoss; passDays(1); S.tollRoads=S.day+30; S.tollDodge=0; log('A stone comes down the slope first, then a second, closer. The toll-man\u2019s price has doubled by the time he names it again. You pay '+khyLoss+' silver in the end, a day later and considerably more polite about it.'); }
+    }});
+  }
+  if(name!=='the Khyber Pass') ch.push({l:(name==='Antioch')?'Ride on in silence':'Press on',f:function(){}});
   return {h:'\u2014 '+name.toUpperCase()+' \u2014', t:txt, ch:ch};
 }
 function hajjTerr(lk){ /* profile-first: a leg with a LEG_TERRAIN_1271 profile takes its DOMINANT terrain as the dash baseline; flags only rule where no profile exists; and an unflagged, unprofiled leg is STEPPE, not desert (Fadak: legTerr's desert default conjured a karaburan in the mountains) */
@@ -12787,8 +12832,8 @@ function battleFinish(outcome){
   if((outcome==='win'||outcome==='draw') && c.grave){ var gr=c.grave, cc=gr.cache||{}; var ggot=cc.silver||0; if(cc.silver) S.silver+=cc.silver; if(cc.goods){ for(var _gi=0;_gi<GOODS.length;_gi++){ var _gg=GOODS[_gi]; var _ng=cc.goods[_gg.id]||0; if(_ng>0 && typeof addGoods==='function') addGoods(_gg.id,_ng,(_gg.e+_gg.w)/2); } } S.silver+=20; if(typeof waterMax==='function')S.water=waterMax(); gr.claimed=true; if(typeof saveGraves==='function')saveGraves(); if(typeof SB_ON!=='undefined'&&SB_ON){ try{ sbSend('graves?run_id=eq.'+encodeURIComponent(gr.runId),'PATCH',{claimed:true}).catch(function(){}); }catch(e){} } L.push('<span class="gold">You take the hideout and plunder it'+(ggot?' — about '+Math.round(ggot)+'s and the lost caravan’s goods':' for what little they kept')+', filling your skins at their spring.</span>'); }
   if(outcome==='surrender'){ var toll=Math.min(S.silver, Math.round(S.silver*0.5)+(c.loot||0)); S.silver-=toll; var _took=0; for(var _gi=0;_gi<GOODS.length;_gi++){ var _g=GOODS[_gi]; var _h=S.goods[_g.id]||0; if(_h>0){ var _keep=Math.floor(_h*0.10); _took+=(_h-_keep); S.goods[_g.id]=_keep; if(_keep<=0)S.basis[_g.id]=0; } } L.push('<span class="red">They strip '+toll+'s and the better part of the cargo \u2014 some '+_took+' '+(_took===1?'unit':'units')+' of goods, leaving only the scraps they could not be bothered to carry \u2014 and '+(c.sea?'sheer off with mocking cheers across the water':'ride off')+'.</span>'); }
   if(outcome==='win'){ banditRep(0.90,1); }
-  else if(outcome==='surrender'){ banditRep(1.05,-1); } /* yielding marks you easy meat, not famous prey: the muster shrinks */
-  else if(outcome==='flee'||outcome==='loss'){ banditRep(1.10,-1); }
+  else if(outcome==='surrender'){ banditRep(1/0.9,-1); } /* pay/flee/surrender = 1/0.9, the exact mirror of a win's x0.9 (Kris): a win and a payoff cancel; alternating is a true wash. the muster shrinks */
+  else if(outcome==='flee'||outcome==='loss'){ banditRep(1/0.9,-1); }
   deaths.forEach(function(p){ p.alive=false; if(typeof noteDeath==='function') noteDeath(p, foe); });
   var _sg=(c.stayers||[]).some(function(f){return f.ref&&f.ref.rival==='genoa'&&f.cHP>0;}), _sv=(c.stayers||[]).some(function(f){return f.ref&&f.ref.rival==='venice'&&f.cHP>0;}); if(_sg&&_sv){ S.cbBattlesTogether=(S.cbBattlesTogether||0)+1; if(S.cbBattlesTogether===1 && !S.cbRespectNoted) S._cbRespectPending=true; }
   S.party=S.party.filter(function(p){return p.alive;});
