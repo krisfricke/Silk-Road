@@ -137,7 +137,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='3.5.71'; const BUILD='0825.shipFraming'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.1.1'; const BUILD='0825.roadsTalk'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -10559,7 +10559,7 @@ var M3=(function(){
    var D=window.MAP3D_DEM; var im=new Image();
    im.onload=function(){ try{ var cv=document.createElement('canvas'); cv.width=D.GW; cv.height=D.GH;
      var cx=cv.getContext('2d'); cx.drawImage(im,0,0); st.dem={px:cx.getImageData(0,0,D.GW,D.GH).data,D:D}; st.lib=2;
-     var q=st.q; st.q=[]; q.forEach(function(f){try{f();}catch(e){}}); tell('ON - the relief map is live (v'+VERSION+'). ?flat2d=1 restores the flat map.'); }catch(e){ st.lib=-1; st.err='dem-decode: '+e.message; tell('OFF - the height data would not decode ('+e.message+'). The 2D map carries on.'); } };
+     var q=st.q; st.q=[]; q.forEach(function(f){try{f();}catch(e){}}); /* 3D up and working: no ledger line (Kris) - only the OFF/fallback cases speak */ }catch(e){ st.lib=-1; st.err='dem-decode: '+e.message; tell('OFF - the height data would not decode ('+e.message+'). The 2D map carries on.'); } };
    im.onerror=function(){st.lib=-1; st.err='dem-img'; tell('OFF - the heightmap image failed. The 2D map carries on.');}; im.src=D.hm; }catch(e){ st.lib=-1; st.err='dem: '+e.message; } }
  /* a SPEC georeferences an image: {key,geo:[W,E,S,N],vbw,vbh,img} */
  function chartSpec(ck,ch){ return {key:ck,geo:ch.geo,vbw:ch.vbw,vbh:ch.vbh,img:chartImg(ch),cities:ch.cities}; }
@@ -12192,7 +12192,32 @@ function tavWriteGraffiti(){ var el=document.getElementById('graffititext'); var
   if(typeof SB_ON!=='undefined' && SB_ON){ try{ sbSend('graffiti','POST',{text:entry.text,name:entry.name,city:entry.city}).catch(()=>{}); }catch(e){} }
   log('You scratch your mark on the wall of the world.'); render(); }
 const TAV_INTRO="Three regulars hold the long table. <b>Diogenes</b>, a lean Greek with a tongue like a flensing-knife, who holds every man a fool and most of them hypocrites, and says so. <b>Nithard</b>, a big Frank gone grey in the saddle, who reckons the world belongs to whoever is strong enough to take it and feels no need to apologise for it. And <b>Kanat</b> the Khwarazmian, careful and exact, forever asking what would follow if every man did as you propose. They are arguing, as ever — just now over <b>bukhts</b> — and shove out a stool for a fourth opinion.";
+function _monLocal(here){ try{ if(typeof CITY_LL==='undefined'||!CITY_LL[here])return false; var lo=CITY_LL[here][0],la=CITY_LL[here][1]; var mn=(typeof monthNum==='function')?monthNum():6; return lo>66&&lo<93&&la>5&&la<32&&mn>=6&&mn<=9; }catch(e){ return false; } }
+function roadCondTalk(){ try{
+  var here=(S&&S.seaMode?S.portName:(city()&&city().name)); if(!here)return null;
+  var mn=(typeof monthNum==='function')?monthNum():6;
+  var es=(typeof seaEdges==='function')?seaEdges(here):[]; var seen={}, land=[];
+  es.forEach(function(e){ var o=(e.a===here)?e.b:e.a; if(!o||seen[o])return; if(e.terr==='med'||e.terr==='sea'||e.terr==='deep')return; seen[o]=1; land.push(o); });
+  var boggy=[], snowy=[];
+  land.forEach(function(o){
+    if(typeof CITY_LL!=='undefined'&&CITY_LL[here]&&CITY_LL[o]){ var mx=(CITY_LL[here][0]+CITY_LL[o][0])/2, my=(CITY_LL[here][1]+CITY_LL[o][1])/2;
+      if(mx>66&&mx<93&&my>5&&my<32&&mn>=6&&mn<=9) boggy.push(eraName(o)); }
+    var lk=(typeof legPairKey==='function')?legPairKey(here,o):null;
+    var prof=lk&&(((typeof LEG_TERRAIN_1271!=='undefined')&&LEG_TERRAIN_1271[lk])||((typeof LEG_TERRAIN!=='undefined')&&LEG_TERRAIN[lk]));
+    var mtn=prof&&prof.some&&prof.some(function(t){return t==='mountain'||t==='harsh';});
+    if(mtn&&(mn>=11||mn<=3)) snowy.push(eraName(o)); });
+  function jl(a){ return a.length<=1?a.join(''):a.slice(0,-1).join(', ')+' and '+a[a.length-1]; }
+  var parts=[];
+  if(boggy.length) parts.push('the road'+(boggy.length>1?'s':'')+' toward '+jl(boggy)+' '+(boggy.length>1?'are':'is')+' deep in monsoon mud just now \u2014 the wheels sink to the hub and a wagon crawls');
+  if(snowy.length) parts.push('the passes toward '+jl(snowy)+' will be holding snow this season \u2014 wiser to let the weather turn before you climb');
+  if(parts.length){ var j=parts.join('; and '); j=j.charAt(0).toUpperCase()+j.slice(1); return 'The trader thinks a moment. \u201c'+j+'. The rest run dry and open enough.\u201d'; }
+  return 'The trader shrugs. \u201cThe roads hereabouts run dry and open just now \u2014 no monsoon mud, no snow choking the passes. Good travelling, if the bandits allow it.\u201d';
+}catch(e){ return null; } }
 const TOPICS={
+ monsoon:{trig:['monsoon','monsoons','rains','rainy'],t:function(){ var here=(S&&S.seaMode?S.portName:(city()&&city().name)); var loc=_monLocal(here);
+   return "\u201cThe <b>monsoon</b> is the whole clock of the eastern trade,\u201d the trader says. \u201cThe summer rains \u2014 about <b>June to September</b> \u2014 drive the sea-winds toward the sunrise and the winter winds back; a ship that beats against them gets nowhere. And ashore those same rains turn the roads of <b>India and Bengal</b> to bog right through that season \u2014 wheels to the hub, a wagon at a crawl. "+(loc?"They have the roads hereabouts <b>right now</b>, so reckon on slow, muddy going.":"They have spent themselves here for the year \u2014 the local roads are firming.")+"\u201d"; }},
+ roads:{trig:['road','roads','road condition','road conditions','overland','track','muddy','boggy','bogged'],t:function(){ return roadCondTalk()||"\u201cThe roads are the roads,\u201d he grunts. \u201cAsk me by name of a place and I will tell you what the season is doing to the way there.\u201d"; }},
+
   inspiration:{trig:['inspiration','inspired','inspire','homage','tribute','oregon','trade wars','tradewars','land of dev','devastation','dungeons','dragons','d&d','credits','influence','influences'],t:"<b>Diogenes</b> sets down his cup and, oddly, seems to look clean through the wall — through the world itself. “Ah — the debt every road owes the roads walked before it. The whole of this long journey follows in the ruts of <b>The Oregon Trail</b> (1971), by Don Rawitsch, Bill Heinemann and Paul Dillenberger. This very tavern — the buying and the selling, the ports and the ledgers of it — is an homage to <b>Trade Wars 2002</b>, by Gary Martin. And this trick, of asking a stranger a plain word and getting a plain answer? That we had from <b>Land of Devastation</b>, by Scott M. Baker. The dice behind a man’s sword-arm and his luck tip their cap to <b>Dungeons &amp; Dragons</b> besides — and a hundred other old games have left their footprints in this dust.” He blinks, and is only a Greek in a Byzantine tavern once more. “…where was I?”"},
  bukht:{trig:['bukht','hybrid'],t:"\u201cA <b>bukht</b>,\u201d he says, \u201cis what you get crossing a one-humped <b>dromedary</b> on a two-humped <b>bactrian</b>. Carries more than either, complains less, and minds neither the burning <b>desert</b> nor the high cold. Worth every coin \u2014 if you can find one.\u201d"},
  animals:{trig:['animal','camel','bactrian','dromedary','mule','donkey','horse','beast','herd','livestock'],t:"\u201cYou buy your <b>mounts</b> and pack-beasts at the livestock market \u2014 <b>bactrians</b> for the cold, <b>dromedaries</b> for the sand, mules for the mountains, horses to outrun trouble. But mind: you can only drive as many as your people can <b>herd</b>. A big caravan wants more hands.\u201d"},
