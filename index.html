@@ -137,7 +137,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.1.6'; const BUILD='0826.banditUnclamp'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.1.9'; const BUILD='0826.turfanSeaMode'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -188,7 +188,7 @@ const GOODS=[
  {id:'porc',  n:'Porcelain',  u:'crate', wt:4, e:34,  w:160, era:'1271'},  /* the Yuan export; Zaiton/Kinsay kilns */
  {id:'ginseng',n:'Ginseng',  u:'catty', wt:1, e:20,  w:120, era:'1271'},  /* Korea & Manchuria root; cheap at the source, dear in the west (Kris) */
 ];
-const STOCKBASE={feathers:10,gum:26,tamarind:30,ginger:40,wool:30,silk:55,rhubarb:34,tea:80,paper:65,musk:9,jade:22,pepper:45,lapis:16,glass:38,coral:11,amber:10,wine:30,pearls:7,ivory:9,frank:30,indigo:24,cinn:20,wax:24,nutmeg:16,pelts:8,conut:35,linen:22,furs:24,slaves:6,aloe:14,felt:30,turq:16,naphtha:26,asbestos:2,dates:40,saffron:8,cotton:40,porc:14,ginseng:18,ruby:3,salt:35,iron:20,beads:24,wadmal:28,mead:22,honey:26,antler:18};
+const STOCKBASE={feathers:10,gum:26,tamarind:30,ginger:40,wool:30,mango:20,silk:55,rhubarb:34,tea:80,paper:65,musk:9,jade:22,pepper:45,lapis:16,glass:38,coral:11,amber:10,wine:30,pearls:7,ivory:9,frank:30,indigo:24,cinn:20,wax:24,nutmeg:16,pelts:8,conut:35,linen:22,furs:24,slaves:6,aloe:14,felt:30,turq:16,naphtha:26,asbestos:2,dates:40,saffron:8,cotton:40,porc:14,ginseng:18,ruby:3,salt:35,iron:20,beads:24,wadmal:28,mead:22,honey:26,antler:18};
 const CONUT_TROPICAL=new Set(['Guangzhou','Kauthara','Palembang','Mantai','Kollam','Zanzibar']);
 let SLAVERY=true;   /* <- the slave trade. flip to false to key it off entirely */
 function slaveryOn(){ return SLAVERY; }
@@ -3459,7 +3459,7 @@ function displacedPt(lon,lat,maxMi){ var ang=rnd()*2*Math.PI,r=maxMi*(0.45+0.55*
 function roughDir(p,name){ var c=DESERT_LL[name],dx=c[0]-p[0],dy=c[1]-p[1]; return 'to the '+((Math.abs(dx)>Math.abs(dy))?(dx>0?'east':'west'):(dy>0?'north':'south')); }
 function nearestDesertCity(p){ var best=null,bd=1e9; DESERT_CITIES.forEach(function(n){ var d=gcMiles(p,DESERT_LL[n]); if(d<bd){bd=d;best=n;} }); return best; }
 function tarimRouteOf(name){ if(['Hami','Turfan','Kucha','Aksu'].indexOf(name)>=0)return 'n'; if(['Miran','Khotan','Yarkand'].indexOf(name)>=0)return 's'; if(['Beshbalik','Suyab','Talas','Ispijab','Chach'].indexOf(name)>=0)return 'k'; return null; }
-function landAtCity(name){ var rt=tarimRouteOf(name); if(rt){ if(rt!==S.route){ S.route=rt; S.routeChosen=true; if(rt==='k')S.steppeDecided=true; } S.itin=fullRoute(rt,routeOrient()); } else if(S.itin && S.itin.length<=2 && typeof fullRoute==='function'){ S.itin=fullRoute(S.route||'s',routeOrient()); } var ni=S.itin?S.itin.findIndex(function(x){return x.name===name;}):-1; if(ni>=0){ S.idx=ni; S.dir=1; S.legKm=0; S._rt=null; S.priceLock={}; if(typeof restockToNow==='function')restockToNow(name); } else if(typeof cityByName==='function'&&cityByName(name)){ /* FIX (the LAST stale-idx organ): a city not on the land itinerary (Baku) arrives as a PORT, never on a stale index */ S.seaMode=true; if(typeof addSeaMarkets==='function')addSeaMarkets(); S.portName=name; S.dir=1; S.legKm=0; S._rt=null; S.priceLock={}; if(typeof restockToNow==='function')restockToNow(name); S.screen='port'; } }
+function landAtCity(name){ var rt=tarimRouteOf(name); if(rt){ if(rt!==S.route){ S.route=rt; S.routeChosen=true; if(rt==='k')S.steppeDecided=true; } S.itin=fullRoute(rt,routeOrient()); } else if(S.itin && S.itin.length<=2 && typeof fullRoute==='function'){ S.itin=fullRoute(S.route||'s',routeOrient()); } var ni=S.itin?S.itin.findIndex(function(x){return x.name===name;}):-1; if(ni>=0){ S.seaMode=false; S.idx=ni; S.dir=1; S.legKm=0; S._rt=null; S.priceLock={}; if(typeof restockToNow==='function')restockToNow(name); } else if(typeof cityByName==='function'&&cityByName(name)){ /* FIX (the LAST stale-idx organ): a city not on the land itinerary (Baku) arrives as a PORT, never on a stale index */ S.seaMode=true; if(typeof addSeaMarkets==='function')addSeaMarkets(); S.portName=name; S.dir=1; S.legKm=0; S._rt=null; S.priceLock={}; if(typeof restockToNow==='function')restockToNow(name); S.screen='port'; } }
 function desertDashEvent(from,to){ var mi=Math.round(gcMiles(DESERT_LL[from],DESERT_LL[to])),days=Math.max(3,Math.round(mi/15)); var mtn=((from==='Talas'&&to==='Akhsikath')||(from==='Akhsikath'&&to==='Talas')); var Fd=eraName(from), Td=eraName(to); if(mtn){ return {h:'THE HERDSMEN\u2019S PASSES', t:"There is no road on any merchant's chart between "+Fd+" and "+Td+" \u2014 but the Karluk shepherds speak of a track over the high Chatkal country: summer pasture to summer pasture, cold fords, and passes where the wind never rests. Perhaps "+days+" hard days, if the weather is kind and you insist.", ch:[ {l:'Insist \u2014 take the mountain track ('+days+'d)',f:function(){ hajjGo(from,to,{d:days,terr:'mountain',water:'over the Chatkal passes, pasture to pasture',land:true}); }}, {l:'Keep to the known roads',f:function(){}} ]}; } var bed=((from==='Yarkand'&&to==='Aksu')||(from==='Aksu'&&to==='Yarkand')); var t=bed?"From "+Fd+" the bed of a dead river runs out into the dunes toward "+Td+" — a pale thread of cracked clay and grey tamarisk that the camel-men say can be followed most of the way across, if the wind has not buried it since. Perhaps "+mi+" miles, and not a well on any of them; but a line to hold to is worth a great deal out here. Reckless — but not quite madness.":"You unroll the map and study it a long while. Between you and "+Td+" there is no road, no track, no well, no wall — only "+mi+" miles of open dune and whatever bearing you can keep off the sun. You would simply strike out, more or less, <i>that way</i>. What could possibly go wrong?"; return {h:'STRIKE ACROSS THE SANDS?', t:t, ch:[ {l:'Risk the crossing for '+Td+' (~'+days+' days if all goes well)', f:function(){ resolveDesertDash(from,to); }}, {l:'Keep to the rim road', f:function(){ log("You weigh the dead sand against your waterskins, and keep to the oasis road."); }} ]}; }
 function resolveDesertDash(from,to){ var bed=((from==='Yarkand'&&to==='Aksu')||(from==='Aksu'&&to==='Yarkand')); dashBegin(from,to,{bed:bed,lostChance:(bed?0.30:0.55)}); }
 function cityClone(nm,terr,dist,fracFallback){ var src=(typeof cityByName==='function')?cityByName(nm):null; var o=src?Object.assign({},src):{name:nm}; o.name=nm; if(terr)o.terr=terr; if(dist!=null)o.dist=dist; if(o.frac==null)o.frac=(fracFallback!=null?fracFallback:0.3); o.silent=false; o.hub=null; return o; }
@@ -3669,7 +3669,7 @@ function checkEdwardCandia(){ try{
    home -> cousin-city (3 hops toward the nearer pole) -> near pole -> far pole -> home. The cousin
    joins, trades well, and inherits ahead of the nephew. All targets read live off the road graph
    and the current prices, so a start anywhere writes its own spine. Dormant unless S.startStory set. ===== */
-const STORY_OVERRIDE={ 'Hormuz':{ cousin:'Baghdad', cousinName:'Yusuf' } };  /* per-start cousin-city overrides (Kris: Hormuz->Baghdad) */
+const STORY_OVERRIDE={ 'Hormuz':{ cousin:'Baghdad', cousinName:'Yusuf' }, 'Turfan':{ cousin:'Almaliq' } };  /* per-start cousin-city overrides (Kris: Hormuz->Baghdad, Turfan->Almaliq) */
 function _storyRisk(t){ return (t==='deep')?1.9:(t==='sea')?1.6:(t==='coast'||t==='med')?1.4:1.0; } /* the sea costs in danger, not only in days \u2014 so the planner stops over-loving it (Kris) */
 function _storyGraph(){ var era=(S&&S.era)||'762'; var yr=(typeof gameDate==='function')?gameDate().y:0; var adj={}; SEA_EDGES.forEach(function(e){
   if(e.era&&e.era!=='both'&&e.era!==era)return; if(!e.era&&era==='1271')return;
@@ -6076,12 +6076,33 @@ function migrate(s){
   if(!s.onceFlags) s.onceFlags={};
   if(!s.herd){ s.herd={donkey:0,mule:0,horse:0,bactrian:(s.camels||3),dromedary:0,hybrid:0}; }
   if(s.startSilver==null) s.startSilver=900;
+  /* REPAIR (Kris 8/26, live bug: "mangoes just utterly nuked my purse"): sell(gid,n) (~line 4128) computes
+     market saturation as (q - STOCKBASE[gid]) / (STOCKBASE[gid]*6) with NO check that STOCKBASE actually has
+     an entry for gid. mango was missing one (its noLedger:true flag only excludes it from the finale profit
+     tally, ~line 5624 - it's a fully real, buyable/sellable bazaar good, a "1271 novelty") so selling mango
+     divided by undefined, produced NaN all the way through the sale price, and S.silver+=q*NaN permanently
+     replaced the player's real silver total with NaN (NaN is falsy in JS, so anywhere the UI reads
+     S.silver||0 it just showed 0, masking how bad the corruption was). Root cause fixed by adding mango to
+     STOCKBASE above - this guard is just a net for saves already hit before that fix landed: if silver
+     somehow reads as NaN/null/Infinity on load, reset it to 0 rather than let a broken number keep
+     propagating through every wage, purchase and toll calculation from here on. This CANNOT recover the lost
+     silver - that value was already overwritten with no backup - only stop the corruption from spreading. */
+  if(s.silver==null || !isFinite(s.silver)) s.silver=0;
   if(!s.priceLock) s.priceLock={};
   if(!s.seen) s.seen={};
   if(s.era==null) s.era='762';
   if(s.lucky==null) s.lucky=false;
   if(s.selfTrade==null) s.selfTrade=0;
   if(!s.log) s.log=[];
+  /* REPAIR (Kris/Barid 8/26): quickStart(cityName) is meant to set S.origin from the start city's own
+     regional/religious perspective (cityPersp) - "the start city's faith drives calendar, units, home
+     festivals" - but newGame() runs first with start=undefined, which internally defaults origin to
+     plain 'east' before quickStart's fix-up line overwrites it. Any save that predates that fix-up line
+     (or hit some other path that skipped it) can be permanently stuck with the wrong origin - e.g. a
+     Candia quick-start reading as 'east', silently losing Nativity/Christmas (and gaining Dongzhi/Lunar
+     New Year instead) with no in-game way to notice anything is wrong. Heal it on every load: if we
+     know the start city, recompute origin from it and correct any mismatch. */
+  if(s.startCity && typeof cityPersp==='function'){ var _wantOrig=cityPersp(s.startCity); if(_wantOrig && s.origin!==_wantOrig) s.origin=_wantOrig; }
   return s;
 }
 async function saveAndQuit(){
