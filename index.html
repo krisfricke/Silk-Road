@@ -143,7 +143,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.2.40'; const BUILD='0905.krisNote'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.9'; const BUILD='0919.voteClock'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -2292,6 +2292,8 @@ function stepDay(){
   if(terr==='mountain' && passDanger()>0 && rnd()<passDanger()*.09){
     S.journeying=false;clearJourney();S.pendingEvent=evSnowedIn();render();return;
   }
+  if(S.lji && typeof ljiVoteCheck==='function'){ const _ve=ljiVoteCheck(); if(_ve){ S.pendingEvent=_ve; S.journeying=false; clearJourney(); render(); return; } }   /* #LJI: the weekly vote */
+  if(S.lji && typeof ljiGaryEvent==='function' && rnd()<0.05){ const ge=ljiGaryEvent(terr); if(ge){ S.pendingEvent=ge; S.journeying=false; clearJourney(); render(); return; } }   /* #LJI: Gary's misadventures */
   if(rnd()<legEventChance(terr)){
     const e=buildEvent(terr);
     if(e){S.pendingEvent=e;S.journeying=false;clearJourney();render();return;}
@@ -2753,17 +2755,25 @@ function freedmanHasStory(p){ if(!p)return false; if(p.sogHome||p.sibId)return t
 function caravanSuccessor(){ if(!S)return null; var lp=(S.party||[]).filter(function(p){return p&&p.alive&&!p.nephew;}); if(!lp.length)return null; var freed=lp.filter(function(p){return p.freedman;}); var plain=freed.filter(function(p){return !freedmanHasStory(p);}); if(plain.length)return pick(plain); if(freed.length)return pick(freed); var trad=lp.filter(function(p){return (p.skills&&p.skills.trade>0)||(typeof HAGGLE!=='undefined'&&HAGGLE[p.name]);}); if(trad.length)return pick(trad); return null; }
 function _successorNote(){ if(!S)return ''; if((S.party||[]).some(function(p){return p.nephew&&p.alive;}))return ''; var suc=(typeof caravanSuccessor==='function')?caravanSuccessor():null; if(!suc)return ''; var nm=suc.name.split(',')[0]; var role=suc.role||'one of your people'; var he=(suc.g==='f'?'her':'his'); return '<p style="margin-top:8px">But the caravan does not die with you. <b>'+nm+'</b>, '+role+', gathers the shaken survivors, takes up the lead-rope, and turns the column back toward the road. What becomes of them from here is '+he+' story now, not yours — and this account ends where theirs begins.</p>'; }
 function _wineFriendNote(who){ if(!S)return ''; var lp=(typeof livingParty==='function'?livingParty():[]); var f=lp.find(function(p){return p&&p.freedman&&!freedmanHasStory(p);}); if(!f)return ''; S.party=(S.party||[]).filter(function(p){return p!==f;}); if(typeof nudgeManumit==='function')nudgeManumit(1); return ' '+f.name.split(',')[0]+', a freed hand with no craft to call their own, leaves the company here with '+who+', who has promised to take them on and teach them the wine.'; }
-function checkCompanionArcs(){ if(!S||S.era!=='1271'||(S.screen!=='city'&&S.screen!=='port'))return null; var here=(S.seaMode?S.portName:((typeof city==='function'&&city())?city().name:null)); if(!here)return null;
+function beeGender(ev,who){ /* Mira's bee episodes, told of whoever keeps the bees (Aggienaut in #LJI): name and pronouns swapped for a man */
+  try{ if(!who||who.name==='Mira'||who.g==='f')return ev; var nm=who.name; var f=function(t){ if(typeof t!=='string')return t;
+      t=t.replace(/\bMira\b/g,nm).replace(/bee-woman/g,'bee-man');
+      t=t.replace(/\bher\b(?=\s*(lights|up|in|to|have|:|,|\.|;|\u201d))/g,'him').replace(/\bher\b/g,'his').replace(/\bHer\b/g,'His').replace(/\bherself\b/g,'himself').replace(/\bshe\b/g,'he').replace(/\bShe\b/g,'He');
+      return t; };
+    ev.t=f(ev.t); (ev.ch||[]).forEach(function(c){ c.l=f(c.l); }); }catch(e){} return ev; }
+function checkCompanionArcs(){ if(!S||S.era!=='1271'||(S.screen!=='city'&&S.screen!=='port'))return null;
+  if(S.lji && typeof ljiVoteCheck==='function'){ var _ve=ljiVoteCheck(); if(_ve) return _ve; }   /* #LJI: the vote finds you in town too */ var here=(S.seaMode?S.portName:((typeof city==='function'&&city())?city().name:null)); if(!here)return null;
   { var _f3=(typeof checkFriarThreeWay==='function')?checkFriarThreeWay():null; if(_f3)return _f3; }
   var lp=(typeof livingParty==='function')?livingParty():[];
   var has=function(nm){ return lp.some(function(p){return p&&p.alive!==false&&p.name===nm;}); };
   var drop=function(nm){ S.party=S.party.filter(function(p){return p.name!==nm;}); };
-  if(has('Mira')){
-    if(here==='Trebizond' && !S._beeTreb){ S._beeTreb=true; return {h:'THE MAD HONEY OF PONTUS', t:"Mira spends her Trebizond morning in the honey-market and comes back round-eyed. The bees of this coast work the wild rhododendron that cloaks the Pontic hills, and their honey — deli bal, the locals call it, the mad honey — comes out faintly green and faintly dangerous: a spoonful sweetens a cup, but three will lay a strong man on his back with his head reeling and his heart gone slow and heavy. “They tell a tale here,” she says, turning a sealed pot in her hands like a live scorpion, “of a whole army of the old Greeks that camped in these hills and ate the wild combs, and fell down as though poisoned or drunk, every man of them, and could not stand again till the next day.” She buys a very little, and marks the pot with a cross so no one sweetens a cup by mistake.", ch:[{l:'Seal it well away',f:function(){}}]}; }
-    if(here==='Badakhshan' && !S._beeBadak && S.party.some(function(p){return p.name==='Mira'&&p.alive;})){ S._beeBadak=true; return {h:'THE GIANT BEES OF THE CLIFFS', t:"In Badakhshan Mira falls in with the honey-hunters who work the valleys running south toward the Indus lands, and what they tell her lights her up and frustrates her in the same breath. Down in the warm river-country and its foothills — not so very far south of here — there lives a giant bee, tawny and half again the size of any she has kept, that hangs a single great comb in the open from a high bough or a rock-face; and deeper still, in the wet gorges under the tallest snow-mountains on earth, a greater kind yet, that men take on swaying rope-ladders through the smoke, cutting the combs from sheer cliffs. The nearer giant, they say, creeps up the valleys almost to the foot of these very mountains — but not across them: here on the cold dry roof of the world Mira finds only the ordinary brown mountain bee. “One of them is a few days south of me,” she says, gazing down the valleys, “and it may as well be on the moon.”", ch:[{l:'Let her have her wondering',f:function(){}}]}; }
-    if((here==='Lahore'||here==='Delhi') && !S._beeDorsata && S.party.some(function(p){return p.name==='Mira'&&p.alive;})){ S._beeDorsata=true; return {h:'THE GREAT BEE OF THE PLAINS', t:"It is here, in the warm river-plains "+(S._beeBadak?"she had only heard of, and hungered after, up in Badakhshan":"of Hind")+", that Mira meets her giant at last. "+pick(['High on the wall of a mosque','Slung from the bough of a great tree above a temple tank','Plastered under an overhang of some old fort'])+" hangs a single vast half-moon of comb, longer than a man is tall and dark and shivering with bees; and the bees are the tawny giants the honey-hunters spoke of, half again the size of any she has kept, and afraid of nothing. She watches the better part of a day from a careful distance, having been warned — twice — what the whole curtain of them does when it is roused. “There you are,” she says at last, softly, the way you greet someone long written-to and never met. She does not try to take them: you cannot, she says — they keep to no box, they follow the flowers and the rains and go where they please. She seems perfectly happy to have been wrong about the moon.", ch:[{l:'Let her have her giant',f:function(){}}]}; }
-    if(here==='Dunhuang' && !S._beeCerana){ S._beeCerana=true; return {h:'AN EASTERN BEE', t:"Somewhere past the last oasis of the desert Mira notices it and then cannot stop noticing it: the bees here are not her bees. They are smaller, darker, quicker to sting and far quicker to abandon a nest and fly, and they will have nothing to do with the straw skeps she knows — they take to hollow trees and clefts in the rock, and the people gather their honey half by robbery, in the old wild way. “A cousin of mine, this bee,” she decides, watching a swarm pour into a crack in the cliff, “but a stranger for all its kinship — an eastern bee, for an eastern world.” It seems, oddly, to settle her: even here at the doorstep of Cathay, bees are still only bees.", ch:[{l:'Leave her to her wonder',f:function(){}}]}; }
-    if(here==='Taiyuan' && !S._beeMite){ S._beeMite=true; return {h:'A SMALL RED MITE', t:"A beekeeper of the Taiyuan hills, hearing there is a foreign bee-woman with the caravan, will not rest until Mira has come to see his hives — the small dark eastern bees she has met before, worked here in hollow logs and wicker skeps. She admires the combs, and the sting-toughened old man who keeps them; and then, turning a frame of capped brood up to the light, she stops. On some of the pale pupae, where the young bees sleep sealed in their cells, rides a little flat mite — red-brown, glossy, no bigger than a pinhead. The old keeper only shrugs: his bees have always carried the things, he says, and thrive well enough regardless. Mira frowns at it a while, turning the frame this way and that, then hands it back. “Huh,” she says. “But it’s probably nothing.”", ch:[{l:'Probably nothing',f:function(){}}]}; } /* Fadak: the small red mite is Varroa. Local A. cerana carry it benignly (co-evolved); it is A. mellifera — Mira's own bees — that it will one day destroy. Techer et al. 2021 (Sci Rep) Suppl. TableS1 site CHN03: a Korea-K1 lineage V. destructor at an apiary in Jinzhong/Yuci, Shanxi, 37.70N 112.71E — Taiyuan's doorstep. A quiet Easter egg; leave it un-explained. */
+  var _bee=lp.find(function(p){return p&&p.alive!==false&&(p.name==='Mira'||p.bees);});
+  if(_bee){
+    if(here==='Trebizond' && !S._beeTreb){ S._beeTreb=true; return beeGender({h:'THE MAD HONEY OF PONTUS', t:"Mira spends her Trebizond morning in the honey-market and comes back round-eyed. The bees of this coast work the wild rhododendron that cloaks the Pontic hills, and their honey — deli bal, the locals call it, the mad honey — comes out faintly green and faintly dangerous: a spoonful sweetens a cup, but three will lay a strong man on his back with his head reeling and his heart gone slow and heavy. “They tell a tale here,” she says, turning a sealed pot in her hands like a live scorpion, “of a whole army of the old Greeks that camped in these hills and ate the wild combs, and fell down as though poisoned or drunk, every man of them, and could not stand again till the next day.” She buys a very little, and marks the pot with a cross so no one sweetens a cup by mistake.", ch:[{l:'Seal it well away',f:function(){}}]},_bee); }
+    if(here==='Badakhshan' && !S._beeBadak){ S._beeBadak=true; return beeGender({h:'THE GIANT BEES OF THE CLIFFS', t:"In Badakhshan Mira falls in with the honey-hunters who work the valleys running south toward the Indus lands, and what they tell her lights her up and frustrates her in the same breath. Down in the warm river-country and its foothills — not so very far south of here — there lives a giant bee, tawny and half again the size of any she has kept, that hangs a single great comb in the open from a high bough or a rock-face; and deeper still, in the wet gorges under the tallest snow-mountains on earth, a greater kind yet, that men take on swaying rope-ladders through the smoke, cutting the combs from sheer cliffs. The nearer giant, they say, creeps up the valleys almost to the foot of these very mountains — but not across them: here on the cold dry roof of the world Mira finds only the ordinary brown mountain bee. “One of them is a few days south of me,” she says, gazing down the valleys, “and it may as well be on the moon.”", ch:[{l:'Let her have her wondering',f:function(){}}]},_bee); }
+    if((here==='Lahore'||here==='Delhi') && !S._beeDorsata){ S._beeDorsata=true; return beeGender({h:'THE GREAT BEE OF THE PLAINS', t:"It is here, in the warm river-plains "+(S._beeBadak?"she had only heard of, and hungered after, up in Badakhshan":"of Hind")+", that Mira meets her giant at last. "+pick(['High on the wall of a mosque','Slung from the bough of a great tree above a temple tank','Plastered under an overhang of some old fort'])+" hangs a single vast half-moon of comb, longer than a man is tall and dark and shivering with bees; and the bees are the tawny giants the honey-hunters spoke of, half again the size of any she has kept, and afraid of nothing. She watches the better part of a day from a careful distance, having been warned — twice — what the whole curtain of them does when it is roused. “There you are,” she says at last, softly, the way you greet someone long written-to and never met. She does not try to take them: you cannot, she says — they keep to no box, they follow the flowers and the rains and go where they please. She seems perfectly happy to have been wrong about the moon.", ch:[{l:'Let her have her giant',f:function(){}}]},_bee); }
+    if(here==='Dunhuang' && !S._beeCerana){ S._beeCerana=true; return beeGender({h:'AN EASTERN BEE', t:"Somewhere past the last oasis of the desert Mira notices it and then cannot stop noticing it: the bees here are not her bees. They are smaller, darker, quicker to sting and far quicker to abandon a nest and fly, and they will have nothing to do with the straw skeps she knows — they take to hollow trees and clefts in the rock, and the people gather their honey half by robbery, in the old wild way. “A cousin of mine, this bee,” she decides, watching a swarm pour into a crack in the cliff, “but a stranger for all its kinship — an eastern bee, for an eastern world.” It seems, oddly, to settle her: even here at the doorstep of Cathay, bees are still only bees.", ch:[{l:'Leave her to her wonder',f:function(){}}]},_bee); }
+    if(here==='Taiyuan' && !S._beeMite){ S._beeMite=true; return beeGender({h:'A SMALL RED MITE', t:"A beekeeper of the Taiyuan hills, hearing there is a foreign bee-woman with the caravan, will not rest until Mira has come to see his hives — the small dark eastern bees she has met before, worked here in hollow logs and wicker skeps. She admires the combs, and the sting-toughened old man who keeps them; and then, turning a frame of capped brood up to the light, she stops. On some of the pale pupae, where the young bees sleep sealed in their cells, rides a little flat mite — red-brown, glossy, no bigger than a pinhead. The old keeper only shrugs: his bees have always carried the things, he says, and thrive well enough regardless. Mira frowns at it a while, turning the frame this way and that, then hands it back. “Huh,” she says. “But it’s probably nothing.”", ch:[{l:'Probably nothing',f:function(){}}]},_bee); } /* Fadak: the small red mite is Varroa. Local A. cerana carry it benignly (co-evolved); it is A. mellifera — Mira's own bees — that it will one day destroy. Techer et al. 2021 (Sci Rep) Suppl. TableS1 site CHN03: a Korea-K1 lineage V. destructor at an apiary in Jinzhong/Yuci, Shanxi, 37.70N 112.71E — Taiyuan's doorstep. A quiet Easter egg; leave it un-explained. */
   }
   if(has('Ovadya')){
     if(here==='Damascus' && !S._ovDamascus){ S._ovDamascus=true; return {h:'THE HOSPITAL OF NUR AL-DIN', t:"Ovadya has known of the great bimaristan of Nur al-Din since he was a boy bent over borrowed books, and in Damascus he goes to it the way another man goes to a shrine. He comes back late and full of it: a hospital that is also a school and a library, its wards kept cool by a running fountain, separate halls for the fevers and the diseases of the eye and the melancholic, a pharmacy of a thousand jars, and physicians who read the day’s cases aloud to their students and write down what they did and whether it answered. “They keep the histories,” he tells you, marveling. “The rich man and the beggar both — and the beggar treated for nothing — and both of them written into the book, so the next physician may learn from them.” He fills a whole quire with notes in a cramped hand, and for days he is happier than you have seen him.", ch:[{l:'Leave him to his notes',f:function(){}}]}; }
@@ -3110,11 +3120,12 @@ function evCamelRaidersMeet(n,demand,drom,horses,shadowed){
      else { S.hp-=8; var lost=loseRandomGoods(.15); S.raiderShadow=S.day+2; log('They pace you without hurry — on this ground their beasts are better than yours. You shed '+lost+' to buy distance, and their dust hangs behind you at dusk like a promise.'); } }},
   ]}; }
 function evBandits(){
+  var _bd=(typeof ljiBandPick==='function')?ljiBandPick():null;   /* #LJI: the first bands on the road are Gary's old antagonists */
   const demand=Math.max(20,Math.round((typeof estateWorth==='function'?estateWorth():S.silver)*.06)); /* toll scales with the WHOLE caravan they can see (cargo+beasts), uncapped — a fat prize is a fat toll (Kris) */
   let bandits=3+ri(3)+(S.banditMod||0); if(seraiActive())bandits-=1; bandits=Math.max(1,bandits); // base roll 1d3+2 = 3..5, then the modifier (can still fall to 1), then ±1 per reputation / a recent rest; floor of 1, no ceiling
   const str=combatStrength();
   const odds = str>=bandits*2 ? ('You could scatter '+(bandits===1?'him':'them')) : str>=bandits ? 'It would be a near thing' : str>0 ? 'You are badly outmatched' : 'You have no one who can fight \u2014 this would be suicide';
-  return {h:'RIDERS',t:(bandits===1?"A lone horseman appears":"About "+bandits+" horsemen appear")+" on the ridgeline"+banditKind()+" with the unhurried confidence of "+(bandits===1?"a man who has":"men who have")+" done this before. "+(bandits===1?"He admires":"Their leader admires")+" your caravan loudly and demands a toll of "+demand+" silver. "+odds+".",
+  return {h:'RIDERS',t:(bandits===1?"A lone horseman appears":"About "+bandits+" horsemen appear")+" on the ridgeline"+banditKind()+" with the unhurried confidence of "+(bandits===1?"a man who has":"men who have")+" done this before. "+(bandits===1?"He admires":"Their leader admires")+" your caravan loudly and demands a toll of "+demand+" silver. "+(_bd?_bd.hail+" ":"")+odds+".",
   ch:[
    {l:'Pay the "toll" ('+demand+' s)',f(){
      if(S.silver>=demand){ S.silver-=demand; banditRep(1/0.9,-1); log("You pay. "+(bandits===1?"He wishes":"The leader wishes")+" you a safe journey with apparently genuine warmth."); }
@@ -3131,7 +3142,7 @@ function evBandits(){
        }
      }
    }},
-   {l:'Stand and fight',f(){ const _cacheS=Math.round(S.silver), _cacheG=Object.assign({},S.goods); enterBattle({n:bandits, sea:false, cache:{silver:_cacheS,goods:_cacheG}}); }},
+   {l:'Stand and fight',f(){ const _cacheS=Math.round(S.silver), _cacheG=Object.assign({},S.goods); enterBattle({n:bandits, sea:false, ljiBand:(_bd?_bd.id:null), band:(_bd?_bd.name:null), cache:{silver:_cacheS,goods:_cacheG}}); }},
    {l:'Throw down your arms and yield',f(){ banditRep(1/0.9,-1); var keep=0.15; for(const g of GOODS){ S.goods[g.id]=Math.round((S.goods[g.id]||0)*keep); if(S.goods[g.id]<=0)S.basis[g.id]=0; } S.silver=Math.round(S.silver*keep); var lost=stripGear(); log("You order the caravan to yield. The riders take their pick of the cargo, your purse, and the very blades from your people\u2019s belts"+(lost.length?" \u2014 "+lost.join(', ')+" gone with them":"")+", then leave you your lives and a tenth of your goods. It is a long, quiet road on from here."); }},
    {l:'Run for it',f(){ if((S.goods.slaves||0)>0){ const _ns=S.goods.slaves; S.goods.slaves=0; S.basis.slaves=0; banditRep(1/0.9,-1); outcomeBox('THE COFFLE CUT LOOSE',"The riders barely glance at your goods \u2014 they make straight for the slave-coffle, cut the ropes, and scatter your captives into the broken country. In the confusion you and the caravan slip clean away. You have lost "+_ns+" "+(_ns>1?'souls':'soul')+" and the silver they cost, and you ride off with a strange splinter under the ribs: were the bandits, today, the better men?"); render(); return; } banditRep(1/0.9,-1);
      var _ft=(typeof legTerr==='function')?legTerr():''; var _sandy=(_ft==='desert'||_ft==='harsh'||_ft==='sand');
@@ -5303,12 +5314,14 @@ function kristoferGreet(scene){
     ? " A traveller detaches himself from the dreamers in the corner \u2014 <b>Kristofer</b>, the one who dreamed this whole road up \u2014 and his face lights when he hears your name. \u201cThe legendary "+nm+"! I have been <i>dying</i> to talk to you. Could you give me a way to reach you \u2014 email, WhatsApp, whatever is convenient? Only so I can thank you and hear what you make of the road.\u201d"
     : " A traveller you cannot quite place catches your eye and steps out from the colonnade \u2014 <b>Kristofer</b>, he says, the one who dreamed this whole road up. \u201cYou\u2019ve made it this far! I would truly love your feedback. Would you share your email, a WhatsApp number, or whatever is the best way to reach you? I promise it will only ever be used by me, personally, to reach out.\u201d");
   return {h:'A FAMILIAR STRANGER', t:t, ch:[
-    {l:'Leave Kristofer your contact and/or a note',f:function(){ _krisGreetMark(); var c=''; try{ c=prompt('Leave Kristofer your contact (email / WhatsApp / anything) and/or a quick note \u2014 only he will ever see it:','')||''; }catch(e){ c=''; } c=c.trim();
-      if(c){ _krisFeedbackSend(c); log('You tell the stranger how to reach you; he thanks you with an odd, outsized warmth, as if it mattered more than it should.'); _krisCloser(); } else { _krisSecrets(); } }},
+    {l:'Leave Kristofer your contact and/or a note',f:function(){ _krisGreetMark(); askText('A FAMILIAR STRANGER','Leave Kristofer your contact (email / WhatsApp / anything) and/or a quick note \u2014 only he will ever see it:',function(c){
+      if(c){ _krisFeedbackSend(c); log('You tell the stranger how to reach you; he thanks you with an odd, outsized warmth, as if it mattered more than it should.'); _krisCloser(); } else { _krisSecrets(); } }); }},
     {l:'Politely decline',f:function(){ _krisGreetMark(); _krisSecrets(); }},
   ]};
 }
-function tavernEvent(){
+function greenRoomText(t){ return (S&&S.lji&&typeof t==='string')?t.replace(/the Qlodserai/g,'the Green Room').replace(/THE QLODSERAI/g,'THE GREEN ROOM'):t; }
+function tavernEvent(){ var _e=_tavernEventCore(); try{ if(_e&&S&&S.lji){ if(_e.h)_e.h=greenRoomText(_e.h); if(_e.t)_e.t=greenRoomText(_e.t); } }catch(x){} return _e; }
+function _tavernEventCore(){
   const c=(S&&S.seaMode&&typeof cityByName==='function'&&cityByName(S.portName))||city(); /* port-first: Baku's tavern rolled Erzurum's dead recruits */
   /* FIRELANCE black market (Kris design, spec §11): Yuan cities, 1271, ~10% offers */
   if(c&&S.era==='1271'&&!isWest()&&!S.firelance&&rnd()<0.10&&['Khanbaliq','Xanadu','Kinsay','Zaiton','Yangzhou',"Chang'an",'Taiyuan','Ningxia','Lanzhou'].indexOf(c.name)>=0){
@@ -5354,7 +5367,8 @@ function tavernEvent(){
   const scene=(c.name==='Qulzum')?("Asking around for the local place to hear the news, a man in tan desert robes reluctantly recommends a tavern called Mos Eisley \u2014 though he cautions it is, in his estimation, a wretched hive of scum and villainy. "+cup+monsoonTavernGossip()):(c.name==='Samarkand')?(cup+((typeof chartSeason==='function'&&chartSeason()==='summer')?"In the summer heat the life of the Qlodserai has gone up onto the flat roof \u2014 carpets and cushions spread under the first stars, a brazier hissing with tea, and travellers reclining in the cool of the evening above walls the colour of dried honey; in the court below a fountain long since gone to a still green pool, and no one quite sure what year it is, or whether that matters. ":"The caravanserai in Samarkand is the Qlodserai \u2014 adobe walls the colour of dried honey, a fountain in the courtyard long since gone to a still green pool, and travellers beneath the colonnade who seem unsure what year it is, or whether that matters. ")+flavour+monsoonTavernGossip()):(cup+"The tavern in "+cityLabel(c)+" is "+tav+". "+flavour+monsoonTavernGossip());
   const rumor=pickRumor();
   if(c.name==='Soldaia' && (S&&S.era)==='1271' && !S.onceFlags.marcoVecchio && typeof marcoVecchioTavern==='function'){ S.onceFlags.marcoVecchio=true; return marcoVecchioTavern(scene); }
-  if(c.name==='Samarkand' && typeof _krisGreetDone==='function' && !_krisGreetDone() && typeof kristoferGreet==='function'){ return kristoferGreet(scene); }  /* Kris: once per person, the meta greeting in the Qlodserai */
+  if(c.name==='Samarkand' && S.lji && !S.onceFlags.greenRoom && typeof greenRoomGreet==='function'){ S.onceFlags.greenRoom=true; return greenRoomGreet(scene); }  /* #LJI: the Green Room, once per run */
+  if(c.name==='Samarkand' && !S.lji && typeof _krisGreetDone==='function' && !_krisGreetDone() && typeof kristoferGreet==='function'){ return kristoferGreet(scene); }  /* Kris: once per person, the meta greeting in the Qlodserai */
   let recruit;
   if(S.job){ recruit=rollRecruit(c.name); if(recruit&&((S.fallen&&S.fallen.indexOf(recruit.name)>=0)||S.party.some(function(p){return p.name===recruit.name;}))) recruit=null; }
   else if(S.lucky && c.name===homeName() && !S.onceFlags.nephewMet && !S.party.some(p=>p.nephew&&p.alive)){
@@ -5373,6 +5387,7 @@ function tavernEvent(){
   } else if(c.name==='Jerusalem' && (S&&S.era)==='1271'){ var _haveAns=S.party.some(function(p){return p.name==='Fra Anselmo'&&p.alive;}); var _lorAvail=!S.party.some(function(p){return p.name==='Fra Lorenzo'&&p.alive;}) && !(S.fallen&&S.fallen.indexOf('Fra Lorenzo')>=0); var _ovAvail=!S.party.some(function(p){return p.name==='Ovadya'&&p.alive;}) && !(S.fallen&&S.fallen.indexOf('Ovadya')>=0); var _ord=_haveAns?['ov','lor']:['lor','ov']; var _pk=null; for(var _oi=0;_oi<_ord.length;_oi++){ if(_ord[_oi]==='lor'&&_lorAvail){_pk='lor';break;} if(_ord[_oi]==='ov'&&_ovAvail){_pk='ov';break;} } var _jn=livingParty().filter(function(p){return p.kind!=='guard';}).length; var _jo=_jn>=4?0.12:_jn===3?0.4:_jn===2?0.55:_jn===1?0.7:0.9; if(_pk && rnd()<_jo){ if(_pk==='lor')return friarTavern(scene); recruit=CITYFOLK['Jerusalem']; } } else {
     recruit=rollRecruit(c.name);
     if(recruit&&((S.fallen&&S.fallen.indexOf(recruit.name)>=0)||S.party.some(function(p){return p.name===recruit.name;}))) recruit=null; /* the dead stay dead, the enrolled stay singular (Kris: Sarkis resurrected) */
+    if(!recruit && S.lji && typeof ljiRecruit==='function') recruit=ljiRecruit();   /* #LJI: the sheet gets its own flat roll wherever the city's own didn't turn up */
   }
   if(recruit && S.job){ var _jn=recruit.name.split(',')[0], _jr=recruit.role; return {h:'THE TAVERN', t: scene+" Across the fire you fall into easy talk with "+recruit.name+", "+_jr+", and by the second cup a road-partnership is half-imagined between you \u2014 but you are working for your keep here just now, not a merchant with a caravan to fill. "+_jn+" grins and claps your shoulder: they\u2019d gladly throw in with you, they say, if ever you set off on a grand trading adventure of your own.", ch:[{l:'Drink to that, and turn in',f(){ log('You drink with '+_jn+'. Another time, another life, perhaps.'); }}]}; }
   if(recruit && recruit.noSlaves && (S.goods.slaves||0)>0){ var _rn=recruit.name, _rr=recruit.role; return {h:'THE TAVERN', t: scene+" Across the fire "+_rn+", "+_rr+", talks easily with you \u2014 until the matter of your cargo comes up. At the word for what is chained in your camp he sets down his cup. 'I have hired my sword to many a caravan,' he says, rising, 'but never to a slaver\u2019s, and I will not start now.' He is gone into the night before the drink is cold.", ch:[{l:'Let him go',f(){ log(_rn+" would not take a slaver\u2019s coin."); }}]}; }
@@ -6568,7 +6583,7 @@ function fodderMode(){ /* 'all': flagged legs, nothing grows - even camels eat f
     var _sm=(typeof seasonMonth==='function')?seasonMonth():6; if((_sm===12||_sm<=2)&&st/p.length>=0.5) return 'snow'; /* Kris: snow on the grass - even good steppe cannot be grazed in deep winter; half-rations from the packs */ } return null; }
 function partyExpert(kind){ /* returns the NAME of the party's best qualified advisor, or null (Kris's A-D gates) */
   var best=null,bv=0; var L=(typeof livingParty==='function')?livingParty():[];
-  for(var i=0;i<L.length;i++){ var p=L[i]; if(!p)continue; var v=0;
+  for(var i=0;i<L.length;i++){ var p=L[i]; if(!p||p.gary)continue; var v=0;   /* #LJI: Gary is never anyone's adviser */
     if(kind==='handle') v=((p.skills&&p.skills.handle)||0)+((p.khabir)?2:0);
     else if(kind==='cook') v=(p.skills&&p.skills.cook)||0;
     else if(kind==='desert') v=(p.ds||0);
@@ -7450,10 +7465,13 @@ function growNephew(){
 }
 
 /* ============ v0.9.19 — two-step setup flow ============ */
-let SETUP={name:'', origin:'west', style:'caravan', era:'1271', companyMode:'pick', nephewName:'', custom:[{t:'Mr',n:''},{t:'Mr',n:''},{t:'Mr',n:''}]};
+let SETUP={name:'', origin:'west', style:'caravan', era:'1271', scenario:'', companyMode:'pick', nephewName:'', custom:[{t:'Mr',n:''},{t:'Mr',n:''},{t:'Mr',n:''}]};
+function ljiSetup(){ /* ?start=LJI - the hidden door: no title screen, straight to the company page (Kris) */
+  SETUP.scenario='lji'; SETUP.era='1271'; SETUP.origin='west'; SETUP.style='caravan'; SETUP.companyMode='pick'; SETUP.nephewName=''; LJI_DRAW=null; LJI_PRECHECK=null;
+  SETUP_PAGE=2; S=null; render(); return true; }
 function setupEra(e){ if($('pname'))SETUP.name=$('pname').value; SETUP.era=e; render(); }
 function setupCompanyMode(mode){ if(SETUP.companyMode==='custom')saveCustom(); SETUP.companyMode=mode; render(); }
-function saveCustom(){ for(let i=0;i<3;i++){ const n=$('cn_'+i), t=$('ct_'+i); if(n)SETUP.custom[i].n=n.value; if(t)SETUP.custom[i].t=t.value; } if($('nname'))SETUP.nephewName=$('nname').value; }
+function saveCustom(){ for(let i=0;i<3;i++){ const n=$('cn_'+i), t=$('ct_'+i); if(n)SETUP.custom[i].n=n.value; if(t)SETUP.custom[i].t=t.value; } if($('nname'))SETUP.nephewName=$('nname').value; if(SETUP.scenario==='lji'&&$('pname'))SETUP.name=$('pname').value; }
 function setupCustomInput(){ saveCustom(); setupTick(); }
 function randomSkills(){ const sk={trade:0,cook:0,handle:0,hunt:0,fight:0}; const keys=Object.keys(sk); let pts=4+ri(2); while(pts>0){ sk[pick(keys)]++; pts--; } return sk; }
 let SETUP_PAGE=1;
@@ -7465,20 +7483,32 @@ function setupContinue(){ SETUP.name=$('pname')?$('pname').value.trim():''; if(!
   if(SETUP.style==='donkey'){ SETUP_PAGE=1; newGame(SETUP.name,[],'', SETUP.origin==='west'?'cpl-humble':'humble'); }
   else { SETUP_PAGE=2; render(); } }
 function setupBack(){ SETUP_PAGE=1; render(); }
-function setupRoster(){ if(SETUP.era==='1271') return SETUP.origin==='west'?ROSTER1271_W:ROSTER1271_E; return (SETUP.origin==='west' ? CPL_ROSTER : ROSTER).filter(function(c){return !c.era||c.era==='762';}); }
+function ljiNameInput(){ SETUP.name=$('pname')?$('pname').value:''; var w=$('nameWarn'); if(w)w.textContent=SETUP.name.trim()?'':'A name is required.'; setupTick(); }
+let LJI_DRAW=null, LJI_PRECHECK=null;
+function ljiRoster(){ /* Gary + eight names drawn from the Year 20 sign-up sheet, skills pot-luck; Gary is always offered */
+  if(LJI_DRAW) return LJI_DRAW;
+  var pool=LJI_NAMES.slice(), out=[]; while(out.length<8&&pool.length){ out.push(pool.splice(ri(pool.length),1)[0]); }
+  var ros=[{id:'lji_gary',name:'Gary',role:'a stout companion with a lute and a gift for misadventure',skills:randomSkills(),g:'m',gary:true,bard:true,custom:true}];
+  out.forEach(function(u){ var sk=randomSkills(), bee=(u==='aggienaut'), bard=ljiIsBard(u); ros.push({id:'lji_'+u.replace(/[^a-z0-9]/gi,'_'),name:u,role:ljiRole(u,bard),skills:sk,g:(bee?'m':'they'),custom:true,bees:bee,bard:bard,lji:true}); });
+  LJI_DRAW=ros; return ros; }
+function ljiRedraw(){ LJI_DRAW=null; LJI_PRECHECK=null; render(); }
+function setupRoster(){ if(SETUP.scenario==='lji') return ljiRoster(); if(SETUP.era==='1271') return SETUP.origin==='west'?ROSTER1271_W:ROSTER1271_E; return (SETUP.origin==='west' ? CPL_ROSTER : ROSTER).filter(function(c){return !c.era||c.era==='762';}); }
 function setupTick(){
   if(SETUP.companyMode==='custom'){ const b=$('btnVenture'); if(b)b.disabled=!SETUP.custom.every(c=>c.n.trim()); return; }
   const ros=setupRoster(); const n=ros.filter(r=>{const e=$('rc_'+r.id);return e&&e.checked}).length;
   const w=$('rosterWarn'); if(w)w.textContent=n===3?'A fine company.':(n+' of 3 chosen.');
   ros.forEach(r=>{const e=$('rc_'+r.id); if(e&&!e.checked)e.disabled=(n>=3);});
-  const b=$('btnVenture'); if(b)b.disabled=(n!==3); }
+  const b=$('btnVenture'); if(b)b.disabled=(n!==3)||(SETUP.scenario==='lji'&&!SETUP.name.trim()); }
 function startVenture(){
+  if($('pname'))SETUP.name=$('pname').value.trim();
+  if(SETUP.scenario==='lji' && !SETUP.name.trim()){ var _w=$('nameWarn'); if(_w)_w.textContent='A name is required.'; return; }
   if(SETUP.companyMode==='custom'){ saveCustom(); if(!SETUP.custom.every(c=>c.n.trim())) return;
     const gm={Mr:'m',Ms:'f',Mx:'they'};
     const members=SETUP.custom.map(c=>{ const sk=randomSkills(); return {name:c.n.trim().slice(0,18), role:topSkill(sk), skills:sk, g:(gm[c.t]||'m'), custom:true}; });
-    SETUP_PAGE=1; newGame(SETUP.name, members, SETUP.nephewName||'', SETUP.origin==='west'?'cpl':undefined); return; }
+    SETUP_PAGE=1; newGame(SETUP.name, members, SETUP.nephewName||'', SETUP.origin==='west'?'cpl':undefined); if(SETUP.scenario==='lji')ljiMark(); return; }
   const ros=setupRoster(); const chosen=ros.filter(r=>{const e=$('rc_'+r.id);return e&&e.checked}).map(r=>r.id);
   if(chosen.length!==3){ const w=$('rosterWarn'); if(w)w.textContent='Pick exactly three.'; return; }
+  if(SETUP.scenario==='lji'){ const mem=ros.filter(r=>chosen.indexOf(r.id)>=0).map(r=>Object.assign({},r,{skills:Object.assign({},r.skills)})); SETUP_PAGE=1; newGame(SETUP.name, mem, SETUP.nephewName||'', 'cpl'); ljiMark(); return; }
   SETUP_PAGE=1; newGame(SETUP.name, chosen, SETUP.nephewName||'', SETUP.origin==='west'?'cpl':undefined); }
 function backToTitle(){ S=null; SETUP_PAGE=1; render(); }
 
@@ -7514,18 +7544,22 @@ function renderSetupPage(m){
   const body = custom
     ? '<p class="sub" style="margin:0 0 8px">Name your own three. The Mr / Ms / Mx sets how the road speaks of them; the skills they bring are pot-luck.</p>'+
       [0,1,2].map(i=>'<div style="margin:5px 0"><select id="ct_'+i+'" onchange="setupCustomInput()">'+['Mr','Ms','Mx'].map(t=>'<option'+(SETUP.custom[i].t===t?' selected':'')+'>'+t+'</option>').join('')+'</select> <input type="text" id="cn_'+i+'" value="'+escAttr(SETUP.custom[i].n)+'" maxlength="18" placeholder="companion name" oninput="setupCustomInput()"></div>').join('')
-    : '<p class="sub" style="margin:0 0 8px">Pick three companions; each brings talents, and losing them in the wastes loses those talents too.</p>'+
+    : (SETUP.scenario==='lji'?'<p class="sub" style="margin:0 0 8px">A company drawn from the Year 20 sign-up sheet — three are picked for you; change them if you like, or <a href="#" onclick="ljiRedraw();return false">draw new names</a>.</p>':'<p class="sub" style="margin:0 0 8px">Pick three companions; each brings talents, and losing them in the wastes loses those talents too.</p>')+
       ros.map(r=>'<label style="display:block;margin:3px 0;cursor:pointer"><input type="checkbox" id="rc_'+r.id+'" onchange="setupTick()"> <b>'+r.name+'</b> <span class="sub">— '+r.role+' · '+skillBlurb(r.skills,r)+'</span></label>').join('')+
       '<p id="rosterWarn" class="sub" style="margin:6px 0">0 of 3 chosen.</p>';
   m.innerHTML=
    '<h2>Choose your company</h2>'+
-   '<p class="sub">'+(west?'Constantinople':'Chang’an')+' · a caravan venture · '+SETUP.name+'</p>'+
+   '<p class="sub">'+(SETUP.era==='1271'?(west?'Venice':'Khanbaliq'):(west?'Constantinople':'Chang’an'))+' · a caravan venture'+(SETUP.scenario==='lji'?' · #LJI':'')+(SETUP.scenario==='lji'?'':' · '+SETUP.name)+'</p>'+   (SETUP.scenario==='lji'?('<div class="panel"><p style="margin-bottom:6px">Your name, for the ledger <span class="red">*</span></p>'+
+     '<input type="text" id="pname" value="'+escAttr(SETUP.name)+'" maxlength="24" placeholder="enter your name" oninput="ljiNameInput()"> '+
+     '<span id="nameWarn" class="sub">'+(SETUP.name.trim()?'':'A name is required.')+'</span></div>'):'')+
    '<div class="panel"><p class="sub" style="margin:0 0 6px">Your sister’s boy comes whether you like it or not. His name: <input type="text" id="nname" value="'+escAttr(SETUP.nephewName||(SETUP.origin==='west'?'Bart':'Little Tang'))+'" placeholder="'+(SETUP.origin==='west'?'Bart':'Little Tang')+'" maxlength="18" style="width:120px" oninput="saveCustom()"></p>'+
    '<div style="margin-bottom:8px;opacity:.85"><b>'+(west?'Bart':'Little Tang')+'</b> <span class="sub">— '+(west?'your nephew Bartholomew, more enthusiasm than sense':NEPHEW.role)+' · '+skillBlurb(NEPHEW.skills,NEPHEW)+' <span class="gold">(always with you)</span></span></div>'+
    '<div class="speedrow" style="margin-bottom:8px">'+modeBtn('pick','Choose from the roster')+modeBtn('custom','Name your own three')+'</div>'+
    body+'</div>'+
    '<button class="seal" id="btnVenture" onclick="startVenture()" disabled>Set out with a caravan</button> '+
-   '<button onclick="setupBack()">← Back</button>';
+   (SETUP.scenario==='lji'?'':'<button onclick="setupBack()">← Back</button>');
+  if(SETUP.scenario==='lji'&&!custom&&!LJI_PRECHECK){ LJI_PRECHECK=['lji_gary']; var _rest=ros.filter(function(r){return !r.gary;}); for(var _k=0;_k<2&&_rest.length;_k++){ LJI_PRECHECK.push(_rest.splice(ri(_rest.length),1)[0].id); } }
+  if(SETUP.scenario==='lji'&&!custom&&LJI_PRECHECK){ LJI_PRECHECK.forEach(function(id){ var e=$('rc_'+id); if(e)e.checked=true; }); }
   setupTick();
 }
 
@@ -8712,7 +8746,14 @@ function evPoloMissed(nm,daysAgo){
   var _place=_wsea?"the waterfront":"the serai";
   var _tok=_wsea?"carrying a golden Tartar tablet whose worth none here can read":"under a golden paiza";
   var _dep=(nm==='Acre')?"took ship on for Ayas":(_wsea?"took ship for Acre and the Levant":"took the eastward road");
-  return {h:'THE THREE VENETIANS', t:"You have missed them"+((daysAgo<=3)?' by a whisker':'')+" \u2014 "+_place+" still talks of the three Latins who passed through "+when+": two grave brothers "+_tok+", bound for the Great Khan with a pope's letters, and a young one who asked more questions than a census. They "+_dep+". Perhaps the roads cross again; they seem to be everywhere a road is.", ch:[{l:'Onward',f:function(){}}]};
+  /* Kris: the second port running gets the short version - you know who they are by now, and the full billing twice reads like a recap */
+  var _seen=(S.poloMissedSeen||0); S.poloMissedSeen=_seen+1;
+  if(_seen>0){
+    var _onw=(nm==='Acre')?"on for Ayas":(_wsea?"on for Acre and the Levant":"on by the eastward road");
+    var _ear=(daysAgo<=3)?"days ago":when;
+    return {h:'THE THREE VENETIANS', t:"You learn the Polos passed through here "+_ear+", headed "+_onw+"."+((daysAgo<=3)?" You are a day or two behind them, and gaining nothing.":""), ch:[{l:'Onward',f:function(){}}]};
+  }
+  return {h:'THE THREE VENETIANS', t:"You have missed them"+((daysAgo<=3)?' by a whisker':'')+" \u2014 "+_place+" still talks of the three Latins who passed through "+when+": two grave brothers "+_tok+", bound for the Great Khan with a pope's letters, and a young one who asked more questions than a census. They "+_dep+". Perhaps the roads cross again.", ch:[{l:'Onward',f:function(){}}]};
 }
 function checkPolo(nm){
   if(!S||S.era!=='1271') return null;
@@ -10616,7 +10657,11 @@ function journeyScene(){
 }
 function regionMap(){
   const d=nextCity(); if(!d)return '';
-  const itin=((!S.routeChosen && !S.returning) ? MAIN1.concat(MAIN2) : S.itin), n=itin.length, x0=14, x1=306, span=x1-x0;
+  var _spine=MAIN1.concat(MAIN2);
+  if(((S&&S.era)||'762')==='1271'){ /* Fadak 9/19 (Kris): the 1271 road runs VENICE <-> KHANBALIQ - the 762 spine was drawn under every 1271 leg */
+    _spine=(S.itin||[]).slice(); var _hasE=_spine.some(function(c){return c&&c.frac<=0.05;}), _hasW=_spine.some(function(c){return c&&c.frac>=0.97;});
+    if(!_hasE)_spine.push({name:'Khanbaliq',frac:0.02,terr:'settled'}); if(!_hasW)_spine.push({name:'Venice',frac:1.0,terr:'settled'}); }
+  const itin=((!S.routeChosen && !S.returning) ? _spine : S.itin), n=itin.length, x0=14, x1=306, span=x1-x0;
   // geographic: east (frac 0) on the RIGHT, west (frac 1) on the LEFT — independent of travel direction
   const xf=(frac)=> x1 - span*clamp(frac,0,1);
   const terrCol={settled:'#6a5630',steppe:'#5a6a3a',desert:'#caa66a',harsh:'#a8763e',mountain:'#7a7488'};
@@ -11436,7 +11481,7 @@ var M3=(function(){
        addCities(L.sc,L.rel,(mp.cities||[]).map(function(cc){return {n:cc.n,x:cc.x,y:cc.y,rn:!!cc.rn};}));
        addHalts(L.sc,L.rel,CHARTS[mp._ck]);
        try{ addNeighborCharts(L,spec); }catch(_nb){}
-       L.camR=17; L.ph=0.5; L.th=Math.PI/2; L.mvKey=mvKey; L.mp=mp; L.q=null; L.qT=null; L.pts=null; L.lastMs=Date.now(); L.userUntil=0; L.trail=[]; L.windB=Math.random()*6.283;
+       L.camR=17; L.ph=0.36; L.th=Math.PI/2;   /* Kris: open low, near his own playing angle - the horizon and the ranges are in frame from the first tick (was 0.5) */ L.mvKey=mvKey; L.mp=mp; L.q=null; L.qT=null; L.pts=null; L.lastMs=Date.now(); L.userUntil=0; L.trail=[]; L.windB=Math.random()*6.283;
        if(kindModel==='ship'){ L.model=mkVessel(); L.model.scale.setScalar(0.16); L.sc.add(L.model); }
        else { var _sv=(typeof wagonServiced==='function')?wagonServiced():{cart:0,wagon:0};
          if(_sv.wagon>0){ var rig=mkOxWagon(); rig.scale.setScalar(0.19); L.sc.add(rig); L.file.push(rig); }   /* a wagon on the road: FOUR oxen and the covered wagon, one rig (Kris) */
@@ -12713,7 +12758,7 @@ function qlodAsk(){ var el=document.getElementById('asktopic'); var q=(el?el.val
   if(gk){ S.tavTraderLine=(typeof TOPICS[gk].t==='function')?TOPICS[gk].t():TOPICS[gk].t; } else { S.tavTraderLine="Qlod spreads his hands. “We have not worked that part out yet. Ask us of the <b>fighting</b>, the <b>hunting</b>, the <b>desert</b>, the <b>sea</b> — or a good you mean to trade.”"; }
   if(el)el.value=''; render(); }
 function renderTavernSamarkand(m){
-  const scene="<p>Samarkand keeps no tavern grander than the rest, and yet it keeps <b>the Qlodserai</b> — a caravanserai between times, its walls the colour of dried honey, a fountain in the courtyard long since gone to a still green pool, and travellers under the colonnade who seem unsure what year it is, or whether that matters. In one corner a wiry beekeeper, <b>Khurshid Farrokh</b>, argues with a foreign friend he calls <b>Qlod</b> over whether the whole of this road could be set down as a game. They have been at it, by the look of them, for years.</p>";
+  const scene=greenRoomText("<p>Samarkand keeps no tavern grander than the rest, and yet it keeps <b>the Qlodserai</b> — a caravanserai between times, its walls the colour of dried honey, a fountain in the courtyard long since gone to a still green pool, and travellers under the colonnade who seem unsure what year it is, or whether that matters. In one corner a wiry beekeeper, <b>Khurshid Farrokh</b>, argues with a foreign friend he calls <b>Qlod</b> over whether the whole of this road could be set down as a game. They have been at it, by the look of them, for years.</p>");
   let menu='<div style="margin:10px 0">'+
     '<button onclick="tavGo(\'traders\')">Join Khurshid and Qlod at their table</button> '+
     '<button onclick="tavGo(\'trader\')">Ask an old trader for counsel (10 s)</button> '+
@@ -12729,7 +12774,7 @@ function renderTavernSamarkand(m){
   else if(v==='facilities'){ var gg=(GRAFFITI||[]).slice(0,30); body='<div class="panel"><p class="sub">The whitewashed wall by the fountain is a palimpsest of every traveller who ever waited here for a caravan that may or may not have come — names, boasts, prayers, and the odd line of real poetry. A charred stick lies on the sill.</p>'+
       '<div class="log" style="height:auto;max-height:220px;font-style:italic">'+gg.map(x=>'<div>“'+(x.text||'')+'” <span class="sub" style="font-style:normal">— '+(x.name||'a hand unknown')+'</span></div>').join('')+'</div>'+
       '<div style="margin-top:8px"><input type="text" id="graffititext" maxlength="140" placeholder="leave your mark…" style="width:70%"> <button onclick="tavWriteGraffiti()">Scratch it on the wall</button></div></div>'; }
-  m.innerHTML='<h2>The Qlodserai <span class="sub">· Samarkand, a place between times</span></h2>'+scene+menu+body+
+  m.innerHTML='<h2>'+(S&&S.lji?'The Green Room':'The Qlodserai')+' <span class="sub">· Samarkand, a place between times</span></h2>'+scene+menu+body+
     '<div style="margin-top:10px"><button class="seal" onclick="leaveTavern()">Call it a night</button></div>'+
     '<p class="sub">Silver <b class="gold">'+Math.round(S.silver)+'</b></p>';
 }
@@ -12835,7 +12880,7 @@ const TAV_NAMES={w:['The Gilded Anchor','The Three Crowns','The Brazen Head','Th
 const TAVERN_FIXED={'Shiraz':'The Rose Garden','Kabul':'The Grape Arbour','Lahore':'The Ravi Gate','Delhi':'The Iron Pillar','Cambay':'The Turning Tide','Chittagong':'The Rice-Boat','Butuan':'The Gold Balangay','Hakata':'The Grey Heron','Kaesong':'The Ginseng House','Socotra':'The Dragon-Tree Shade','Zanzibar':'The Sewn Boat','Fustat':'The Sycamore Court','Asyut':'The Forty Days\u2019 Rest','Qus':'The Camel-Gate','Aydhab':'The Pilgrims\u2019 Well','Aylah':'The Coral Anchor','Medina':'The Court of the Palms','Mecca':'The Camel-Brokers\u2019 Awning','Sanaa':'The Alabaster Window','Aden':'The Monsoon Door','Dhofar':'The Frankincense Scale','Kish':'The Pearl-Divers\u2019 Rest','Kollam':'The Pepper Garland','Puttalam':'The Palmyra Shade','Kedah':'The Green Peak','Tumasik':'The Straits Lantern','Kauthara':'The Eaglewood House','Guangzhou':'The Six Banyans','Zaiton':'The Hall of Ten Thousand Sails','Alexandria':'The Pharos Lamp','the Perevoloka':'The Greased Keel','the Don landing':'The Nine Tongues','Saraichik':'The Bridge of Boats','Baku':'The Eternal Hearth','Basra':'The Garden of Two Moons','Tabriz':'The Nightingale’s Cup','Erzurum':'The Sign of the Copper Ewer','Sivas':'The Saffron Door','Konya':'The Caravan’s Rest','Yazd':'The Pomegranate Court','Kerman':'The Cypress and Rose','Nishapur':'The Turquoise Door','Varamin':'The Blue Dome','Herat':'The Hundred Gardens','Balkh':'The Melon Garden','Hormuz':'The Pearl and Palm','Baghdad':'The Round Cup','Damghan':'The Pistachio Bough','Badakhshan':'The Ruby Lamp','Rey':'The Potter\u2019s Cup','Venice':'The Gilded Anchor','Acre':'The Brazen Head','Ragusa':'The Golden Keel','Trebizond':'The Crossed Oars','Ephesus':'The Three Crowns','Jerusalem':'The Pilgrim’s Rest','Karakorum':'The Felt Hall','Almaliq':'The White Mare','Otrar':'The Long Tether','Talas':'The Drum and Kettle','Sarai':'The Kumis Bowl','Beshbalik':'The Four Winds','Kinsay':'The House of Ten Thousand Felicities','Khotan':'The Jade Cup','Yangzhou':'The Golden Carp','Khanbaliq':'The Willow-Gate Wineshop','Dunhuang':'The Inn of Distant Bells','Luoyang':'The Resting Crane','Hedeby':'The Whetted Prow','Visby':'The Salt Raven','Havn':'The Whale’s Road','Aldeigjuborg':'The Drowned Oar','Uppsala':'The Kettle of the Gods','Old Uppsala':'The Kettle of the Gods','Lubeck':'The Tarred Gull'};
 function hotTavern(nm){ return ((typeof janAt==='function')?janAt(nm):8)>=15; } /* tropical/hot towns: no fireside; the evening is about moving air (Kris caught Puttalam huddling by a fire) */
 function hotHere(){ return (typeof hotTavern==='function')&&hotTavern(S&&(S.seaMode?S.portName:(city()&&city().name))); }
-function tavernNameFor(nm){ if(TAVERN_FIXED[nm])return TAVERN_FIXED[nm]; var h=0; for(var i=0;i<nm.length;i++)h=(h*31+nm.charCodeAt(i))>>>0;
+function tavernNameFor(nm){ if(nm==='Samarkand'&&S&&S.lji)return 'The Green Room'; if(TAVERN_FIXED[nm])return TAVERN_FIXED[nm]; var h=0; for(var i=0;i<nm.length;i++)h=(h*31+nm.charCodeAt(i))>>>0;
   var c=(typeof cityByName==='function'&&cityByName(nm))||{}; var bank;
   if(typeof isAmberPlace==='function'&&isAmberPlace(nm)) bank=TAV_NAMES.n;
   else { var f=(c.frac!=null)?c.frac:0.7; bank=(f<0.45)?TAV_NAMES.c:(f<0.62)?TAV_NAMES.s:(f<0.85)?TAV_NAMES.p:TAV_NAMES.w; }
@@ -13078,7 +13123,7 @@ function cbQuarter(f){ var q=f.cHP/f.cMax; return q<=0?'down':q<=0.25?'failing':
 function enterBattle(opts){
   var sea=!!opts.sea; /* the pirate/raider count already includes the galley crew (the +5 in the event roll); no hidden second +5 — what the event shows is what you fight (Fadak) */
   S.pendingEvent=null; S._inBattle=true; S._rt=null; /* the battle snapshot owns the road (v3.1.111); the resume-guard must not fight it */
-  S.battle={ phase:'prep', sea:sea, n:opts.n, cache:opts.cache||null, grave:opts.grave||null,
+  S.battle={ phase:'prep', sea:sea, n:opts.n, cache:opts.cache||null, grave:opts.grave||null, ljiBand:opts.ljiBand||null, band:opts.band||null,
     trav:{idx:S.idx, dir:S.dir, legKm:S.legKm, dashFrom:(S.dash&&S.dash.from)||null, dashTo:(S.dash&&S.dash.to)||null, itinRef:S.itin, dashRef:S.dash}, /* Kris's perennial post-battle teleport (Miran; the road to Rey): snapshot the road when steel is drawn, restore it when sheathed - whatever mangles it in between loses */
     fighters:buildFighters(sea), prevScreen:(S.screen==='battle'?'travel':S.screen),
     L:[], loot:0, B:null, stayers:null, withdrawers:null, round:0, timer:null,
@@ -13096,7 +13141,7 @@ function renderBattle(m){
         '<td><b>'+cbName(f)+'</b> <span class="sub">'+(f.you?'(you) ':'')+cbRoleWord(f.role)+' · '+cbQuarter(f)+' [HP '+f.cHP+'/'+f.cMax+'] · fight '+f.fs+(f.bow?' · 🏹':'')+(f.mount?' · 🐎':'')+'</span></td>'+
         '<td style="text-align:center"><input type="checkbox" '+(f._withdraw?'checked':'')+' onclick="battleToggle('+i+',0)"></td></tr>';
     }).join('');
-    m.innerHTML='<div class="panel event"><h3 class="red">'+(c.sea?'PIRATES':'BANDITS')+' — '+c.n+(c.sea?' aboard a galley':' riders')+'</h3>'+
+    m.innerHTML='<div class="panel event"><h3 class="red">'+(c.sea?'PIRATES':(c.band?c.band.toUpperCase():'BANDITS'))+' — '+c.n+(c.sea?' aboard a galley':' riders')+'</h3>'+
       '<p class="sub">Tick <b>fight</b> (left) or <b>withdraw</b> (right) for each. Those who withdraw lead off the pack-animals and slip clear if the fight is lost — but a lone fighter left to stand alone may lose heart and bolt too.</p>'+
       '<table><tr><th>fight</th><th>character</th><th>withdraw</th></tr>'+rows+'</table>'+
       '<button class="seal" onclick="battleJoin()">Join battle</button> <button onclick="'+(c.sea?'battleSurrender()':'battleAllWithdraw();battleJoin()')+'">'+(c.sea?'Surrender':'Withdraw everyone')+'</button></div>';
@@ -13214,6 +13259,7 @@ function cbResultText(outcome,sea,n){
 function battleFinish(outcome){
   var c=S.battle; if(!c)return; if(c.timer){clearTimeout(c.timer);c.timer=null;}
   var sea=c.sea, foe=sea?'pirates':'bandits', L=c.L; if(outcome==='win' && !sea)S._legWon=true;
+  if(outcome==='win' && !sea && c.ljiBand && typeof ljiBandBeaten==='function'){ var _bl=ljiBandBeaten(c.ljiBand); if(_bl)L.push('<span class="gold">'+_bl+'</span>'); }   /* #LJI: a band is retired only by being beaten */
   if(sea){ S.seaCrew=(c.stayers||[]).filter(function(f){return f.sailor && f.cHP>0;}).length; }
   if(outcome==='surrender' && (S.goods.slaves||0)>0){
     if(sea){ S.goods.slaves=0; S.basis.slaves=0; if(S.souls)S.souls=[]; if(L)L.push('<span class="gold">The pirates cut your slave-coffle loose and put them over the side for the shore \u2014 one cargo they will not sell back to a slaver.</span>'); }
@@ -13940,6 +13986,8 @@ function quickStartFromURL(){ try{
   var m=/[?#&]start=([^&#]+)/.exec(location.href); if(!m) return false;
   var want=decodeURIComponent(m[1]).replace(/[_+]/g,' ').trim().toLowerCase(); if(!want) return false;
   if(/^mango/.test(want) && typeof mangoStart==='function') return mangoStart();
+  if(/^ljiloop/.test(want) && typeof ljiStart==='function') return ljiStart();          /* the loop-video quickstart (tools/loopvid.js) */
+  if(/^lji/.test(want) && typeof ljiSetup==='function') return ljiSetup();               /* ?start=LJI - the scenario proper */
   SETUP.era='1271';
   var all=[].concat(MAIN1,NORTH,SOUTH,MAIN2,STEPPE,SEA);
   for(var i=0;i<all.length;i++){ var c=all[i]; if(!c||!c.name||c.era==='762'||c.camp)continue;
@@ -13959,6 +14007,143 @@ function mangoStart(){ try{
   S.mangoQuest=true; S.mangoAge=0; S.mangoIce=false; S.mangoLeft=false; S.mangoWon=false; S._mangoDay=S.day; S._mangoLastQ=(S.goods&&S.goods.mango)||0;
   S.pendingEvent=mangoTitleEvent(); render(); return true;
  }catch(e){ return false; } }
+/* ============ #LJI (Fadak 9/19): the scenario for the LJ Idol posts - Gary rides with the caravan ============
+   ?start=lji -> a Samarkand quickstart with GARY in the party: a stout companion with a gift for misadventure.
+   His mishaps are terrain-aware and locally true (Urtica dioica lines the Fergana ditches and every Pamir
+   stream-bank to ~3000 m; Arslanbob's walnut forests hum with wild bees; the Pamir marmots carry plague -
+   the history rule holds even for comedy). ~5% of travel days; never fatal. */
+/* The Year 20 sign-up sheet (therealljidol.dreamwidth.org/1219874.html, four pages, read 19 Sep 2026) */
+const LJI_NAMES=['dizzydog','hwango','kandigurl','hafnia','joeymichaels','banana_galaxy','aggienaut','serpentpixie','gardeningatnight','goldmourn','gunwithoutmusic','penpusher','kizzy','murielle','roina_arwen','muchtooarrogant','rayaso','sorchawench','adore','drippedonpaper','tonithegreat','blue_mermaid','strryeyedgrrl','adpazd','thephantomq',
+ 'oxymoron67','halfshellvenus','shay_writes','supremegoddessofall','acatwhowrites','swirlsofpurple','bsgsix','impoetry','n3m3sis43','inchoatewords','adoptedwriter','ryl','bleodswean','spaciireth','miintikwa','shadaras','belgatherial','bittyjane','lapis_lazuli615','chasing_silver','purplepetrichor','yachiru','singedsun','mezzomint','jake67jake',
+ 'xyla','karmasoup','gnomeangel','ofearthandstars','missspiff','troof_therry','copyright1983','mstrobel','theycallmepace','wildtalents','wolfden','krispykritter','alycewilson','millysdaughter','simplyn2deep','commodityfetishx','annofowlshire','flipflop_diva','marlawentmad','legalpad819','fruzicle','eeyore_grrl','essoku','reidharriscooper','ashelterofpages',
+ 'renaissanced','dmsj','definitelyodette','thepythianscroll','onda_bianca','poppetawoppet','banyans_in_nola','whatever_nevermind','humanbeansradio','imafarmgirl','bassicallytom','middlesp00n','fausts_dream','dreamer_or_not21','theenginesshot','pixiebelle','scribblesinblue','niquildrvr','littlebitofearth','puppetmaker'];
+function ljiMark(){ /* a run begun from the title screen in the #LJI setting: flag it and put the title card in front of whatever opener newGame queued */
+  try{ if(!S)return; S.lji=true; S.ljiVoteDay=null; S.ljiBandsDone=[]; S.ljiGone=[]; var _pe=S.pendingEvent||null;
+    S.pendingEvent={h:'#LJI', t:"A trading venture in the year 1271 — Venice to the court of the Great Khan and home again.", ch:[{l:'Set out',f:function(){ S.pendingEvent=_pe; }}]};
+    render(); }catch(e){} }
+function askText(h,lead,cb){ /* in-page stand-in for prompt(): a dialogue with a box; cb(text) on Send, cb('') on Never mind */
+  S.pendingEvent={h:h, t:lead+'<br><textarea id="askbox" rows="3" maxlength="600" style="width:100%;box-sizing:border-box;margin-top:8px;background:#1b1712;color:#f2ead6;border:1px solid #8a6d3b;border-radius:4px;padding:6px;font:inherit"></textarea>', ch:[
+    {l:'Send',f:function(){ var b=document.getElementById('askbox'); cb(((b&&b.value)||'').trim()); }},
+    {l:'Never mind',f:function(){ cb(''); }}]};
+  render(); try{ var b=document.getElementById('askbox'); if(b)b.focus(); }catch(e){} }
+function greenRoomGreet(scene){ /* #LJI: the Samarkand house is the Green Room; the first to arrive is told so (checked against the shared feedback table; on any doubt, plain welcome) */
+  var ev={h:'THE GREEN ROOM', t:scene+" A hand-lettered board by the door reads: <b>Welcome to the Green Room! Please leave your comments.</b>", ch:[
+    {l:'Leave a comment',f:function(){ askText('THE GREEN ROOM','The comment board — say anything; only Kristofer reads it:',function(c){
+      if(c){ if(typeof _krisFeedbackSend==='function')_krisFeedbackSend('[#LJI Green Room] '+c); log('You leave your comment on the Green Room board. Someone will read it.'); } else log('You leave the board as you found it.'); }); }},
+    {l:'Just look around',f:function(){ log('You take a seat in the Green Room and listen to the others come in.'); }}]};
+  try{ if(typeof SB_ON!=='undefined'&&SB_ON&&typeof sbGet==='function'){ var _ev=ev; sbGet('feedback?select=version&contact=like.*%23LJI%20Green%20Room*&limit=1').then(function(rows){ if(Array.isArray(rows)&&rows.length===0&&S&&S.pendingEvent===_ev){ _ev.t=scene+" A hand-lettered board by the door reads: <b>Welcome to the Green Room! You are the first one here!</b> Please leave your comments."; render(); } }).catch(function(){}); } }catch(e){}
+  return ev; }
+/* ---- #LJI: the four rival organisations, as bands on the road (Gary's own Idol history, Sidebar/Green Room, Sept 2026).
+   The first bandits a #LJI caravan meets announce themselves as one of these; a band is retired only when it is BEATEN
+   IN THE FIELD - paying the toll leaves it riding. Order is the order of the history. ---- */
+const LJI_BANDS=[
+ {id:'sophism', name:"Sophism",
+  hail:"They do not want the cargo, it turns out. They want to appraise it \u2014 aloud, at length, in a written bulletin they pass among themselves and post at the next caravanserai, so that other merchants may know which caravans are badly loaded and which drivers cannot drive. Not one of them will give a name. It is for your improvement, they say, from behind the cloth.",
+  beaten:"Sophism is scattered back into the wind, and the bulletin stops appearing at the serais. There turn out to have been four of them. The opinions had suggested forty."},
+ {id:'sheep', name:"the Sheep Stations",
+  hail:"They were the tail of somebody's string once, the leader says \u2014 the slow, the overlooked, the first to be cut loose \u2014 and they banded together so as not to be cut loose one at a time. They put it to a vote among themselves before riding down, and you lost.",
+  beaten:"The Sheep Stations scatter over the ridge, and whatever they vote on tonight, it will not be you."},
+ {id:'flame', name:"the Flame of Brigit",
+  hail:"They name themselves without being asked: <b>the Flame of Brigit</b>, who rode with a greater company once and broke from it in a quarrel no one will explain, and who keep \u2014 they say \u2014 the same road, the same rules, the same everything, save that they begin their reckoning afresh with every new moon.",
+  beaten:"The Flame of Brigit is put out. They kept the form of a greater company and none of its luck, and they will not trouble this road again."},
+ {id:'bren', name:"The Bren LJ Idol",
+  hail:"Their banner is another company's banner, copied close and then altered in one or two particulars meant to be funny. They are <b>The Bren LJ Idol</b>, the leader announces, and they do the whole business properly: every rider masked, so that a caravan is judged on the goods alone and not on whose it is. She has a list of everything wrong with how this road is run, and she reads it out before the toll.",
+  beaten:"The Bren LJ Idol breaks and is gone, and the cloths come off in the running. The band that rode out to show everyone how it ought to be done lasts two seasons on this road and not a day longer."},
+ {id:'stupidfree', name:"the Stupid-Free",
+  hail:"They have come, the leader explains, not to rob you exactly but to point out at length everything wrong with your caravan \u2014 your beasts, your loads, your choice of road, your people, you \u2014 for your own improvement. The toll is for the lesson.",
+  beaten:"The Stupid-Free are driven off mid-sentence, which no one who has met them thought possible."}
+];
+function ljiBandPick(){ if(!S||!S.lji)return null; var done=S.ljiBandsDone||[]; for(var i=0;i<LJI_BANDS.length;i++){ if(done.indexOf(LJI_BANDS[i].id)<0) return LJI_BANDS[i]; } return null; }
+function ljiBandBeaten(id){ if(!S||!S.lji||!id)return ''; S.ljiBandsDone=S.ljiBandsDone||[]; if(S.ljiBandsDone.indexOf(id)>=0)return ''; S.ljiBandsDone.push(id);
+  var b=null; for(var i=0;i<LJI_BANDS.length;i++){ if(LJI_BANDS[i].id===id)b=LJI_BANDS[i]; } if(!b)return '';
+  try{ log(b.beaten); }catch(e){} return b.beaten; }
+
+/* ---- #LJI recruiting: anyone off the sign-up sheet not yet taken can turn up at any table, at FLAT odds.
+   The city's own character is rolled first, on the usual odds that thin as the company grows; only if that
+   fails does the sheet get its roll - so a small caravan mostly meets the city's own, a large one mostly
+   meets the twentieth season. ---- */
+const LJI_RECRUIT_ODDS=0.25;
+const LJI_BARD_ROLES=["a singer of the caravan roads","a lute-player with every road-song by heart","a teller of tales for supper","a rhymer who will make a verse of you before the month is out","a drum and a whistle, both a little battered"];
+function ljiIsBard(u){ return u!=='aggienaut' && rnd()<1/6; }   /* a sixth: the same share as each of the five skills (Kris) */
+function ljiRole(u,bard){ return (u==='aggienaut') ? 'a beekeeper, and a wanderer by trade' : (bard ? pick(LJI_BARD_ROLES) : 'lately of the twentieth season'); }
+   /* the role never names the talent: the listing already prints 'gifted hunter' after it, and saying it twice reads like a stammer */
+function ljiTaken(){ var t={}; try{ (S.party||[]).forEach(function(p){ if(p&&p.name)t[p.name]=1; });
+  (S.fallen||[]).forEach(function(n){ t[n]=1; }); (S.ljiGone||[]).forEach(function(n){ t[n]=1; });
+  for(var k in (S.dispersed||{})){ (S.dispersed[k]||[]).forEach(function(m){ if(m&&m.name)t[m.name]=1; }); } }catch(e){} return t; }
+function ljiMember(u){ var sk=(typeof randomSkills==='function')?randomSkills():{trade:1,cook:1,handle:1}; var bee=(u==='aggienaut'), bard=ljiIsBard(u);
+  return {name:u, role:ljiRole(u,bard), skills:sk, g:(bee?'m':'they'), lji:true, bees:bee, bard:bard, fs:5+ri(4), hs:3+ri(3)}; }
+function ljiRecruit(){ if(!S||!S.lji)return null;
+  var taken=ljiTaken(), pool=LJI_NAMES.filter(function(n){ return !taken[n]; });
+  if(!pool.length) return null;
+  if(rnd()>=LJI_RECRUIT_ODDS) return null;   /* flat: the crowd at the door does not thin as your company grows */
+  return ljiMember(pool[Math.floor(rnd()*pool.length)]); }
+
+/* ---- #LJI: the vote-out. Above a party of five, Gary calls one every week of game time; with Gary gone the
+   call still comes, in his voice, out of nothing at all - about once a month, and never twice in a week. ---- */
+function ljiVoteCheck(){ try{
+  if(!S||!S.lji||S.dead)return null;
+  var lp=(typeof livingParty==='function'?livingParty():[]).filter(function(p){return p&&p.kind!=='guard';});
+  var cands=lp.filter(function(p){ return p.lji && !p.gary; });
+  /* Kris: the clock starts the DAY THE COMPANY CROSSES SIX, not at the start of the run - the sixth member
+     joined and was put to a vote on the next screen. Drop back to five (or run out of eligible names) and the
+     clock is thrown away, so it always takes a full week of being over-large before anyone is voted out. */
+  if(lp.length+1<=5 || !cands.length){ S.ljiVoteDay=null; return null; }   /* party = you and your companions, as the ledger counts it */
+  if(S.ljiVoteDay==null){ S.ljiVoteDay=S.day; return null; }
+  if((S.day-S.ljiVoteDay)<7) return null;
+  var gary=(typeof ljiGary==='function')?ljiGary():null;
+  if(!gary && rnd()>=1/30) return null;
+  S.ljiVoteDay=S.day;
+  return ljiVoteEvent(cands[Math.floor(rnd()*cands.length)], !!gary); }catch(e){ return null; } }
+function ljiVoteEvent(who,garyHere){
+  var nm=who.name, G=(typeof ljiGary==='function'&&ljiGary())?ljiGary().name:'Gary';
+  var t = garyHere
+    ? G+" gets up on a pack-saddle at the evening fire and announces, with the air of a man performing a duty, that the company has grown too large for the road and it is time to vote somebody out. There is grumbling. There is a vote anyway. The lot falls on <b>"+nm+"</b>."
+    : "At the evening fire the talk dies all at once, and a voice comes out of the dark that everyone recognises and nobody can place \u2014 patient, faintly amused, unmistakably Gary's \u2014 saying that the company has grown too large and somebody must be voted out. The fire gutters. The lot falls on <b>"+nm+"</b>.";
+  return {h:(garyHere?'A VOTE AT THE FIRE':'A VOICE AT THE FIRE'), t:t, ch:[
+    {l:'Let the vote stand',f:function(){ ljiVoteOut(who, garyHere); }},
+    {l:'Say the vote is nonsense \u2014 and watch '+nm+' go anyway',f:function(){ ljiVoteOut(who, garyHere, true); }}]};
+}
+function ljiVoteOut(who,garyHere,protested){
+  try{ S.party=(S.party||[]).filter(function(p){ return p!==who; });
+    S.ljiGone=(S.ljiGone||[]); if(who.name)S.ljiGone.push(who.name);
+    if(typeof recoverGear==='function'){ try{ recoverGear(who); }catch(e){} }
+    log(who.name+(protested?' takes the vote better than you do, shoulders a pack':' shoulders a pack')+' and walks back down the road you came by'+(garyHere?'':' \u2014 and nobody can say afterwards who actually counted the votes')+'.');
+  }catch(e){} }
+function ljiStart(){ try{ /* ?start=lji - the quick Samarkand loop the film uses: Gary plus two names off the sheet */
+  var ok=quickStart('Samarkand'); if(!ok)return false;
+  try{ var comps=(S.party||[]).filter(function(p){return p&&p.alive&&!p.nephew;}); var g=comps[0]||(S.party||[])[0];
+    if(g){ g.name='Gary'; g.full=null; g.role='a stout companion with a lute and a gift for misadventure'; g.gary=true; g.bard=true; }
+    var pool=LJI_NAMES.slice(); comps.slice(1,3).forEach(function(p){ var u=pool.splice(ri(pool.length),1)[0]; var bard=ljiIsBard(u); p.name=u; p.full=null; p.g='they'; p.lji=true; p.bard=bard; p.role=ljiRole(u,bard); if(u==='aggienaut'){ p.bees=true; p.g='m'; } }); }catch(e){}
+  S.lji=true; S.ljiVoteDay=null; S.ljiBandsDone=[]; S.ljiGone=[];
+  S.pendingEvent={h:'#LJI', t:"A trading venture in the year 1271 — out of Samarkand, over the Onion Mountains and back, with Gary.", ch:[{l:'Set out',f(){}}]};
+  render(); return true; }catch(e){ return false; } }
+function ljiGary(){ return (S&&S.party||[]).find(function(p){return p&&p.gary&&p.alive;}); }
+function ljiGaryEvent(terr){ var g=ljiGary(); if(!g)return null; var G=g.name||'Gary';
+  function halfDay(){ try{ S.legKm=Math.max(0,(S.legKm||0)-Math.round((typeof daySpeed==='function'?daySpeed():60)*0.5)); }catch(e){} }
+  var pool=[];
+  pool.push({h:G.toUpperCase()+' IN THE NETTLES', t:G+" steps off the track to answer nature and answers it, at length, in a waist-high stand of stinging nettles — the same Urtica that lines every ditch from here to the Pamir. He comes out shrieking — a high, carrying note that turns every head in the string and sets the camels shifting — at a run, then at a hop, then sits down in the road, still shrieking at intervals, to compare the two experiences.", ch:[
+    {l:'Dock leaves — or, in this country, cool mud from the ditch',f(){ halfDay(); log(G+' is daubed in ditch-mud to the elbows and forgiven, mostly, by noon. Half a day gone.'); }},
+    {l:'Let him itch; it teaches',f(){ log(G+' itches for two days and is philosophical about it on the third.'); }}]});
+  if(terr==='settled'||terr==='steppe') pool.push({h:G.toUpperCase()+' AND THE ARYK', t:"Walking backward to finish a story, "+G+" goes into an irrigation channel to the chest. The story, the caravan agrees, was not that good.", ch:[
+    {l:'Fish him out and dry the packs',f(){ halfDay(); S.food=Math.max(0,(S.food||0)-2); log(G+' and two measures of flour come out of the aryk; only one of them dries usable.'); }}]});
+  if(terr==='settled') pool.push({h:G.toUpperCase()+' AND THE APRICOTS', t:"A Fergana orchard, a low wall, and "+G+" — who eats, by the drover's count, forty-one apricots. The reckoning arrives an hour down the road and keeps arriving.", ch:[
+    {l:'Camp early for his sake',f(){ halfDay(); log('The caravan camps early. '+G+' is not seen until morning, and then only from a distance.'); }},
+    {l:'March on; he can catch up',f(){ log(G+' catches up at dusk, thinner, and does not speak of apricots again.'); }}]});
+  if(terr==='mountain'||terr==='rugged') pool.push({h:G.toUpperCase()+' AND THE MARMOT', t:G+" comes back to the fire delighted, holding a fat Pamir marmot by the tail: supper. The Kirghiz herdsman with you looks at it and does not like it. A marmot that lets itself be caught by "+G+", he says, is a marmot that was already dying; the hill-people eat marmot gladly, but they leave the slow ones lie and they shift camp when the burrows go quiet, and no one has ever told them why.", ch:[
+    {l:'Knock it out of his hands, now',f(){ log('The marmot goes over the edge and '+G+' sulks. The herdsman makes him wash to the shoulder in snowmelt, twice, and will not say what for.'); }},
+    {l:'Let him roast it (what could go wrong)',f(){ halfDay(); log(G+' roasts the marmot alone, at a fire well apart, and eats it alone, and is watched all night by a herdsman who keeps his distance. Nothing comes of it - this time.'); }}]});
+  if(terr==='mountain'||terr==='rugged') pool.push({h:G.toUpperCase()+"'S BOOT", t:"Crossing a snowmelt torrent on the stones, "+G+" loses a boot. It goes downstream at a pace no one can match, riding high, like a little coracle.", ch:[
+    {l:'Bind his foot and hobble on',f(){ halfDay(); log(G+' hobbles the rest of the day with a felt-wrapped foot and a new respect for cobblers.'); }}]});
+  if(terr==='steppe') pool.push({h:G.toUpperCase()+' AND THE WILD HORSE', t:"A string of wild horses grazes near the track and "+G+" announces that any horse can be ridden by a man who believes in himself. The horse has other beliefs.", ch:[
+    {l:'Pick him up',f(){ halfDay(); log(G+' is picked out of the grass, unbroken, though not for want of the horse trying.'); }}]});
+  if(terr==='settled'||terr==='forest') pool.push({h:G.toUpperCase()+' AND THE BEES', t:"In a walnut forest above the road "+G+" finds a hollow tree humming with wild bees and reasons that honey is honey. He returns with a comb, a swollen eye and an escort.", ch:[
+    {l:'Take the honey, it was dearly bought',f(){ try{ if(S.goods&&('honey' in S.goods)){ S.goods.honey=(S.goods.honey||0)+1; log('A comb of wild honey joins the cargo; '+G+' sees out of one eye until Thursday.'); } else log(G+' eats the comb himself, wax and all, and swells like a bolster.'); }catch(e){} }}]});
+  if(terr==='settled'||terr==='forest') pool.push({h:G.toUpperCase()+' AND THE CAT', t:"At the edge of the orchards a cat sits on a wall and watches the caravan go by, as cats do. "+G+" stops dead. It is, he says, KittyMichaels — the very cat, he would know that face anywhere — and it has been following him since the last town, and possibly since Venice. No one else can say what the cat looked like, since it has gone.", ch:[
+    {l:'Humour him',f(){ log(G+' leaves a scrap of dried mutton on the wall for KittyMichaels. It is gone by morning, which proves nothing, and everything.'); }},
+    {l:'There is no cat',f(){ log(G+' says nothing more about the cat, but looks back over his shoulder at every wall for a week.'); }}]});
+  pool.push({h:'THE CAMEL AND '+G.toUpperCase(), t:"The lead camel has taken a view of "+G+", and expresses it, from close range, with everything a camel keeps in its cheek for the purpose.", ch:[
+    {l:'Give him a rag',f(){ log(G+' walks at the back of the string for a week by mutual agreement.'); }}]});
+  return pool[Math.floor(rnd()*pool.length)]; }
 function mangoTitleEvent(){ return {h:'MANGO QUEST', t:"<img src='Pictures/mango_quest_title.jpg' onerror=\"this.style.display='none'\" style='width:100%;border-radius:4px;margin-bottom:8px'>A trading venture in the year 1271 — in pursuit of the one perfect fruit.", ch:[{l:'Begin',f(){ S.pendingEvent=mangoDreamEvent(); }}]}; }
 function mangoDreamEvent(){ return {h:'A DREAM OF THE PERFECT FRUIT', t:"You wake in your house in Venice with the grey dawn on the canal, the dream still clinging to you like sleep. In it you held a fruit you have never seen: round and heavy, its skin a burning orange, the flesh within golden and fibrous and running with a juice sweeter than any honey of the Levant. And you knew, in the way of dreams, exactly where it grows — far to the southeast, past Persia, past the mountains, in the hot green lands beyond India. You will go. You will find this ultimate fruit, and carry it home to Venice, whatever the road costs you.", ch:[{l:'Set out for the mango',f(){ log('You provision for the longest of roads, chasing a fruit no Venetian has tasted. Buy mangoes where they grow, in the far southeast — and pray they last the journey home.'); }}]}; }
 function mangoRumor(){ try{ if(!S||!S.mangoQuest||S.mangoIce)return ''; var c=city(); if(!c||!MANGO_RUMOR_CITY.has(c.name))return ''; return "A caravan-man lowers his voice: 'You carry the soft fruit — the mango? Then hear this. High in the cold at <b>Tashkurgan</b>, on the Badakhshan road to Kashgar, they keep a bag of ice that never melts. Pack your fruit in it and it will never rot, not in a hundred years. Men have grown old chasing that bag.' <br><br>"; }catch(e){ return ''; } }

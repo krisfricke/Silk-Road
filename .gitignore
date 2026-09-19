@@ -205,3 +205,9 @@ Maps/strip_04_relief.png
 # --- root-level pipeline data / dev exhibits (not the game) ---
 /routes_master.json
 /setout_charts_1271.json
+
+# --- recordings: the loop video and its frames stay in the working folder, never here ---
+video/
+*.mp4
+*.webm
+loopvid.js
