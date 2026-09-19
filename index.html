@@ -143,7 +143,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.9'; const BUILD='0919.voteClock'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.12'; const BUILD='0920.rigAlone'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -3125,7 +3125,7 @@ function evBandits(){
   let bandits=3+ri(3)+(S.banditMod||0); if(seraiActive())bandits-=1; bandits=Math.max(1,bandits); // base roll 1d3+2 = 3..5, then the modifier (can still fall to 1), then ±1 per reputation / a recent rest; floor of 1, no ceiling
   const str=combatStrength();
   const odds = str>=bandits*2 ? ('You could scatter '+(bandits===1?'him':'them')) : str>=bandits ? 'It would be a near thing' : str>0 ? 'You are badly outmatched' : 'You have no one who can fight \u2014 this would be suicide';
-  return {h:'RIDERS',t:(bandits===1?"A lone horseman appears":"About "+bandits+" horsemen appear")+" on the ridgeline"+banditKind()+" with the unhurried confidence of "+(bandits===1?"a man who has":"men who have")+" done this before. "+(bandits===1?"He admires":"Their leader admires")+" your caravan loudly and demands a toll of "+demand+" silver. "+(_bd?_bd.hail+" ":"")+odds+".",
+  return {h:(_bd?_bd.name.toUpperCase():'RIDERS'),t:(bandits===1?"A lone horseman appears":"About "+bandits+" horsemen appear")+" on the ridgeline"+(_bd?'':banditKind())+" with the unhurried confidence of "+(bandits===1?"a man who has":"men who have")+" done this before. "+(bandits===1?"He admires":"Their leader admires")+" your caravan loudly and demands a toll of "+demand+" silver. "+(_bd?_bd.hail+" ":"")+odds+".",
   ch:[
    {l:'Pay the "toll" ('+demand+' s)',f(){
      if(S.silver>=demand){ S.silver-=demand; banditRep(1/0.9,-1); log("You pay. "+(bandits===1?"He wishes":"The leader wishes")+" you a safe journey with apparently genuine warmth."); }
@@ -11489,8 +11489,20 @@ var M3=(function(){
          var _naM=((typeof totalAnimals==='function')&&(typeof S!=='undefined'&&S))?totalAnimals():3;
          var _hitM=_sv.wagon>0?4:(_sv.cart>0?2:0);
          var _nShow=Math.max(0,Math.min(3,_naM-_hitM));   /* the string shows what you HAVE: 1 beast draws 1 (Kris) */
+         if(_sv.wagon>0||_sv.cart>0) _nShow=0;   /* Kris: a vehicle OR a string, never both - a camel beside a wagon reads as a giant */
          for(var i=0;i<_nShow;i++){ var cm=mkCamel(); cm.scale.setScalar(0.18); L.sc.add(cm); L.file.push(cm); }
          if(_naM<=0&&_sv.wagon<=0&&_sv.cart<=0){ for(var i2=0;i2<2;i2++){ var wk=mkWalker(); wk.scale.setScalar(0.17); L.sc.add(wk); L.file.push(wk); } } }   /* afoot: the pack rides your own back */
+       /* Kris: a wagon is nearly two units long, the old file spacing was 0.85 - so the next beast was planted
+          INSIDE the wagon bed and the team ahead read as strays on the road. Lay the file out by each unit's real
+          footprint instead: front of the rig at the head, every follower a clear stride behind the one in front. */
+       (function(){ var cursor=0.22, GAP=0.30;
+         L.file.forEach(function(o){ var zF=0.4,zB=-0.4;
+           try{ var keep=o.rotation.y; o.rotation.y=0; o.updateMatrixWorld(true);
+             var bb=new THREE.Box3().setFromObject(o); zF=bb.max.z-o.position.z; zB=bb.min.z-o.position.z;
+             o.rotation.y=keep; o.updateMatrixWorld(true); }catch(e){}
+           o.userData.fOff=cursor+zF;                 /* distance BEHIND the player at which this unit's origin rides */
+           cursor=o.userData.fOff-zB+GAP; });         /* the next unit starts a stride behind this one's tail */
+       })();
        (function(){ var N=500,p=new Float32Array(N*3);
          for(var i=0;i<N;i++){ p[i*3]=(Math.random()-0.5)*16; p[i*3+1]=Math.random()*8; p[i*3+2]=(Math.random()-0.5)*16; }
          var g2=new THREE.BufferGeometry(); g2.setAttribute('position',new THREE.BufferAttribute(p,3));
@@ -11609,10 +11621,10 @@ var M3=(function(){
        L.model.userData.sails.forEach(function(sg9){ var tb=(sg9.userData.base||0)+trim;
          sg9.rotation.y+=(tb-sg9.rotation.y)*0.06; }); } }
    for(var i=0;i<L.file.length;i++){
-     var cm=L.file[i], p=trailAt(L,0.22+(i)*0.85);   /* interpenetration is for the caravanserai stable, after dark (Kris) */
+     var cm=L.file[i], p=trailAt(L,(cm.userData.fOff!=null?cm.userData.fOff:(0.22+(i)*0.85)));   /* interpenetration is for the caravanserai stable, after dark (Kris) */
      var cx2,cz2,chd;
      if(p){ cx2=p.x; cz2=p.z; chd=(p.hd===null?hd2:p.hd); }
-     else { var off=0.22+i*0.85; cx2=x-Math.sin(hd2)*off; cz2=z-Math.cos(hd2)*off; chd=hd2; }
+     else { var off=(cm.userData.fOff!=null?cm.userData.fOff:(0.22+i*0.85)); cx2=x-Math.sin(hd2)*off; cz2=z-Math.cos(hd2)*off; chd=hd2; }
      if(cm.userData.hd===undefined||cm.userData.hd===null) cm.userData.hd=chd;
      var dd=chd-cm.userData.hd; while(dd>Math.PI)dd-=2*Math.PI; while(dd<-Math.PI)dd+=2*Math.PI;
      cm.userData.hd+=dd*0.15;                             /* each beast takes the corner in its own time */
