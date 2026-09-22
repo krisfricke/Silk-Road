@@ -143,7 +143,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.12'; const BUILD='0920.rigAlone'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.15'; const BUILD='0921.beeTree2'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -7489,7 +7489,7 @@ function ljiRoster(){ /* Gary + eight names drawn from the Year 20 sign-up sheet
   if(LJI_DRAW) return LJI_DRAW;
   var pool=LJI_NAMES.slice(), out=[]; while(out.length<8&&pool.length){ out.push(pool.splice(ri(pool.length),1)[0]); }
   var ros=[{id:'lji_gary',name:'Gary',role:'a stout companion with a lute and a gift for misadventure',skills:randomSkills(),g:'m',gary:true,bard:true,custom:true}];
-  out.forEach(function(u){ var sk=randomSkills(), bee=(u==='aggienaut'), bard=ljiIsBard(u); ros.push({id:'lji_'+u.replace(/[^a-z0-9]/gi,'_'),name:u,role:ljiRole(u,bard),skills:sk,g:(bee?'m':'they'),custom:true,bees:bee,bard:bard,lji:true}); });
+  out.forEach(function(u){ var sk=ljiSkills(u), bee=(u==='aggienaut'), bard=ljiIsBard(u); ros.push({id:'lji_'+u.replace(/[^a-z0-9]/gi,'_'),name:u,role:ljiRole(u,bard),skills:sk,g:(bee?'m':'they'),custom:true,bees:bee,bard:bard,lji:true}); });
   LJI_DRAW=ros; return ros; }
 function ljiRedraw(){ LJI_DRAW=null; LJI_PRECHECK=null; render(); }
 function setupRoster(){ if(SETUP.scenario==='lji') return ljiRoster(); if(SETUP.era==='1271') return SETUP.origin==='west'?ROSTER1271_W:ROSTER1271_E; return (SETUP.origin==='west' ? CPL_ROSTER : ROSTER).filter(function(c){return !c.era||c.era==='762';}); }
@@ -14074,15 +14074,32 @@ function ljiBandBeaten(id){ if(!S||!S.lji||!id)return ''; S.ljiBandsDone=S.ljiBa
    The city's own character is rolled first, on the usual odds that thin as the company grows; only if that
    fails does the sheet get its roll - so a small caravan mostly meets the city's own, a large one mostly
    meets the twentieth season. ---- */
+/* A few of the Year 20 names carry their talent in the name, so the draw stops arguing with it (Kris: imafarmgirl
+   always handles the animals). Everything not listed here is pot-luck as before. */
+const LJI_TRAITS={
+ imafarmgirl:{skill:'handle'}, dizzydog:{skill:'handle'}, oxymoron67:{skill:'handle'}, annofowlshire:{skill:'handle'},
+ wolfden:{skill:'hunt'}, wildtalents:{skill:'hunt'}, roina_arwen:{skill:'hunt'},
+ gunwithoutmusic:{skill:'fight'}, bsgsix:{skill:'fight'}, n3m3sis43:{skill:'fight'}, yachiru:{skill:'fight'},
+ karmasoup:{skill:'cook'}, middlesp00n:{skill:'cook'}, kandigurl:{skill:'cook'}, krispykritter:{skill:'cook'},
+ banana_galaxy:{skill:'cook'}, niquildrvr:{skill:'cook'}, littlebitofearth:{skill:'cook'}, gardeningatnight:{skill:'cook'},
+ penpusher:{skill:'trade'}, copyright1983:{skill:'trade'}, legalpad819:{skill:'trade'}, commodityfetishx:{skill:'trade'},
+ chasing_silver:{skill:'trade'}, lapis_lazuli615:{skill:'trade'}, scribblesinblue:{skill:'trade'},
+ impoetry:{bard:1}, thepythianscroll:{bard:1}, mezzomint:{bard:1}, bassicallytom:{bard:1}, humanbeansradio:{bard:1},
+ poppetawoppet:{bard:1}, puppetmaker:{bard:1}, definitelyodette:{bard:1}, thephantomq:{bard:1}, inchoatewords:{bard:1}
+};
+function ljiTrait(u){ return (LJI_TRAITS&&LJI_TRAITS[u])||null; }
+function ljiSkills(u){ var sk=(typeof randomSkills==='function')?randomSkills():{trade:1,cook:1,handle:1}; var t=ljiTrait(u);
+  if(t&&t.skill) sk[t.skill]=Math.max(sk[t.skill]||0,3);   /* the name says so: give it, and let the rest fall where it falls */
+  return sk; }
 const LJI_RECRUIT_ODDS=0.25;
 const LJI_BARD_ROLES=["a singer of the caravan roads","a lute-player with every road-song by heart","a teller of tales for supper","a rhymer who will make a verse of you before the month is out","a drum and a whistle, both a little battered"];
-function ljiIsBard(u){ return u!=='aggienaut' && rnd()<1/6; }   /* a sixth: the same share as each of the five skills (Kris) */
+function ljiIsBard(u){ var t=ljiTrait(u); if(t&&t.bard)return true; return u!=='aggienaut' && rnd()<1/6; }   /* a sixth: the same share as each of the five skills (Kris) - unless the name is a musician's */
 function ljiRole(u,bard){ return (u==='aggienaut') ? 'a beekeeper, and a wanderer by trade' : (bard ? pick(LJI_BARD_ROLES) : 'lately of the twentieth season'); }
    /* the role never names the talent: the listing already prints 'gifted hunter' after it, and saying it twice reads like a stammer */
 function ljiTaken(){ var t={}; try{ (S.party||[]).forEach(function(p){ if(p&&p.name)t[p.name]=1; });
   (S.fallen||[]).forEach(function(n){ t[n]=1; }); (S.ljiGone||[]).forEach(function(n){ t[n]=1; });
   for(var k in (S.dispersed||{})){ (S.dispersed[k]||[]).forEach(function(m){ if(m&&m.name)t[m.name]=1; }); } }catch(e){} return t; }
-function ljiMember(u){ var sk=(typeof randomSkills==='function')?randomSkills():{trade:1,cook:1,handle:1}; var bee=(u==='aggienaut'), bard=ljiIsBard(u);
+function ljiMember(u){ var sk=ljiSkills(u); var bee=(u==='aggienaut'), bard=ljiIsBard(u);
   return {name:u, role:ljiRole(u,bard), skills:sk, g:(bee?'m':'they'), lji:true, bees:bee, bard:bard, fs:5+ri(4), hs:3+ri(3)}; }
 function ljiRecruit(){ if(!S||!S.lji)return null;
   var taken=ljiTaken(), pool=LJI_NAMES.filter(function(n){ return !taken[n]; });
@@ -14133,7 +14150,7 @@ function ljiGary(){ return (S&&S.party||[]).find(function(p){return p&&p.gary&&p
 function ljiGaryEvent(terr){ var g=ljiGary(); if(!g)return null; var G=g.name||'Gary';
   function halfDay(){ try{ S.legKm=Math.max(0,(S.legKm||0)-Math.round((typeof daySpeed==='function'?daySpeed():60)*0.5)); }catch(e){} }
   var pool=[];
-  pool.push({h:G.toUpperCase()+' IN THE NETTLES', t:G+" steps off the track to answer nature and answers it, at length, in a waist-high stand of stinging nettles — the same Urtica that lines every ditch from here to the Pamir. He comes out shrieking — a high, carrying note that turns every head in the string and sets the camels shifting — at a run, then at a hop, then sits down in the road, still shrieking at intervals, to compare the two experiences.", ch:[
+  pool.push({h:G.toUpperCase()+' IN THE NETTLES', t:G+" steps off the track to answer nature and answers it, at length, in a waist-high stand of stinging nettles. He comes out shrieking — a high, carrying note that turns every head in the string and sets the camels shifting — at a run, then at a hop, then sits down in the road, still shrieking at intervals.", ch:[
     {l:'Dock leaves — or, in this country, cool mud from the ditch',f(){ halfDay(); log(G+' is daubed in ditch-mud to the elbows and forgiven, mostly, by noon. Half a day gone.'); }},
     {l:'Let him itch; it teaches',f(){ log(G+' itches for two days and is philosophical about it on the third.'); }}]});
   if(terr==='settled'||terr==='steppe') pool.push({h:G.toUpperCase()+' AND THE ARYK', t:"Walking backward to finish a story, "+G+" goes into an irrigation channel to the chest. The story, the caravan agrees, was not that good.", ch:[
@@ -14148,8 +14165,24 @@ function ljiGaryEvent(terr){ var g=ljiGary(); if(!g)return null; var G=g.name||'
     {l:'Bind his foot and hobble on',f(){ halfDay(); log(G+' hobbles the rest of the day with a felt-wrapped foot and a new respect for cobblers.'); }}]});
   if(terr==='steppe') pool.push({h:G.toUpperCase()+' AND THE WILD HORSE', t:"A string of wild horses grazes near the track and "+G+" announces that any horse can be ridden by a man who believes in himself. The horse has other beliefs.", ch:[
     {l:'Pick him up',f(){ halfDay(); log(G+' is picked out of the grass, unbroken, though not for want of the horse trying.'); }}]});
-  if(terr==='settled'||terr==='forest') pool.push({h:G.toUpperCase()+' AND THE BEES', t:"In a walnut forest above the road "+G+" finds a hollow tree humming with wild bees and reasons that honey is honey. He returns with a comb, a swollen eye and an escort.", ch:[
-    {l:'Take the honey, it was dearly bought',f(){ try{ if(S.goods&&('honey' in S.goods)){ S.goods.honey=(S.goods.honey||0)+1; log('A comb of wild honey joins the cargo; '+G+' sees out of one eye until Thursday.'); } else log(G+' eats the comb himself, wax and all, and swells like a bolster.'); }catch(e){} }}]});
+  if(terr==='settled'||terr==='forest'){ var _bk=null,_fg=null;
+   try{ var _lp=(typeof livingParty==='function'?livingParty():[]);
+     _bk=_lp.find(function(p){ return p && p.alive!==false && (p.name==='Mira'||p.bees); });
+     _fg=_lp.filter(function(p){ return p && p.alive!==false && !p.gary && (((p.skills&&p.skills.fight)||0)>=2 || (typeof combFS==='function'&&combFS(p)>=10)); })
+           .sort(function(a,b){ return ((b.skills&&b.skills.fight)||0)-((a.skills&&a.skills.fight)||0); })[0];
+   }catch(e){}
+   var _bch=[];
+   if(_bk) _bch.push({l:'Let '+_bk.name+' handle the bee tree',f(){ halfDay();
+     try{ if(S.goods){ if('honey' in S.goods)S.goods.honey=(S.goods.honey||0)+1; if('wax' in S.goods)S.goods.wax=(S.goods.wax||0)+1; } }catch(e){}
+     log(_bk.name+' goes up to the tree with smoke and patience and comes back unhurried and unstung, with a crock of honey and an armful of comb. That evening the comb goes into a pot over the fire and is rendered down, skimmed and poured off into clean cakes of wax. '+G+' watches from a distance he has chosen carefully.'); }});
+   if(_fg) _bch.push({l:_fg.name+' will brave the tree',f(){ halfDay();
+     try{ if(S.goods&&('honey' in S.goods))S.goods.honey=(S.goods.honey||0)+1; }catch(e){}
+     try{ var _hb=(typeof combHP==='function')?combHP(_fg):6; _fg.hpBase=_hb+1; }catch(e){}
+     var _gO=(_fg.g==='f')?'her':(_fg.g==='they')?'them':'him', _gS=(_fg.g==='f')?'she':(_fg.g==='they')?'they':'he', _gV=(_fg.g==='they')?'go':'goes';
+     log(_fg.name+' goes in with a cloak over the head and comes out at a dead run, swollen and swearing, with the comb held high and the honey saved. Whatever else it did, it has hardened '+_gO+' \u2014 there is a little more to take before '+_gS+' '+_gV+' down now.'); }});
+   _bch.push({l:'Leave the bees to the bees',f(){ log('The bee tree is left humming to itself. '+G+', who will not be going back there, is quiet for an hour, which is its own kind of honey.'); }});
+   pool.push({h:G.toUpperCase()+' AND THE BEES', t:"The tranquility of the caravan taking a rest is broken by shrieking in the nearby walnut forest. Presently "+G+" emerges attempting to run and flail about at the same time. When he finally calms down he lets on that he found a hollow tree humming with wild bees and emanating the rich aroma of honey, and, well\u2026 he will not be going back there.", ch:_bch});
+  }
   if(terr==='settled'||terr==='forest') pool.push({h:G.toUpperCase()+' AND THE CAT', t:"At the edge of the orchards a cat sits on a wall and watches the caravan go by, as cats do. "+G+" stops dead. It is, he says, KittyMichaels — the very cat, he would know that face anywhere — and it has been following him since the last town, and possibly since Venice. No one else can say what the cat looked like, since it has gone.", ch:[
     {l:'Humour him',f(){ log(G+' leaves a scrap of dried mutton on the wall for KittyMichaels. It is gone by morning, which proves nothing, and everything.'); }},
     {l:'There is no cat',f(){ log(G+' says nothing more about the cat, but looks back over his shoulder at every wall for a week.'); }}]});
