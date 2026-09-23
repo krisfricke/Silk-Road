@@ -143,7 +143,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.22'; const BUILD='0923.eventProb'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.23'; const BUILD='0923.faceTheRoad'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -11703,11 +11703,18 @@ var M3=(function(){
    else { L.tgt.x+=(x-L.tgt.x)*0.15; L.tgt.z+=(z-L.tgt.z)*0.15; L.tgt.y+=((y+0.4)-L.tgt.y)*0.15; }
  }
  function seedTrail(L,q,qdir){ try{
-   if(!L.trail||L.trail.length>=2||!L.pts)return;
+   if(!L.pts)return;
    /* Kris: on a leg whose chart polyline runs AGAINST the march, q falls as you travel - and this used to
       seed the road 'already walked' in the direction of travel, so the file was laid out ahead of the
       caravan, facing back. The cart drove at the town it was leaving for a beat, then turned round. */
    var _d=(qdir==null?(L.qDir||1):qdir), step=0.004*(_d>=0?1:-1);
+   /* Kris: at the head of a leg there IS no road already walked (q sits on the town), so nothing below can
+      seed, the heading stays null, and every figure stood facing +z until the first day's movement swung it
+      round - the 'flip' at every departure. So: before anything else, if the caravan has no heading yet,
+      read it off the road AHEAD and face that way from the first frame. */
+   if(L.hd===null){ var _q1=Math.max(0,Math.min(1,q+step*3)), _p0=voyPosAt(L.pts,q), _p1=voyPosAt(L.pts,_q1);
+     var _dx=(_p1[0]-_p0[0])/10, _dz=(_p1[1]-_p0[1])/10; if(Math.abs(_dx)+Math.abs(_dz)>1e-6) L.hd=Math.atan2(_dx,_dz); }
+   if(!L.trail||L.trail.length>=2)return;        /* no trail on this map, or the road behind is already known */
    var pts=[],qq=q,need=1.8,acc=0,last=null;
    while(qq>0&&qq<1&&acc<need){ var p=voyPosAt(L.pts,qq); var w={x:p[0]/10,z:p[1]/10};
      if(last){ acc+=Math.hypot(w.x-last.x,w.z-last.z); }
