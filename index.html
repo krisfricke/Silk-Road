@@ -143,7 +143,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.15'; const BUILD='0921.beeTree2'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.16'; const BUILD='0923.hwango'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -2337,7 +2337,8 @@ function doHunt(terr, inTown, hunter){
       var _dt = hunter.name+(terr==='mountain'
         ? " went up after an ibex and did not come back — a slip on the ice, a long fall, no body to carry home."
         : " went out for game and met "+beast+". They did not come back.");
-      S.pendingEvent={h:'THEY DID NOT COME BACK', t:"You keep the fire up past the second watch, and then you stop pretending anyone is coming in. "+_dt+" One good hand fewer on the road, and a long silence over the camp where the talk used to be.", ch:[{l:'Mourn, and go on',f:function(){}}]};
+      var _hw=null; try{ _hw=(typeof livingParty==='function'?livingParty():[]).find(function(q){ return q && q.alive!==false && q.name==='hwango' && q!==hunter; }); }catch(e){}
+      S.pendingEvent={h:'THEY DID NOT COME BACK', t:"You keep the fire up past the second watch, and then you stop pretending anyone is coming in. "+_dt+" One good hand fewer on the road, and a long silence over the camp where the talk used to be."+(_hw?" Into that silence hwango says, without being asked, that they were eaten by a giant crab. Nobody asks him how he knows. He does not offer.":""), ch:[{l:'Mourn, and go on',f:function(){}}]};
       return _dt;
     }
     S.huntLuck=0; S.huntRisk=Math.min(.5,(S.huntRisk||0)+.10);
@@ -5393,7 +5394,7 @@ function _tavernEventCore(){
   if(recruit && recruit.noSlaves && (S.goods.slaves||0)>0){ var _rn=recruit.name, _rr=recruit.role; return {h:'THE TAVERN', t: scene+" Across the fire "+_rn+", "+_rr+", talks easily with you \u2014 until the matter of your cargo comes up. At the word for what is chained in your camp he sets down his cup. 'I have hired my sword to many a caravan,' he says, rising, 'but never to a slaver\u2019s, and I will not start now.' He is gone into the night before the drink is cold.", ch:[{l:'Let him go',f(){ log(_rn+" would not take a slaver\u2019s coin."); }}]}; }
   if(recruit && recruit.nephew){ return nephewOffer(scene); }
   if(recruit){
-    return {h:'THE TAVERN', t: scene+(recruit._dispersed?(" Across the fire sits a face you know — "+recruit.name+", "+recruit.role+", who left your company when the purse ran dry. Scraping by here in "+cityLabel(c)+", "+recruit.name.split(',')[0]+" wonders over a cup whether there might be room on the road again."):(" Across the fire, "+recruit.name+" — "+recruit.role+", "+topSkill(recruit.skills,recruit)+" — falls into talk with you, and before the night is out asks, half in jest and half not, whether your caravan might have room for one more.")),
+    return {h:'THE TAVERN', t: scene+(recruit._dispersed?(" Across the fire sits a face you know — "+recruit.name+", "+recruit.role+", who left your company when the purse ran dry. Scraping by here in "+cityLabel(c)+", "+recruit.name.split(',')[0]+" wonders over a cup whether there might be room on the road again."):(" Across the fire, "+recruit.name+" — "+recruit.role+", "+topSkill(recruit.skills,recruit)+" — falls into talk with you, and before the night is out asks, half in jest and half not, whether your caravan might have room for one more."))+(recruit.pitch?(' '+recruit.pitch):''),
       ch:[
        {l:'Welcome '+recruit.name+' to the company',f(){ var _wd=recruit._dispersed; if(_wd){ delete recruit._dispersed; recruit.alive=true; recruit.left=false; S.party.push(recruit); if(S.dispersed&&S.dispersed[c.name]) S.dispersed[c.name]=S.dispersed[c.name].filter(function(x){return x!==recruit;}); } else { S.party.push({...recruit,skills:{...recruit.skills},alive:true,kind:'companion',recruited:true,fromCity:c.name}); } log(recruit.name+", "+recruit.role+", "+(_wd?"takes up with you again":"joins the caravan")+". "+(recruit.join||"")); var _rv=(typeof checkCbRivalry==='function'?checkCbRivalry():null)||(typeof checkUsamaGuy==='function'?checkUsamaGuy():null)||(typeof checkFriarDebate==='function'?checkFriarDebate():null)||(typeof checkFriarNestorianDebate==='function'?checkFriarNestorianDebate():null); if(_rv)S.pendingEvent=_rv; }},
        {l:'Enjoy the night, but keep your company as it is',f(){ log('You drink with '+recruit.name+' and part as friends. Tavern talk: “'+rumor+'”'); }},
@@ -7489,7 +7490,8 @@ function ljiRoster(){ /* Gary + eight names drawn from the Year 20 sign-up sheet
   if(LJI_DRAW) return LJI_DRAW;
   var pool=LJI_NAMES.slice(), out=[]; while(out.length<8&&pool.length){ out.push(pool.splice(ri(pool.length),1)[0]); }
   var ros=[{id:'lji_gary',name:'Gary',role:'a stout companion with a lute and a gift for misadventure',skills:randomSkills(),g:'m',gary:true,bard:true,custom:true}];
-  out.forEach(function(u){ var sk=ljiSkills(u), bee=(u==='aggienaut'), bard=ljiIsBard(u); ros.push({id:'lji_'+u.replace(/[^a-z0-9]/gi,'_'),name:u,role:ljiRole(u,bard),skills:sk,g:(bee?'m':'they'),custom:true,bees:bee,bard:bard,lji:true}); });
+  out.forEach(function(u){ var sk=ljiSkills(u), bee=(u==='aggienaut'), bard=ljiIsBard(u), t=ljiTrait(u);
+    ros.push({id:'lji_'+u.replace(/[^a-z0-9]/gi,'_'),name:u,role:ljiRole(u,bard),skills:sk,g:((t&&t.g)||(bee?'m':'they')),custom:true,bees:bee,bard:bard,lji:true,digger:!!(t&&t.digger),pitch:(t&&t.pitch)||null}); });
   LJI_DRAW=ros; return ros; }
 function ljiRedraw(){ LJI_DRAW=null; LJI_PRECHECK=null; render(); }
 function setupRoster(){ if(SETUP.scenario==='lji') return ljiRoster(); if(SETUP.era==='1271') return SETUP.origin==='west'?ROSTER1271_W:ROSTER1271_E; return (SETUP.origin==='west' ? CPL_ROSTER : ROSTER).filter(function(c){return !c.era||c.era==='762';}); }
@@ -13015,6 +13017,7 @@ function youGear(){ if(!S.youGear) S.youGear={armor:null,bow:null,weapon:null,cl
 /* ---- combat stat derivation (transient fighters; never mutate party mid-fight) ---- */
 function defaultSimpleWeapon(p){
   if(!p) return {label:'staff', die:6};
+  if(p.digger||/gravedigger|shovel|digger/.test((p.role||'').toLowerCase())) return {label:'shovel', die:6};   /* what he came with, and what he would rather be using */
   if(p.bard) return {label:'sharp words', die:6};
   var t=(p.role||'').toLowerCase(), sk=p.skills||{};
   if(/fisher|diver/.test(t)) return {label:'fishing trident', die:6};
@@ -14084,6 +14087,8 @@ const LJI_TRAITS={
  banana_galaxy:{skill:'cook'}, niquildrvr:{skill:'cook'}, littlebitofearth:{skill:'cook'}, gardeningatnight:{skill:'cook'},
  penpusher:{skill:'trade'}, copyright1983:{skill:'trade'}, legalpad819:{skill:'trade'}, commodityfetishx:{skill:'trade'},
  chasing_silver:{skill:'trade'}, lapis_lazuli615:{skill:'trade'}, scribblesinblue:{skill:'trade'},
+ hwango:{bard:1, digger:1, role:'a teller of unimproving tales, prised out of his woods',
+   pitch:"He is going east, he says, to search for a multifaceted shard of crystallized malice that was entrusted to the bloodline of some magical stoats centuries ago, and that whispers impossible truths. He says it the way another man would say he was going to Kashgar for pepper, and does not elaborate."},
  impoetry:{bard:1}, thepythianscroll:{bard:1}, mezzomint:{bard:1}, bassicallytom:{bard:1}, humanbeansradio:{bard:1},
  poppetawoppet:{bard:1}, puppetmaker:{bard:1}, definitelyodette:{bard:1}, thephantomq:{bard:1}, inchoatewords:{bard:1}
 };
@@ -14094,13 +14099,16 @@ function ljiSkills(u){ var sk=(typeof randomSkills==='function')?randomSkills():
 const LJI_RECRUIT_ODDS=0.25;
 const LJI_BARD_ROLES=["a singer of the caravan roads","a lute-player with every road-song by heart","a teller of tales for supper","a rhymer who will make a verse of you before the month is out","a drum and a whistle, both a little battered"];
 function ljiIsBard(u){ var t=ljiTrait(u); if(t&&t.bard)return true; return u!=='aggienaut' && rnd()<1/6; }   /* a sixth: the same share as each of the five skills (Kris) - unless the name is a musician's */
-function ljiRole(u,bard){ return (u==='aggienaut') ? 'a beekeeper, and a wanderer by trade' : (bard ? pick(LJI_BARD_ROLES) : 'lately of the twentieth season'); }
+function ljiRole(u,bard){ var t=ljiTrait(u); if(t&&t.role)return t.role;
+  return (u==='aggienaut') ? 'a beekeeper, and a wanderer by trade' : (bard ? pick(LJI_BARD_ROLES) : 'lately of the twentieth season'); }
    /* the role never names the talent: the listing already prints 'gifted hunter' after it, and saying it twice reads like a stammer */
 function ljiTaken(){ var t={}; try{ (S.party||[]).forEach(function(p){ if(p&&p.name)t[p.name]=1; });
   (S.fallen||[]).forEach(function(n){ t[n]=1; }); (S.ljiGone||[]).forEach(function(n){ t[n]=1; });
   for(var k in (S.dispersed||{})){ (S.dispersed[k]||[]).forEach(function(m){ if(m&&m.name)t[m.name]=1; }); } }catch(e){} return t; }
-function ljiMember(u){ var sk=ljiSkills(u); var bee=(u==='aggienaut'), bard=ljiIsBard(u);
-  return {name:u, role:ljiRole(u,bard), skills:sk, g:(bee?'m':'they'), lji:true, bees:bee, bard:bard, fs:5+ri(4), hs:3+ri(3)}; }
+function ljiMember(u){ var sk=ljiSkills(u); var bee=(u==='aggienaut'), bard=ljiIsBard(u), t=ljiTrait(u);
+  var m={name:u, role:ljiRole(u,bard), skills:sk, g:(bee?'m':'they'), lji:true, bees:bee, bard:bard, fs:5+ri(4), hs:3+ri(3)};
+  if(t&&t.digger)m.digger=true; if(t&&t.pitch)m.pitch=t.pitch; if(t&&t.g)m.g=t.g;
+  return m; }
 function ljiRecruit(){ if(!S||!S.lji)return null;
   var taken=ljiTaken(), pool=LJI_NAMES.filter(function(n){ return !taken[n]; });
   if(!pool.length) return null;
