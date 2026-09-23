@@ -143,7 +143,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.19'; const BUILD='0923.noFlyIn'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.22'; const BUILD='0923.eventProb'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -2294,10 +2294,8 @@ function stepDay(){
   }
   if(S.lji && typeof ljiVoteCheck==='function'){ const _ve=ljiVoteCheck(); if(_ve){ S.pendingEvent=_ve; S.journeying=false; clearJourney(); render(); return; } }   /* #LJI: the weekly vote */
   if(S.lji && typeof ljiGaryEvent==='function' && rnd()<0.05){ const ge=ljiGaryEvent(terr); if(ge){ S.pendingEvent=ge; S.journeying=false; clearJourney(); render(); return; } }   /* #LJI: Gary's misadventures */
-  if(rnd()<legEventChance(terr)){
-    const e=buildEvent(terr);
-    if(e){S.pendingEvent=e;S.journeying=false;clearJourney();render();return;}
-  }
+  { const e=buildEvent(terr);   /* no terrain gate any more: every event rolled for itself in there */
+    if(e){S.pendingEvent=e;S.journeying=false;clearJourney();render();return;} }
   updateJourney();
 }
 function setPaceLive(k){ S.pace=k; const r=$('pacelive'); if(r)[...r.querySelectorAll('button')].forEach(b=>b.classList.toggle('on',b.dataset.k===k)); }
@@ -2475,14 +2473,19 @@ function pressOn(){ // synchronous fast-forward to next event / arrival (the "sk
     if(S.lostOk!=null && S.day>=S.lostOk+3){ S.lostOk=null; S.pendingEvent={h:'THE RIGHT ROAD', t:"Three days on from the fork, a landmark you half-remembered lifts over the horizon exactly where it ought to be. You chose right; the road runs true.", ch:[{l:'Press on, vindicated',f(){}}]}; render(); return; }
     const terr=legTerr();
     if(terr==='mountain'&&passDanger()>0&&rnd()<passDanger()*.09){S.pendingEvent=evSnowedIn();render();return;}
-    if(rnd()<legEventChance(terr)){S.pendingEvent=buildEvent(terr); if(S.pendingEvent){render();return;}}
+    { S.pendingEvent=buildEvent(terr); if(S.pendingEvent){render();return;} }   /* the events roll for themselves */
   }
   render();
 }
+function legMultOf(lk){ if(!S||!lk)return 1; var m=(S.legMult&&S.legMult[lk]); return (m>0)?m:1; }   /* what the riders of THIS road think of you: a smooth multiplier, no tiers, no ceiling, no decay (Kris) */
 function legHeatDone(lk,arrCity){ if(!S)return;
-  if(lk && !(S.voy&&S.voy.crewJob)){ S.legHeat=S.legHeat||{}; if(S._legWon){ S.legHeat[lk]=Math.max(0,(S.legHeat[lk]||0)-1); } else { S.legHeat[lk]=(S.legHeat[lk]||0)+1; } } /* +1 heat per completed leg; -1 (floor 0) and no +1 if bandits were beaten on this run; skipped while crewing a ship (Kris) */
+  if(lk && !(S.voy&&S.voy.crewJob)){ S.legMult=S.legMult||{};
+    /* Kris's rule: every completed pass of a road makes its bandits 5% likelier; beating them there makes
+       them 10% less likely. Compounding, unbounded in either direction - a road you keep walking gets worse,
+       a road where you keep winning gets quieter, and neither ever snaps to a tier. */
+    S.legMult[lk]=Math.max(0.01,(S.legMult[lk]||1)*(S._legWon?0.90:1.05)); } /* +1 heat per completed leg; -1 (floor 0) and no +1 if bandits were beaten on this run; skipped while crewing a ship (Kris) */
   S._legWon=false;
-  if(arrCity && (arrCity===goalName()||arrCity===homeName()))S.legHeat={}; /* reaching either pole-city resets the accumulation */
+  if(arrCity && (arrCity===goalName()||arrCity===homeName()))S.legMult={}; /* reaching either pole-city wipes the slate: new season, new riders */
 }
 function arrive(){
   S._rt=null;   /* Kris d385-397 (Wuwei): arriving ENDS the leg - the route-lock memory must not survive it, or the first event after the next departure 'restores' the road you just finished */
@@ -2995,15 +2998,29 @@ function evReedFolk(){
    {l:'Ask their reed-paths through the marsh',f(){ S.serai=Math.max(S.serai||0,S.day+5); log('An old fowler traces the firm channels for you with a reed-stem in the mud. For some days the caravan keeps to ground that bears — the quags and soft fords known before you reach them.'); }},
    {l:'Spare them some salt and go on',f(){ var q=4+ri(4); S.food=(S.food||0)+q; log('You spare them a little salt and iron off the packs, and they send you off with a brace of smoked duck and a blessing in the tongue of the water.'); }},
   ]}; }
-function buildEvent(terr){
-  const pool=[];
-  const add=(w,f)=>{for(let i=0;i<w;i++)pool.push(f)};
+/* EVERY EVENT ROLLS FOR ITSELF (Kris, 4.3.22). The old system put every possible event into one raffle,
+   drew whether *anything* happened from a fixed per-terrain chance, and then drew the winner - so adding
+   a possibility to the road made every other possibility rarer, and a 5% bump to the bandits was quietly
+   diluted by whatever else was in the pool. Now each event carries its own daily probability; each is
+   the chance that the day brings something is simply what those probabilities stack to (1 - the product
+   of the misses: no cap, it just grows as the road gets busier), and the kind of event is then drawn by
+   each event's share of that stack.
+   EV_K is a per-terrain scale for the legacy weights, chosen so that on day one every event happens at
+   exactly the daily rate it had under the raffle - the one-time bridge from tickets to percentages. It is
+   derived from the old terrain chance and the measured base pool of each terrain, not a ceiling. */
+const EV_BASEPOOL={settled:25,steppe:27,desert:26,harsh:26.35,mountain:28,rugged:24,forest:10,marsh:20,jungle:9};
+function evScale(terr){ return legEventChance(terr)/(EV_BASEPOOL[terr]||20); }   /* probability per legacy weight-point, this terrain */
+function buildEvent(terr,peek){
+  const cand=[];                                   /* {p: daily probability, f: the event} */
+  const K=evScale(terr);
+  const add=(w,f)=>{ if(w>0)cand.push({p:w*K,f}); };
+  const addF=add;                                  /* a weight is already a smooth number here; there is nothing to floor */
   const _ltf=(function(){ try{ var _k=legPairKey(city().name,(nextCity()||{}).name||''); return (S.legTraffic&&S.legTraffic[_k])||0; }catch(e){ return 0; } })();
   const lostW=(w)=>Math.max(0,Math.round(w*Math.pow(0.5,_ltf)));   /* getting lost fades as you learn a road: halved per completed pass (Kris) */
   { var _nphA=(S.goods&&S.goods.naphtha)||0; if(_nphA>0 && rnd()<0.35*Math.pow(0.5,S.naphthaFires||0)) if(rnd()<0.5) add(1, evCampFire); /* each naphtha fire halves the odds of the next, for the rest of the game (Kris) */ } /* Kris: naphtha is naphtha on any road; the 90-day cooldown keeps it rare */
   if(terr==='desert'||terr==='harsh'||terr==='sand'){
     var _sv=(typeof legServiced==='function')&&legServiced();
-    { var _csv=(typeof coldSeverity==='function')?coldSeverity():0; if(_csv>0.3) add(Math.round(1+_csv*3),evBlizzard); }
+    { var _csv=(typeof coldSeverity==='function')?coldSeverity():0; if(_csv>0.3) add((1+_csv*3),evBlizzard); }
     { var _amb=(S.dash&&S.dash.from&&typeof isAmberPlace==='function'&&(isAmberPlace(S.dash.from)||isAmberPlace(S.dash.to)));
       if(_amb){ add(2,function(){ return evRiverVillage(city()); });
         var _hm=(SWEDEN_HOME[S.dash.from]&&SWEDEN_HOME[S.dash.to])&&!(S.kingIre>0); /* an OUTLAW has no home country (Kris) */
@@ -3015,7 +3032,7 @@ function buildEvent(terr){
     { var _stC=(typeof curTempC==='function')?curTempC():20; if(_stC>=5) add(_sv?1:3,evSandstorm); } /* Kris: the karaburan/black-wind is a WARM-season dust storm - suppress it in the cold months (below ~5C the desert's storm is a buran/blizzard, added above when it is cold enough), so no black wind on the near-freezing Hungry Steppe in February */ add((_sv?3:2)+(desertBonus()>0?1:0),evOasis); add(_sv?1:2,evMirage); add(1,evWildCamels); add(3,evCamel); add(_sv?1:2,evCholera); add(2,evSnakebite);
   }
   if(terr==='harsh'){add(2,evDryWell); add(2,evGraves); add(lostW(2),evLost);}
-  if(terr==='steppe'){ { var _csv2=(typeof coldSeverity==='function')?coldSeverity():0; if(_csv2>0.3) add(Math.round(1+_csv2*3),evBlizzard); } /* Kris: a December storm on the Hungry Steppe is snow, not dust */ let _fw=2; const _m=(S.goods&&S.goods.musk)||0, _w=(S.goods&&S.goods.wine)||0; if(_m>=10)_fw+=2; else if(_m>=1)_fw+=1; if(_w>=10)_fw+=2; else if(_w>=1)_fw+=1; add(_fw,evFeast); add(2,evSogdian); add(2,evFord); add(4+(tollActive()?2:0),evCaravanserai); add(2,evCamel); add(2,evWildHorses); add(2,evSnakebite);}
+  if(terr==='steppe'){ { var _csv2=(typeof coldSeverity==='function')?coldSeverity():0; if(_csv2>0.3) add((1+_csv2*3),evBlizzard); } /* Kris: a December storm on the Hungry Steppe is snow, not dust */ let _fw=2; const _m=(S.goods&&S.goods.musk)||0, _w=(S.goods&&S.goods.wine)||0; if(_m>=10)_fw+=2; else if(_m>=1)_fw+=1; if(_w>=10)_fw+=2; else if(_w>=1)_fw+=1; add(_fw,evFeast); add(2,evSogdian); add(2,evFord); add(4+(tollActive()?2:0),evCaravanserai); add(2,evCamel); add(2,evWildHorses); add(2,evSnakebite);}
   if(terr==='mountain'){if((typeof coldSeverity==='function')&&coldSeverity()>0)add(3,evSnow); /* Oxus 8/04 (Kris): no snow on a pass that never freezes - Yemen in June */ add(2,evAltitude); add(2,evHotspring); add(4+(tollActive()?2:0),evCaravanserai); add(lostW(1),evLost); add(2,evFord); add(1,evCamel); add(2,evWildHorses); add(2,evFall); add(2,evMarmots);}
   if(terr==='rugged'){add(lostW(2),evLost); add(2,evFord); add(2,evWildHorses); add(2,evCamel); add(2,evHotspring); add(1,evMarmots); add(3,evDromedaryCold);}
   if(terr==='settled'){add(3,evInspect); add(3,evSogdian); add(2,evRebellion); add(4+(tollActive()?2:0),evCaravanserai); add(2,evCamel); add(2,evCholera);}
@@ -3027,22 +3044,39 @@ function buildEvent(terr){
   // bandits: base presence by terrain, scaled by your reputation (pay them and word spreads; beat them and they avoid you)
   let banditBase={steppe:3,desert:2,forest:2,mountain:2,rugged:2,settled:1,marsh:1,jungle:1,harsh:0.5}[terr]||1; // bandits favour ambush country (forest/hills/passes) and roads near towns; only the deep desert (harsh) is too inhospitable to lurk in. contested frontiers add x1.6 below.
   if(raiderCountry() && (terr==='desert'||terr==='harsh'||terr==='sand')) add(3,evCamelRaiders);
-  if(banditBase){ let bw=banditBase*(S.banditFreq||1); if(inContestedZone())bw*=1.6; if(typeof polFrontierBandit==='function')bw*=polFrontierBandit(); if(S.tollDodge && S.day<=S.tollDodge)bw*=2; /* dodged a toll: off the swept roads, doubled bandits for 30 d (Kris) */ if(S.banditVengeance && S.day<=S.banditVengeance)bw*=1.2; if(S.saleHeatUntil && S.day<=S.saleHeatUntil)bw*=(1+(S.saleHeatBonus||0)); bw*=wealthLure(); { const _lk=legPairKey(city().name,(nextCity()||{}).name||''); const _hh=(S.legHeat&&S.legHeat[_lk])||0; add(Math.max(0,Math.round(bw)+_hh), evBandits); } /* per-leg heat is ADDITIVE, on top of the ordinary modifiers (Kris) */ }
-  for(let i=0;i<8;i++){
-    const fn=pick(pool);
-    if(seraiActive()){ // recently rested & gathered road-news: more cautious, better informed
-      if(fn===evBandits && rnd()<.66) continue;      // travelling warier
-      if(fn===evLost && rnd()<((S&&S._sozzled>0)?.60:.80)) continue;          // knows the road (drunk: the fork confounds you twice as often - Kris)
-      if(fn===evFord && inAnatolia()) continue;
-      if((fn===evFord||fn===evSnow) && rnd()<.50) continue; // forewarned of the worst hazards
+  if(banditBase){ let bw=banditBase*(S.banditFreq||1); if(inContestedZone())bw*=1.6; if(typeof polFrontierBandit==='function')bw*=polFrontierBandit(); if(S.tollDodge && S.day<=S.tollDodge)bw*=2; /* dodged a toll: off the swept roads, doubled bandits for 30 d (Kris) */ if(S.banditVengeance && S.day<=S.banditVengeance)bw*=1.2; if(S.saleHeatUntil && S.day<=S.saleHeatUntil)bw*=(1+(S.saleHeatBonus||0)); bw*=wealthLure(); { const _lk=legPairKey(city().name,(nextCity()||{}).name||''); bw*=legMultOf(_lk); }   /* the road's own reputation, compounding 5% a pass and -10% a beating (Kris) */ addF(bw, evBandits); }
+  /* what the company knows or has earned tilts the odds - as a multiplier on the event's own probability,
+     never as a re-draw (the old code drew again, which is a tier by the back door) */
+  const sozzled=(S&&S._sozzled>0), serai=seraiActive(), merit=(meritActive()?(S.meritPct||0):0);
+  for(const c of cand){ const fn=c.f;
+    if(serai){                                     // recently rested & gathered road-news: warier, better informed
+      if(fn===evBandits) c.p*=0.34;                // travelling warier
+      if(fn===evLost) c.p*=(sozzled?0.40:0.20);    // knows the road (drunk: the fork confounds you twice as often - Kris)
+      if(fn===evFord && inAnatolia()) c.p=0;
+      if(fn===evFord||fn===evSnow) c.p*=0.5;       // forewarned of the worst hazards
     }
-    if(fn===evFeast && S.huntressDeclined && rnd()<.10) continue; // word travels among the Karluk camps
-    if(meritActive() && (fn===evSandstorm||fn===evDryWell||fn===evSnow||fn===evFord||fn===evMirage) && rnd()<(S.meritPct||0)) continue; // the lama's blessing turns aside the storm
-    if(fn===evWildCamels && S.camelScare && S.day<=S.camelScare && rnd()<.10) continue; // recent hunting has scared the wild bactrians off
-    const e=fn(); if(e)return e;
+    if(fn===evFeast && S.huntressDeclined) c.p*=0.9;                                      // word travels among the Karluk camps
+    if(merit && (fn===evSandstorm||fn===evDryWell||fn===evSnow||fn===evFord||fn===evMirage)) c.p*=(1-merit); // the lama's blessing turns aside the storm
+    if(fn===evWildCamels && S.camelScare && S.day<=S.camelScare) c.p*=0.9;               // recent hunting has scared the wild bactrians off
+  }
+  if(peek) return cand;                            /* the ledger's view: the tilted probabilities, unrolled */
+  /* Kris's model, exactly: the stacked chance that SOMETHING happens today is 1 - the product of every event's
+     miss (no cap - it simply climbs as the road fills up); if the day is not quiet, the kind of event is
+     drawn by each one's share of the stack. An event that turns out impossible right now (a cooldown, no
+     camel to lose, wrong season) hands its share to the rest rather than making the day quiet. */
+  let miss=1; for(const c of cand) miss*=(1-Math.min(1,c.p));
+  if(rnd()<miss) return null;                      /* a quiet day: the road had nothing to say */
+  const live=cand.filter(c=>c.p>0);
+  while(live.length){
+    let tot=0; for(const c of live)tot+=c.p; let r=rnd()*tot, k=0;
+    for(;k<live.length-1;k++){ r-=live[k].p; if(r<0)break; }
+    const c=live.splice(k,1)[0]; const e=c.f(); if(e)return e;
   }
   return null;
 }
+/* the odds of anything at all on a day of this road - for the ledger and for tests; the game never uses it as a gate */
+function dayEventOdds(terr){ try{ var q=1; buildEvent(terr,true).forEach(function(c){ q*=(1-Math.min(1,c.p)); }); return 1-q; }catch(e){ return NaN; } }
+
 function seraiActive(){ return S.serai && S.day <= S.serai; }
 function tollActive(){ return S.tollRoads && S.day <= S.tollRoads; } // paid into the empire's roads lately => more staging-posts
 function springActive(){ return S.springBuff && S.day <= S.springBuff; }
@@ -6157,6 +6191,7 @@ function setMount(p,v){ if(p) p.mount=(!!v && !p.noHorse); }
 function memGear(p,slot){ return (p&&p.gear)?p.gear[slot]:null; }
 function setGear(p,slot,v){ if(p){ p.gear=p.gear||{}; p.gear[slot]=v; } }
 function migrate(s){
+  try{ if(s && s.legHeat && !s.legMult){ s.legMult={}; for(var _lk in s.legHeat){ var _h=+s.legHeat[_lk]||0; if(_h)s.legMult[_lk]=Math.pow(1.05,_h); } delete s.legHeat; } }catch(e){}   /* the old integer heat becomes the multiplier it was standing in for (Kris's 400-day run keeps its notoriety) */
   if(!s) return s;
   /* REPAIR (8/06 Kris): feathers/gum were given a real geographic range after saves already had
      stock baked in for towns like Candia that no longer qualify - heal any existing stock record. */
@@ -11667,20 +11702,25 @@ var M3=(function(){
    if(!L._tgtSet){ L.tgt.set(x,y+0.4,z); L._tgtSet=true; }   /* Kris: the camera used to open on the CHART CENTRE and glide to the caravan - which, at the head of a leg, read as the caravan arriving back at the town it had just left. It starts on the caravan now. */
    else { L.tgt.x+=(x-L.tgt.x)*0.15; L.tgt.z+=(z-L.tgt.z)*0.15; L.tgt.y+=((y+0.4)-L.tgt.y)*0.15; }
  }
- function seedTrail(L,q){ try{
+ function seedTrail(L,q,qdir){ try{
    if(!L.trail||L.trail.length>=2||!L.pts)return;
+   /* Kris: on a leg whose chart polyline runs AGAINST the march, q falls as you travel - and this used to
+      seed the road 'already walked' in the direction of travel, so the file was laid out ahead of the
+      caravan, facing back. The cart drove at the town it was leaving for a beat, then turned round. */
+   var _d=(qdir==null?(L.qDir||1):qdir), step=0.004*(_d>=0?1:-1);
    var pts=[],qq=q,need=1.8,acc=0,last=null;
-   while(qq>0&&acc<need){ var p=voyPosAt(L.pts,qq); var w={x:p[0]/10,z:p[1]/10};
+   while(qq>0&&qq<1&&acc<need){ var p=voyPosAt(L.pts,qq); var w={x:p[0]/10,z:p[1]/10};
      if(last){ acc+=Math.hypot(w.x-last.x,w.z-last.z); }
-     pts.push(w); last=w; qq-=0.004; }
+     pts.push(w); last=w; qq-=step; }
    pts.reverse(); L.trail=pts;                       /* the road already walked, oldest first */
  }catch(e){} }
  function tickTravel(mp){ try{ var L=st.live; if(!L)return;
-   var q=Math.max(0,Math.min(1,S.legKm/(legDist()||1))); if(city()&&city().name!==mp.start)q=1-q;
-   L.pts=voyMapPts(mp); L.qT=q; seedTrail(L,q); }catch(e){} }
+   var q=Math.max(0,Math.min(1,S.legKm/(legDist()||1))), _rev=!!(city()&&city().name!==mp.start); if(_rev)q=1-q;
+   L.qDir=_rev?-1:1;                                  /* which way q runs against the march (Kris: the cart that set off backwards) */
+   L.pts=voyMapPts(mp); L.qT=q; seedTrail(L,q,L.qDir); }catch(e){} }
  function tickVoy(mp){ try{ var L=st.live; if(!L)return; var v=S&&S.voy; if(!v)return; L.lastTickMs=Date.now(); L.qDir=(v.from!==mp.from)?-1:1;
    var q=(v.total-v.daysLeft)/(v.total||1); if(v.lost&&v.lostQ!=null)q=v.lostQ; if(v.from!==mp.from)q=1-q;
-   L.pts=voyMapPts(mp); L.qT=q; seedTrail(L,q); }catch(e){} }
+   L.pts=voyMapPts(mp); L.qT=q; seedTrail(L,q,L.qDir); }catch(e){} }
 
  /* ---- DIORAMA LEAF BUILDERS (module scope; usable by the moving map too) ---- */
  function mkSkiff(withSail){ var b=new THREE.Group();
