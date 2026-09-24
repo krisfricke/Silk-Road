@@ -143,7 +143,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.23'; const BUILD='0923.faceTheRoad'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.24'; const BUILD='0924.secondChance'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -14112,7 +14112,7 @@ const LJI_NAMES=['dizzydog','hwango','kandigurl','hafnia','joeymichaels','banana
  'xyla','karmasoup','gnomeangel','ofearthandstars','missspiff','troof_therry','copyright1983','mstrobel','theycallmepace','wildtalents','wolfden','krispykritter','alycewilson','millysdaughter','simplyn2deep','commodityfetishx','annofowlshire','flipflop_diva','marlawentmad','legalpad819','fruzicle','eeyore_grrl','essoku','reidharriscooper','ashelterofpages',
  'renaissanced','dmsj','definitelyodette','thepythianscroll','onda_bianca','poppetawoppet','banyans_in_nola','whatever_nevermind','humanbeansradio','imafarmgirl','bassicallytom','middlesp00n','fausts_dream','dreamer_or_not21','theenginesshot','pixiebelle','scribblesinblue','niquildrvr','littlebitofearth','puppetmaker'];
 function ljiMark(){ /* a run begun from the title screen in the #LJI setting: flag it and put the title card in front of whatever opener newGame queued */
-  try{ if(!S)return; S.lji=true; S.ljiVoteDay=null; S.ljiBandsDone=[]; S.ljiGone=[]; var _pe=S.pendingEvent||null;
+  try{ if(!S)return; S.lji=true; S.ljiVoteDay=null; S.ljiBandsDone=[]; S.ljiGone=[]; S.ljiBench=[]; S.ljiSCDay=null; var _pe=S.pendingEvent||null;
     S.pendingEvent={h:'#LJI', t:"A trading venture in the year 1271 — Venice to the court of the Great Khan and home again.", ch:[{l:'Set out',f:function(){ S.pendingEvent=_pe; }}]};
     render(); }catch(e){} }
 function askText(h,lead,cb){ /* in-page stand-in for prompt(): a dialogue with a box; cb(text) on Send, cb('') on Never mind */
@@ -14196,22 +14196,64 @@ function ljiRecruit(){ if(!S||!S.lji)return null;
 
 /* ---- #LJI: the vote-out. Above a party of five, Gary calls one every week of game time; with Gary gone the
    call still comes, in his voice, out of nothing at all - about once a month, and never twice in a week. ---- */
+/* nominal days left to the home pole on the road back: the chart's kilometres at the book's 70 km/day, no
+   weather, no pace, no beasts - the number a man would quote at the fire, not the number the road will take */
+function ljiDaysHome(){ try{ if(!S||!S.returning||!S.itin)return Infinity; var km=0;
+  for(var j=(S.idx||0)+1;j<S.itin.length;j++) km+=(S.itin[j].dist||0);
+  if(S.screen==='travel') km-=(S.legKm||0); return Math.max(0,km)/70; }catch(e){ return Infinity; } }
+/* Kris: the largest company the vote will tolerate. Five on the road; on the run home it tightens - four at
+   22 nominal days out, three at 15 - and on the last day only one idolist may walk into Venice. */
+function ljiVoteMax(){ var d=ljiDaysHome(); return (d<=15)?3:(d<=22)?4:5; }
 function ljiVoteCheck(){ try{
   if(!S||!S.lji||S.dead)return null;
   var lp=(typeof livingParty==='function'?livingParty():[]).filter(function(p){return p&&p.kind!=='guard';});
   var cands=lp.filter(function(p){ return p.lji && !p.gary; });
-  /* Kris: the clock starts the DAY THE COMPANY CROSSES SIX, not at the start of the run - the sixth member
-     joined and was put to a vote on the next screen. Drop back to five (or run out of eligible names) and the
+  var gary=(typeof ljiGary==='function')?ljiGary():null, maxN=ljiVoteMax();
+  /* the finale: a day out from home, two idolists is one too many - a vote at once, and again tomorrow if it must be */
+  if(ljiDaysHome()<=1 && cands.length>=2 && S.ljiFinalVoteDay!==S.day){ S.ljiFinalVoteDay=S.day; S.ljiVoteDay=S.day;
+    return ljiVoteEvent(cands[Math.floor(rnd()*cands.length)], !!gary, true); }
+  /* Second Chance Idol: the company has fallen below what the vote allows, and somebody is waiting on the bench */
+  var sc=ljiSecondChanceCheck(lp,gary,maxN); if(sc) return sc;
+  /* Kris: the clock starts the DAY THE COMPANY CROSSES the line, not at the start of the run - the sixth member
+     joined and was put to a vote on the next screen. Drop back under (or run out of eligible names) and the
      clock is thrown away, so it always takes a full week of being over-large before anyone is voted out. */
-  if(lp.length+1<=5 || !cands.length){ S.ljiVoteDay=null; return null; }   /* party = you and your companions, as the ledger counts it */
+  if(lp.length+1<=maxN || !cands.length){ S.ljiVoteDay=null; return null; }   /* party = you and your companions, as the ledger counts it */
   if(S.ljiVoteDay==null){ S.ljiVoteDay=S.day; return null; }
   if((S.day-S.ljiVoteDay)<7) return null;
-  var gary=(typeof ljiGary==='function')?ljiGary():null;
   if(!gary && rnd()>=1/30) return null;
   S.ljiVoteDay=S.day;
   return ljiVoteEvent(cands[Math.floor(rnd()*cands.length)], !!gary); }catch(e){ return null; } }
-function ljiVoteEvent(who,garyHere){
+function ljiSecondChanceCheck(lp,gary,maxN){ try{
+  var bench=(S.ljiBench||[]).filter(function(m){ return m&&m.name; });
+  if(!bench.length || lp.length+1>=maxN){ S.ljiSCDay=null; return null; }   /* the clock runs only while there is room and someone to fill it */
+  if(S.ljiSCDay==null){ S.ljiSCDay=S.day; return null; }                     /* a week from the day the company fell short */
+  if((S.day-S.ljiSCDay)<7) return null;
+  if(!gary && rnd()>=1/30) return null;                                       /* no Gary: about once a month, in his voice */
+  S.ljiSCDay=S.day;
+  return ljiSecondChanceEvent(bench[Math.floor(rnd()*bench.length)], !!gary); }catch(e){ return null; } }
+function ljiSecondChanceEvent(who,garyHere){
   var nm=who.name, G=(typeof ljiGary==='function'&&ljiGary())?ljiGary().name:'Gary';
+  var twist="<b>"+nm+"</b> is rejoining the company \u2014 back from Second Chance Idol, which in one of "+G+"'s signature twists, is entirely a dance competition this round.";
+  var t = garyHere
+    ? G+" stands up at the evening fire with the look of a man who has been saving something all day, and announces that "+twist+" And there "+nm+" is, walking in out of the dark \u2014 dusty, footsore, still visibly counting a rhythm under the breath, and carrying every last thing they left with."
+    : "At the evening fire the talk dies all at once, and the voice comes out of the dark again \u2014 patient, faintly amused, unmistakably "+G+"'s \u2014 to say that "+twist+" And there "+nm+" is, walking in out of the dark \u2014 dusty, footsore, still visibly counting a rhythm under the breath, and carrying every last thing they left with.";
+  return {h:'SECOND CHANCE IDOL', t:t, ch:[{l:'Make room at the fire',f:function(){ ljiSecondChanceReturn(who); }}]};
+}
+function ljiSecondChanceReturn(who){ try{
+  S.ljiBench=(S.ljiBench||[]).filter(function(m){ return m!==who; });
+  S.ljiGone=(S.ljiGone||[]).filter(function(n){ return n!==who.name; });
+  who.alive=true; if(who.hp!=null) who.hp=Math.max(who.hp,60);            /* the dance did them no lasting harm */
+  S.party=S.party||[]; S.party.push(who); if(typeof normalizeMember==='function')normalizeMember(who);
+  S.ljiVoteDay=null; S.ljiSCDay=null;
+  log(who.name+' is back in the company, with the same pack and the same boots, and will not discuss the dancing.');
+}catch(e){} }
+function ljiVoteEvent(who,garyHere,finale){
+  var nm=who.name, G=(typeof ljiGary==='function'&&ljiGary())?ljiGary().name:'Gary';
+  if(finale) return {h:(garyHere?'THE LAST VOTE':'THE LAST VOICE'), t:(garyHere
+      ? G+" waits until the lamps of home are all but in sight, then gets up on a pack-saddle for the last time and says, with the air of a man closing a book, that only one of the company can walk in through the gate as an idolist \u2014 and that the rules are the rules. The lot falls on <b>"+nm+"</b>."
+      : "A day out from home the voice comes out of the dark one last time \u2014 patient, amused, unmistakably "+G+"'s \u2014 to say that only one of the company can walk in through the gate as an idolist, and that the rules are the rules. The lot falls on <b>"+nm+"</b>."),
+    ch:[{l:'Let the vote stand',f:function(){ ljiVoteOut(who, garyHere); }},
+        {l:'Say the vote is nonsense \u2014 and watch '+nm+' go anyway',f:function(){ ljiVoteOut(who, garyHere, true); }}]};
   var t = garyHere
     ? G+" gets up on a pack-saddle at the evening fire and announces, with the air of a man performing a duty, that the company has grown too large for the road and it is time to vote somebody out. There is grumbling. There is a vote anyway. The lot falls on <b>"+nm+"</b>."
     : "At the evening fire the talk dies all at once, and a voice comes out of the dark that everyone recognises and nobody can place \u2014 patient, faintly amused, unmistakably Gary's \u2014 saying that the company has grown too large and somebody must be voted out. The fire gutters. The lot falls on <b>"+nm+"</b>.";
@@ -14222,7 +14264,8 @@ function ljiVoteEvent(who,garyHere){
 function ljiVoteOut(who,garyHere,protested){
   try{ S.party=(S.party||[]).filter(function(p){ return p!==who; });
     S.ljiGone=(S.ljiGone||[]); if(who.name)S.ljiGone.push(who.name);
-    if(typeof recoverGear==='function'){ try{ recoverGear(who); }catch(e){} }
+    /* Kris: voted out is not dead - they walk off with everything they carried, and wait on the bench for Second Chance */
+    S.ljiBench=(S.ljiBench||[]); S.ljiBench.push(who);
     log(who.name+(protested?' takes the vote better than you do, shoulders a pack':' shoulders a pack')+' and walks back down the road you came by'+(garyHere?'':' \u2014 and nobody can say afterwards who actually counted the votes')+'.');
   }catch(e){} }
 function ljiStart(){ try{ /* ?start=lji - the quick Samarkand loop the film uses: Gary plus two names off the sheet */
@@ -14230,7 +14273,7 @@ function ljiStart(){ try{ /* ?start=lji - the quick Samarkand loop the film uses
   try{ var comps=(S.party||[]).filter(function(p){return p&&p.alive&&!p.nephew;}); var g=comps[0]||(S.party||[])[0];
     if(g){ g.name='Gary'; g.full=null; g.role='a stout companion with a lute and a gift for misadventure'; g.gary=true; g.bard=true; }
     var pool=LJI_NAMES.slice(); comps.slice(1,3).forEach(function(p){ var u=pool.splice(ri(pool.length),1)[0]; var bard=ljiIsBard(u); p.name=u; p.full=null; p.g='they'; p.lji=true; p.bard=bard; p.role=ljiRole(u,bard); if(u==='aggienaut'){ p.bees=true; p.g='m'; } }); }catch(e){}
-  S.lji=true; S.ljiVoteDay=null; S.ljiBandsDone=[]; S.ljiGone=[];
+  S.lji=true; S.ljiVoteDay=null; S.ljiBandsDone=[]; S.ljiGone=[]; S.ljiBench=[]; S.ljiSCDay=null;
   S.pendingEvent={h:'#LJI', t:"A trading venture in the year 1271 — out of Samarkand, over the Onion Mountains and back, with Gary.", ch:[{l:'Set out',f(){}}]};
   render(); return true; }catch(e){ return false; } }
 function ljiGary(){ return (S&&S.party||[]).find(function(p){return p&&p.gary&&p.alive;}); }
