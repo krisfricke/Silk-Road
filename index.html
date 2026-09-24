@@ -39,6 +39,7 @@
     border-bottom:1px solid var(--line);font-size:.8rem}
   #stats b{color:var(--silk);font-weight:normal}
   #stats .bad{color:var(--seal)}
+#stats .blue{color:var(--blue)}
 
   #ribbon{display:flex;flex-wrap:wrap;gap:2px 10px;padding:8px 2px;font-size:.72rem;
     color:var(--dim);border-bottom:1px solid var(--line)}
@@ -143,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.27'; const BUILD='0924.bestDealBold'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.32'; const BUILD='0924.voteResultBox'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -1658,7 +1659,8 @@ function dateStr(){
   if(isWest()){ const gd=gameDate(); return 'Day '+S.day+' · '+gd.d+' '+CAL_MONTHS[gd.m-1]+' '+gd.y; }
   return 'Day '+S.day+' · '+MONTHS[i]+' month';
 }
-function log(t){S.log.unshift({d:S.day,t}); if(S.log.length>40)S.log.pop(); if(!S.fullLog)S.fullLog=[]; S.fullLog.push({d:S.day,t:t,hp:(S&&S.hp!=null?Math.round(S.hp):null),ag:(S&&S.silver!=null?Math.round(S.silver):null)}); if(S.fullLog.length>800)S.fullLog.shift();}
+function slvWords(t){ return (typeof t==='string')?t.replace(/\b(?:one|1) souls? of slaves\b/g,'one slave').replace(/\b(\d+) souls of slaves\b/g,'$1 slaves'):t; } /* Kris 0924: slaves go into the auto-haggles; 'one soul of slaves' reads as nonsense */
+function log(t){ t=slvWords(t); S.log.unshift({d:S.day,t}); if(S.log.length>40)S.log.pop(); if(!S.fullLog)S.fullLog=[]; S.fullLog.push({d:S.day,t:t,hp:(S&&S.hp!=null?Math.round(S.hp):null),ag:(S&&S.silver!=null?Math.round(S.silver):null)}); if(S.fullLog.length>800)S.fullLog.shift();}
 function outcomeBox(h,msg){ log(msg); if(S&&!S.dead) S.pendingEvent={h:h,t:msg,ch:[{l:'Go on',f:function(){}}]}; }
 
 /* ============ TIME & TRAVEL ============ */
@@ -2413,7 +2415,7 @@ function buyFromLocals(per){
 }
 function starvPickItem(askS){ /* Kris: wine first (they can use it on the spot), then the item nearest above the ask - no menus, no appraisal talk */
  try{ var hub=(typeof barterHub==='function')?barterHub():null; if(!hub)return null; var best=null;
-  GOODS.forEach(function(g){ if(g.id==='slaves')return; var q=(S.goods&&S.goods[g.id])||0; if(q<1)return; var v=barterUnitValue(g,hub); if(v<1)return;
+  GOODS.forEach(function(g){ var q=(S.goods&&S.goods[g.id])||0; if(q<1)return; var v=barterUnitValue(g,hub); if(v<1)return;
     if(g.id==='wine'){ best={g:g,v:v,wine:true}; return; }
     if(best&&best.wine)return;
     var ok=(v>=askS), bok=best&&(best.v>=askS);
@@ -3963,7 +3965,7 @@ function waitYearGo(){
   if(wages>0){ if(S.silver>=wages){ S.silver-=wages; }
     else { var short=wages-S.silver; S.silver=0;
       var cc=(typeof cityByName==='function'&&cityByName(here))||city();
-      var lots=GOODS.filter(function(g){return g.id!=='slaves'&&(S.goods[g.id]||0)>0;}).map(function(g){return {g:g,p:price(g,cc)};}).sort(function(a,b){return a.p-b.p;});
+      var lots=GOODS.filter(function(g){return (S.goods[g.id]||0)>0;}).map(function(g){return {g:g,p:price(g,cc)};}).sort(function(a,b){return a.p-b.p;});
       for(var li=0;li<lots.length&&short>0;li++){ var L=lots[li]; var n=Math.min(S.goods[L.g.id],Math.ceil(short/Math.max(1,L.p))); if(n<1)continue; S.goods[L.g.id]-=n; if(S.goods[L.g.id]<=0&&S.basis)S.basis[L.g.id]=0; short-=n*L.p; sold.push(n+' '+L.g.u+(n>1?'s':'')+' of '+L.g.n.toLowerCase()); }
       if(short>0){ S.wageDebt=(S.wageDebt||0)+Math.round(short); } } }
   var NEWS=[[1271,11,"In the eleventh month the Great Khan proclaims his dynasty under a Chinese name: DAI YUAN, the Great Origin. The heralds read it out in four scripts."],
@@ -4149,7 +4151,7 @@ function factorRunMonth(){
   var sold=[];
   if(wages>0){ if(S.silver>=wages){ S.silver-=wages; }
     else { var short=wages-S.silver; S.silver=0; var cc=((typeof cityByName==='function')&&cityByName(here))||city();
-      var lots=GOODS.filter(function(g){return g.id!=='slaves'&&(S.goods[g.id]||0)>0;}).map(function(g){return {g:g,p:price(g,cc)};}).sort(function(a,b){return a.p-b.p;});
+      var lots=GOODS.filter(function(g){return (S.goods[g.id]||0)>0;}).map(function(g){return {g:g,p:price(g,cc)};}).sort(function(a,b){return a.p-b.p;});
       for(var li=0;li<lots.length&&short>0;li++){ var L=lots[li]; var n=Math.min(S.goods[L.g.id],Math.ceil(short/Math.max(1,L.p))); if(n<1)continue; S.goods[L.g.id]-=n; if(S.goods[L.g.id]<=0&&S.basis)S.basis[L.g.id]=0; short-=n*L.p; sold.push(n+' '+L.g.u+(n>1?'s':'')+' of '+L.g.n.toLowerCase()); }
       if(short>0){ S.wageDebt=(S.wageDebt||0)+Math.round(short); } } }
   try{ if(typeof restockToNow==='function'&&here)restockToNow(here); }catch(e){}
@@ -4524,7 +4526,7 @@ function evNephewWedding(neph){
   const resto = Math.max(30, Math.round(S.silver*.12));
   return {h:'YOUR NEPHEW, AGAIN',t:neph.name+" has been discovered in a deeply compromising situation with "+her+". Her family is at the door, and they are not here to congratulate anyone. They will accept silver, a wedding, or a fight — your choice, made quickly.",
   ch:[
-   {l:'Pay restitution ('+resto+' s)',f(){ if(S.silver>=resto){S.silver-=resto;log("Silver changes hands. Honour is satisfied, "+neph.name+" is sheepish, and you make a note to watch him in the next town too.");} else { var _owed=resto-S.silver; S.silver=0; var _c=city(); var _took=[]; var _order=GOODS.filter(function(g){return g.id!=='slaves'&&(S.goods[g.id]||0)>0;}).sort(function(a,b){return price(b,_c)-price(a,_c);}); for(var _i=0;_i<_order.length&&_owed>0;_i++){ var _g=_order[_i]; var _u=Math.max(1,Math.round(price(_g,_c)*0.6)); var _q=Math.min(Math.ceil(_owed/_u),S.goods[_g.id]||0); if(_q>0){ S.goods[_g.id]-=_q; if(S.goods[_g.id]<=0)S.basis[_g.id]=0; _owed-=_q*_u; _took.push(_q+" "+_g.u+(_q>1?'s':'')+" of "+_g.n.toLowerCase()); } } if(_owed>0){ S.hp-=6; log("You cannot cover it even in kind. The family takes every coin"+(_took.length?" and "+_took.join(', '):"")+", and still it ends in hard words and a thrown pot; you leave "+_c.name+" faster than planned."); } else { log("You have not the silver, so the family takes payment in kind \u2014 appraising your goods meanly, in their own favour: they carry off "+_took.join(', ')+". Honour is satisfied, barely, and "+neph.name+" dares not meet your eye."); } } }},
+   {l:'Pay restitution ('+resto+' s)',f(){ if(S.silver>=resto){S.silver-=resto;log("Silver changes hands. Honour is satisfied, "+neph.name+" is sheepish, and you make a note to watch him in the next town too.");} else { var _owed=resto-S.silver; S.silver=0; var _c=city(); var _took=[]; var _order=GOODS.filter(function(g){return (S.goods[g.id]||0)>0;}).sort(function(a,b){return price(b,_c)-price(a,_c);}); for(var _i=0;_i<_order.length&&_owed>0;_i++){ var _g=_order[_i]; var _u=Math.max(1,Math.round(price(_g,_c)*0.6)); var _q=Math.min(Math.ceil(_owed/_u),S.goods[_g.id]||0); if(_q>0){ S.goods[_g.id]-=_q; if(S.goods[_g.id]<=0)S.basis[_g.id]=0; _owed-=_q*_u; _took.push(_q+" "+_g.u+(_q>1?'s':'')+" of "+_g.n.toLowerCase()); } } if(_owed>0){ S.hp-=6; log("You cannot cover it even in kind. The family takes every coin"+(_took.length?" and "+_took.join(', '):"")+", and still it ends in hard words and a thrown pot; you leave "+_c.name+" faster than planned."); } else { log("You have not the silver, so the family takes payment in kind \u2014 appraising your goods meanly, in their own favour: they carry off "+_took.join(', ')+". Honour is satisfied, barely, and "+neph.name+" dares not meet your eye."); } } }},
    {l:'Leave '+neph.name+' to marry her',f(){ neph.alive=false; neph.married=true; neph.marriedAt=city().name; log(neph.name+" stays behind in "+city().name+" to be married into the family. Your sister will have opinions. The caravan is quieter and short one pair of hands — but you will call on him each time the road brings you back this way."); }},
    {l:'Slip out of town tonight',f(){ passDays(1); S.hp-=3; if(rnd()<.5){log("You break camp in the dark and are three li gone by dawn. "+neph.name+" sulks for a week.");} else {S.silver=Math.max(0,S.silver-Math.round(S.silver*.06));log("The family's men catch you at the gate. There is a scuffle and a fine before they let you go.");} }},
   ]};
@@ -5621,7 +5623,22 @@ function pirateVessel(){
 }
 function hullMult(){ return (S&&S.era==='1271')?1:2; }  /* boat-building improves: sewn hulls and square rigs of 762 wreck at twice the rate of the 1271 nave/junk (Kris) */
 function winterStormMult(terr){ const m=gameDate().m; var _mons=false; try{ var _f=(S&&S.voy&&S.voy.from)||(S&&S.sail&&S.sail.from); var _t=(S&&S.voy&&S.voy.to)||(S&&S.sail&&S.sail.target); if(typeof CITY_LL!=='undefined'&&typeof monsoonSeaLL==='function'){ _mons=monsoonSeaLL(CITY_LL[_f])||monsoonSeaLL(CITY_LL[_t]); } }catch(e){} if(_mons){ if(m>=6&&m<=9) return 2.6; if(m===5||m===10||m===11) return 1.7; return 1.0; } let w=1; if([12,1,2].indexOf(m)>=0)w=2.4; else if([11,3].indexOf(m)>=0)w=1.6; if(terr==='med'&&w>1)w*=1.3; return w; } /* Fadak: monsoon-basin storms peak Jun-Sep + cyclone shoulders; the winter NE monsoon is the SAFE season there */
-function captainTongue(){ const nm=(S.voy?S.voy.to:S.portName); const o=(typeof SEA_ORDER!=='undefined')?SEA_ORDER[nm]:null; if(o==null||o>=11)return 'Greek'; if(o<=4)return 'Malay'; if(o<=5)return 'Tamil'; return 'Arabic'; }
+/* Kris 0924: a Hormuz-Cambay captain swore in Greek (the old SEA_ORDER lookup fell through to Greek for every 1271 port it
+   didn't list). Now: the ship's home waters = the port she sailed FROM (else the destination), by name then by coordinates. */
+var CAPTAIN_TONGUE={Venice:'Venetian',Ragusa:'Venetian',Candia:'Venetian',Gortyn:'Greek',Constantinople:'Greek',Trebizond:'Greek',Ephesus:'Greek',Soldaia:'Greek',Caffa:'Genoese',Famagusta:'Greek',Acre:'Genoese',Ayas:'Armenian',Tana:'Venetian',
+  Alexandria:'Arabic',Fustat:'Arabic',Qulzum:'Arabic',Aydhab:'Arabic',Jeddah:'Arabic',Aden:'Arabic',Dhofar:'Arabic',Socotra:'Arabic',Zanzibar:'Swahili',Basra:'Arabic',Baghdad:'Arabic',
+  Hormuz:'Persian',Kish:'Persian',Siraf:'Persian',Cambay:'Gujarati',Kollam:'Malayalam',Puttalam:'Tamil',Mantai:'Tamil',Chittagong:'Bengali',
+  Kedah:'Malay',Tumasik:'Malay',Palembang:'Malay',Kauthara:'Cham',Butuan:'Visayan',Guangzhou:'Cantonese',Zaiton:'Hokkien',Kinsay:'Chinese',Yangzhou:'Chinese',Hakata:'Japanese',Kaesong:'Korean'};
+function captainTongue(){ try{
+  var f=S.voy?S.voy.from:S.portName, t=S.voy?S.voy.to:null;
+  for(var nm of [f,t]){ if(nm&&CAPTAIN_TONGUE[nm]) return CAPTAIN_TONGUE[nm]; }
+  var ll=(typeof CITY_LL!=='undefined')&&(CITY_LL[f]||CITY_LL[t]); if(ll){ var lon=ll[0],lat=ll[1];
+    if(lat>=50) return (S.era==='1271')?'Low German':'Norse';
+    if(lon<37&&lat>=30) return 'Greek';
+    if(typeof gulfSeaLL==='function'&&gulfSeaLL(ll)) return 'Persian';
+    if(lon<66) return 'Arabic'; if(lon<80) return (lat>=18)?'Gujarati':'Malayalam'; if(lon<95) return 'Tamil';
+    if(lon<110&&lat<18) return 'Malay'; if(lon>=125&&lat>=33) return 'Japanese'; return 'Chinese'; }
+ }catch(e){} return 'several languages'; }
 function seaHeatMult(){ if(!S)return 1; var m=1; if(S.tollDodge && S.day<=S.tollDodge)m*=2; if(S.banditVengeance && S.day<=S.banditVengeance)m*=1.2; if(S.saleHeatUntil && S.day<=S.saleHeatUntil)m*=(1+(S.saleHeatBonus||0)); return m; }
 function _gearValAt(cityName){ var k=(typeof cityKit==='function')?cityKit(cityName):[]; var pOf=function(slot,id){ for(var i=0;i<k.length;i++){ if(k[i][0]===slot&&k[i][1]===id) return k[i][2]; } if(slot==='armor'&&typeof armorResale==='function') return Math.round(armorResale(id)*2); return (slot==='bow')?30:38; };
   var tot=0, slots=['weapon','armor','bow','cloak']; var yg=(typeof youGear==='function')?youGear():null;
@@ -7565,7 +7582,7 @@ function ljiRoster(){ /* Gary + eight names drawn from the Year 20 sign-up sheet
   var pool=LJI_NAMES.slice(), out=[]; while(out.length<8&&pool.length){ out.push(pool.splice(ri(pool.length),1)[0]); }
   var ros=[{id:'lji_gary',name:'Gary',role:'a stout companion with a lute and a gift for misadventure',skills:randomSkills(),g:'m',gary:true,bard:true,custom:true}];
   out.forEach(function(u){ var sk=ljiSkills(u), bee=(u==='aggienaut'), bard=ljiIsBard(u), t=ljiTrait(u);
-    ros.push({id:'lji_'+u.replace(/[^a-z0-9]/gi,'_'),name:u,role:ljiRole(u,bard),skills:sk,g:((t&&t.g)||(bee?'m':'they')),custom:true,bees:bee,bard:bard,lji:true,digger:!!(t&&t.digger),pitch:(t&&t.pitch)||null}); });
+    ros.push({id:'lji_'+u.replace(/[^a-z0-9]/gi,'_'),name:u,role:ljiRole(u,bard),skills:sk,g:((t&&t.g)||(bee?'m':'they')),custom:true,bees:bee,bard:bard,lji:true,digger:!!(t&&t.digger),pitch:(t&&t.pitch)||null,salty:!!(t&&t.salty),ss:((t&&t.salty)?12:undefined)}); });
   LJI_DRAW=ros; return ros; }
 function ljiRedraw(){ LJI_DRAW=null; LJI_PRECHECK=null; render(); }
 function setupRoster(){ if(SETUP.scenario==='lji') return ljiRoster(); if(SETUP.era==='1271') return SETUP.origin==='west'?ROSTER1271_W:ROSTER1271_E; return (SETUP.origin==='west' ? CPL_ROSTER : ROSTER).filter(function(c){return !c.era||c.era==='762';}); }
@@ -8639,6 +8656,23 @@ function voyFare(from,to){ const lk=findLink(from,to); if(!lk)return {per:0,carg
 function iceClosed(e){ if(!e||!e.ice)return false; var m=monthNum(); if(e.ice==='gulf') return (m>=12||m<=4); if(e.ice==='mid') return (m>=1&&m<=3); return false; }
 function iceboundEvent(fromName,toName){ var m=monthNum(); return {h:'THE SEA IS ICE', t:"No ship sails for "+toName+" \u2014 the sea is frozen"+(m>=12||m<=1?" and the skippers are drinking through the dark":"")+". The harbour folk shrug: the ice road opens when it opens, and it is not open yet. Come back when the water shows.", ch:[{l:'Wait for the thaw here',f(){}},{l:'Look for another road',f(){}}]}; }
 function legEtaDays(lk,fromName,toName){ var d=(lk&&lk.d)||20; if(lk&&lk.windEasy&&toName&&toName!==lk.windEasy) d=Math.round(d*(lk.windHardMul||3)); return d; } /* Kris: in-town estimate must reflect the slow against-wind beat, not raw lk.d */
+function barterFare(need,hub){ /* Kris 0924: goods to cover a shortfall, valued at 75% of the price in THIS town, the combination landing closest at-or-above the need (bounded knapsack, fewest pieces on ties). Slaves are not offered. */
+ try{ if(!(need>0)||!hub) return null;
+  var lots=[]; GOODS.forEach(function(g){ var q=(S.goods&&S.goods[g.id])||0; if(q<1)return; var v=barterUnitValue(g,hub); if(v<1)return; lots.push({g:g,v:v,q:Math.min(q,Math.ceil(need/v))}); });
+  if(!lots.length) return null;
+  var maxV=0; lots.forEach(function(L){ if(L.v>maxV)maxV=L.v; }); var T=need+maxV-1; if(T>200000) return null;   /* a closest-over combination never exceeds need+maxV-1 */
+  var INF=1e9, dp=new Array(T+1).fill(INF); dp[0]=0; var chs=[];
+  lots.forEach(function(L){ var nd=dp.slice(), ch=new Uint16Array(T+1);
+    for(var s0=0;s0<=T;s0++){ if(dp[s0]>=INF)continue; for(var k=1;k<=L.q;k++){ var s1=s0+k*L.v; if(s1>T)break; if(dp[s0]+k<nd[s1]){ nd[s1]=dp[s0]+k; ch[s1]=k; } } }
+    chs.push(ch); dp=nd; });
+  var best=-1; for(var t=need;t<=T;t++){ if(dp[t]<INF){ best=t; break; } }
+  if(best<0) return null;
+  var items=[], cur=best;
+  for(var gi=lots.length-1;gi>=0;gi--){ var k2=chs[gi][cur]; if(k2>0){ items.push({id:lots[gi].g.id,k:k2,u:lots[gi].g.u,n:lots[gi].g.n}); cur-=k2*lots[gi].v; } }
+  if(cur!==0) return null;
+  var txt=items.map(function(it){ var u=it.u; return (it.k>1?it.k+' '+(/(s|x|z|ch|sh)$/.test(u)?u+'es':u+'s'):'one '+u)+' of '+it.n.toLowerCase(); }).join(' and ');
+  return {items:items,sum:best,need:need,txt:slvWords(txt)};
+ }catch(e){ return null; } }
 function beginVoyage(fromName, toName){ S._fodOK=S._provOK=S._pwOK=S._h2oOK=false; /* fresh leg: re-evaluate provisioning gates. setOut resets these at 2372; the chart/voyage set-out path must too, or a stale "Set out as you are" _fodOK silently skips the fodder gate - Kris’s Nishapur horses. (Safe on boat/hire re-entry: those gates run before hajjGo, so nothing has set these yet.) */
   const lk=findLink(fromName,toName); if(!lk){ log("There is no passage that way."); render(); return; }
   if(!S._wsailOK && lk.terr!=='land' && lk.terr!=='canal' && lk.terr!=='river' && (typeof seasonMonth==='function')){
@@ -8659,9 +8693,10 @@ function beginVoyage(fromName, toName){ S._fodOK=S._provOK=S._pwOK=S._h2oOK=fals
        the dangerous season there is the SW monsoon, Jun-Sep, already modelled in winterStormMult(). The Mediterranean
        mare-clausum closure (Dec-Feb) does not apply to this basin, so gate the two on separate seasons (Kris caught the
        'wolf' warning firing on a February Zaiton-Kauthara sailing, which is backwards). */
-    if(_wmons ? (_wm>=6&&_wm<=9) : (_wm===12||_wm<=2)){
+    var _wshut=_wmons && (function(){ try{ return monsoonGated(lk) && !monsoonOpen(fromName,toName); }catch(e){ return false; } })();   /* Kris 0924: a course the monsoon shuts outright gets the shut-sea notice below, not a 'wait for kinder weather' warning first */
+    if(!_wshut && (_wmons ? (_wm>=6&&_wm<=9) : (_wm===12||_wm<=2))){
     var _wves=(function(){ try{ return ((typeof eastAsiaSeaLL==='function')&&(eastAsiaSeaLL(CITY_LL[fromName])||eastAsiaSeaLL(CITY_LL[toName])))?'junks':'dhows'; }catch(e){ return 'ships'; } })();
-    S.pendingEvent={h:(_wmons?'THE MONSOON SEA':'THE SEA IN WINTER'), t:(_wmons?("The captains hear your destination and look at the sky. \u201cThis is the season of the great wind out of the southwest \u2014 the "+_wves+" that sail now do not all come home. We will take your silver if you insist, but a wise man waits for the monsoon to turn.\u201d"):"The captains hear your destination and look at the sky. \u201cIn this season the sea is a wolf \u2014 gales out of a clear morning, and the drowned of last winter still unburied. We will take your silver if you insist, but a wise man waits for the season to turn.\u201d"), ch:[
+    S.pendingEvent={h:(_wmons?'THE MONSOON SEA':'THE SEA IN WINTER'), t:(_wmons?("The captains hear your destination and look at the sky. \u201cThis is the season of the great wind out of the southwest \u2014 the "+_wves+" that sail now do not all come home. We will take your silver if you insist, but a wise man waits for the monsoon to turn.\u201d"+((function(){ try{ return monsoonGated(lk)&&!monsoonWinterward(fromName,toName,lk); }catch(e){ return false; } })()?" <span class=\"sub\">(This is the only wind that carries a ship this way. The safer sailings on it come at its edges, in April and May before it breaks or in October as it slackens. Once it turns in November, no ship sails this course again until spring.)</span>":"")):"The captains hear your destination and look at the sky. \u201cIn this season the sea is a wolf \u2014 gales out of a clear morning, and the drowned of last winter still unburied. We will take your silver if you insist, but a wise man waits for the season to turn.\u201d"), ch:[
       {l:'Sail anyway',f:function(){ S._wsailOK=true; try{ beginVoyage(fromName,toName); }finally{ S._wsailOK=false; } }},
       {l:'Wait for kinder weather',f:function(){}}]};
     render(); return; } } }
@@ -8723,7 +8758,15 @@ const FERRY_LANES={'Aydhab|Jeddah':1}; /* Oxus 8/04 (Kris): legs where the WHOLE
      break-up (ICE-RUN gate) closes it again. Hulls force the runners/timber/abandon decision first. */
   if(typeof iceRoadCheck==='function' && iceRoadCheck(fromName,toName,lk)) return;
   const fare=voyFare(fromName,toName);
-  if(fare.total>0 && S.silver<fare.total){ var _lnd=lk&&lk.terr==='land'; S.pendingEvent={h:(_lnd?'THE ROAD TO '+toName.toUpperCase():'PASSAGE BY SEA'), t:(fare.portage?"The portage-master reckons your loads: "+fare.total+" silver to haul "+fare.excess+" weight over the neck on his rollers and ox-sledges - your own backs carry the first five apiece for nothing - and he will not lift a bale on credit. Come back when you have raised it.":_lnd?"The guide shakes his head at your purse: "+fare.total+" silver for the road ("+fare.per+" for "+(livingComps()+1)+" head, "+fare.cargo+" in porterage), and he will not lead a party that cannot meet the fee for the road. Come back when you have raised it.":"The master of the "+toName+" ship counts your purse and shakes his head: "+fare.total+" silver for the passage ("+fare.per+" for "+(livingComps()+1)+" head, "+fare.cargo+" porterage on "+cargoW()+" of cargo), and he will not carry a merchant who cannot pay it. You keep ashore until you have raised the fare."), ch:[{l:(_lnd?'Back to '+fromName:'Stay in port'),f(){}}]}; render(); return; }
+  if(fare.total>0 && S.silver<fare.total){ var _lnd=lk&&lk.terr==='land'; S.pendingEvent={h:(_lnd?'THE ROAD TO '+toName.toUpperCase():'PASSAGE BY SEA'), t:(fare.portage?"The portage-master reckons your loads: "+fare.total+" silver to haul "+fare.excess+" weight over the neck on his rollers and ox-sledges - your own backs carry the first five apiece for nothing - and he will not lift a bale on credit. Come back when you have raised it.":_lnd?"The guide shakes his head at your purse: "+fare.total+" silver for the road ("+fare.per+" for "+(livingComps()+1)+" head, "+fare.cargo+" in porterage), and he will not lead a party that cannot meet the fee for the road. Come back when you have raised it.":"The master of the "+toName+" ship counts your purse and shakes his head: "+fare.total+" silver for the passage ("+fare.per+" for "+(livingComps()+1)+" head, "+fare.cargo+" porterage on "+cargoW()+" of cargo), and he will not carry a merchant who cannot pay it. You keep ashore until you have raised the fare."), ch:[{l:(_lnd?'Back to '+fromName:'Stay in port'),f(){}}]};
+    /* Kris 0924: fleeing a plague town short of the fare - make up the difference in goods at 75% of their value HERE, as close to the fare as the packs allow */
+    try{ if(S.plague&&S.plague.name===fromName&&typeof barterFare==='function'){ var _bf=barterFare(fare.total-Math.floor(Math.max(0,S.silver)), (typeof cityByName==='function'&&cityByName(fromName))||city());
+      if(_bf){ var _who=fare.portage?'portage-master':(_lnd?'guide':'master'); S.pendingEvent.ch.unshift({l:'Make up the fare in goods: '+_bf.txt,f:function(){
+        _bf.items.forEach(function(it){ S.goods[it.id]=Math.max(0,(S.goods[it.id]||0)-it.k); if(S.goods[it.id]<=0&&S.basis)S.basis[it.id]=0; });
+        S.silver=Math.floor(Math.max(0,S.silver))+_bf.need;   /* the over-value stays with him - there is no change in a plague port */
+        log('With the sickness in the streets there is no haggling: the '+_who+' takes '+_bf.txt+' against the rest of the fare, reckoned at three-quarters of what they would fetch in the market, and keeps the difference.');
+        beginVoyage(fromName,toName); }}); } } }catch(e){}
+    render(); return; }
   if(lk.portage && (typeof fleet==='function') && fleet().length && !S._portOK){ var _ov=Math.max(0,Math.round(soulsAboard()*PERSON_SPACE+cargoW()-fleetCargo())); if(_ov>0){ var _fee=Math.max(3,Math.round(_ov*0.15)); S.pendingEvent={h:'THE PORTERS NAME THEIR PRICE', t:"Your hulls cannot hold all you carry for the drag-across \u2014 "+_ov+" weight must go by cart. The portage-men will sledge the overage to "+toName+" for "+_fee+" silver \u2014 their carts, their oxen, their price.", ch:[{l:'Pay '+_fee+' s and cross',f:function(){ if(S.silver>=_fee){ S.silver-=_fee; S._portOK=true; try{ beginVoyage(fromName,toName); }finally{ S._portOK=false; } } else log('You have not the silver.'); }},{l:'Stay at the landing',f:function(){}}]}; render(); return; } }
   if(lk.portage && (typeof fleet==='function')&&fleet().length){ log('The hulls go over on rollers \u2014 ox-teams, greased keels, and a day of profanity in nine languages.'); }
   if(lk.terr==='land' && (lk.halts||lk.hajj) && !lk.portage){ hajjGo(fromName,toName,lk); return; }   /* a portage stays on the haulage path - no beasts, no overload gate (Kris) */
@@ -9236,13 +9279,13 @@ function barterForMeasures(askS,perAsk,what){ /* Kris: no coin? the halt propose
   if(S.silver>=askS) return null;
   var hub=barterHub(); if(!hub) return null;
   var best=null;
-  GOODS.forEach(function(g){ if(g.id==='slaves')return; var q=(S.goods&&S.goods[g.id])||0; if(q<1)return; var v=barterUnitValue(g,hub); if(v<1)return;
+  GOODS.forEach(function(g){ var q=(S.goods&&S.goods[g.id])||0; if(q<1)return; var v=barterUnitValue(g,hub); if(v<1)return;
     var ok=(v>=askS);
     if(!best || (ok&&!best.ok) || (ok===best.ok && (ok ? v<best.v : v>best.v))) best={g:g,v:v,ok:ok}; });
   if(!best) return null;
   var meas=Math.floor(best.v*perAsk/askS); if(meas<1) return null;
   var gn=best.g.n.toLowerCase(), un=best.g.u, hn=eraName(hub.name);
-  return {l:'Barter: one '+un+' of '+gn+' for '+meas+' measures of '+what, /* Kris: no appraisal shown - you stand at the stall and decide */
+  return {l:slvWords('Barter: one '+un+' of '+gn+' for '+meas+' measures of '+what), /* Kris: no appraisal shown - you stand at the stall and decide */
     f:function(){ S.goods[best.g.id]=Math.max(0,(S.goods[best.g.id]||0)-1); if(what==='food')S.food+=meas; else S.fodder=(S.fodder||0)+meas; log('The trade is weighed out barter-fashion \u2014 one '+un+' of '+gn+' against '+meas+' measures of '+what+'. No coin changes hands.'); }};
  }catch(e){ return null; } }
 function animalBuy(id,priceS,dealer){ /* Kris: the buy button IS the barter button - all your silver first, then the best combination of goods closing the gap at the 75% rate (min overshoot, max 4 items) */
@@ -9252,7 +9295,7 @@ function animalBuy(id,priceS,dealer){ /* Kris: the buy button IS the barter butt
   var sp=Math.floor(Math.max(0,S.silver)); var need=priceS-sp;
   var hub=(typeof barterHub==='function')?barterHub():null;
   var units=[];
-  if(hub) GOODS.forEach(function(g){ if(g.id==='slaves')return; var q=Math.min((S.goods&&S.goods[g.id])||0,10); if(q<1)return; var v=barterUnitValue(g,hub); if(v<1)return; for(var i=0;i<q;i++)units.push({id:g.id,u:g.u,n:g.n,v:v}); });
+  if(hub) GOODS.forEach(function(g){ var q=Math.min((S.goods&&S.goods[g.id])||0,10); if(q<1)return; var v=barterUnitValue(g,hub); if(v<1)return; for(var i=0;i<q;i++)units.push({id:g.id,u:g.u,n:g.n,v:v}); });
   units.sort(function(x,y){ return y.v-x.v; }); units=units.slice(0,40);
   var best=null;
   (function search(idx,picked,sum){
@@ -9274,7 +9317,7 @@ function barterForAnimal(id,priceS){ /* Kris: best COMBINATION landing closest j
   if(S.silver>=priceS) return null;
   var hub=barterHub(); if(!hub) return null;
   var units=[];
-  GOODS.forEach(function(g){ if(g.id==='slaves')return; var q=Math.min((S.goods&&S.goods[g.id])||0,10); if(q<1)return; var v=barterUnitValue(g,hub); if(v<1)return; for(var i=0;i<q;i++)units.push({id:g.id,u:g.u,n:g.n,v:v}); });
+  GOODS.forEach(function(g){ var q=Math.min((S.goods&&S.goods[g.id])||0,10); if(q<1)return; var v=barterUnitValue(g,hub); if(v<1)return; for(var i=0;i<q;i++)units.push({id:g.id,u:g.u,n:g.n,v:v}); });
   if(!units.length) return null;
   units.sort(function(x,y){ return y.v-x.v; }); units=units.slice(0,40);
   var best=null;
@@ -9287,7 +9330,7 @@ function barterForAnimal(id,priceS){ /* Kris: best COMBINATION landing closest j
   var cnt={},rep={};
   best.items.forEach(function(u){ cnt[u.id]=(cnt[u.id]||0)+1; rep[u.id]=u; });
   var parts=Object.keys(cnt).map(function(id){ return cnt[id]+' '+rep[id].u+(cnt[id]>1?'s':'')+' of '+rep[id].n.toLowerCase(); });
-  return {l:'Barter: '+parts.join(' + ')+' for the beast',
+  return {l:slvWords('Barter: '+parts.join(' + ')+' for the beast'),
     f:function(){ best.items.forEach(function(u){ S.goods[u.id]=Math.max(0,(S.goods[u.id]||0)-1); }); if(typeof gainAnimal==='function')gainAnimal(id); S.water=waterMax(); log('Goods against beast, weighed and grudged and agreed \u2014 no coin changes hands.'); }};
  }catch(e){ return null; } }
 function evCharchan(force){ try{ /* Kris: the hamlet that is a stop only when you NEED it - food, fodder, water, a beast - else a line in the log */
@@ -9860,7 +9903,12 @@ function voyLine(){
   const t=S.voy.terr;
   if(t==='land')  return "The caravan track winds on through dust and heat, with the long patience of the road.";
   if(t==='canal') return "The barge slides between green banks, poled and towed, the cultivated land sliding by close enough to touch.";
-  if(t==='med')   return "The galley keeps the coast in sight, island to headland to island, in the crowded and contested waters of the Middle Sea.";
+  if(t==='med'){ /* Kris 0924: 'med' is the coasting TYPE, not the Mediterranean - Hormuz-Cambay read 'galley ... Middle Sea' */
+    var _ll=null; try{ _ll=CITY_LL[S.voy.from]||CITY_LL[S.voy.to]; }catch(e){}
+    var _medSea=!_ll || (_ll[0]<37 && _ll[1]>=30);
+    if(_medSea) return "The galley keeps the coast in sight, island to headland to island, in the crowded and contested waters of the Middle Sea.";
+    if(typeof voyChinaSea==='function'&&voyChinaSea()) return "The junk works along the coast from headland to headland, her battened sails creaking, the land never quite out of sight.";
+    return "The dhow runs along the coast from headland to headland, the land a brown line to one side, the open sea to the other, and the swell long and slow under her."; }
   return "Blue water in every direction. The captain keeps the casks; your only cares are the food and the weather, and the long roll of the monsoon swell.";
 }
 const VOYMAPS={
@@ -10527,7 +10575,8 @@ function ptBar(){ if(!S||!S.playtest)return ''; return '<div style="margin:5px 0
 function renderStats(){
   const el=$('stats');
   if(!S){el.innerHTML='';return;}
-  const w=cargoW()>cargoCap()?' class="bad"':'';
+  var _cgPort=false; try{ _cgPort=cargoW()>cargoCap() && totalAnimals()===0 && !S.journeying && !S.voyaging && (S.seaMode || (typeof seaEdges==='function' && city() && seaEdges(city().name).length>0)); }catch(e){}
+  const w=cargoW()>cargoCap()?(_cgPort?' class="blue"':' class="bad"'):'';   /* Kris 0924: over your own backs in a seaport with no beasts is fine - the ship carries it for porterage - so blue, not red */
   el.innerHTML=
    'Silver <b>'+Math.round(S.silver)+'</b>'+
    '<span>Food <b'+(S.food<10?' class="bad"':'')+'>'+Math.round(S.food)+'</b></span>'+
@@ -10537,7 +10586,7 @@ function renderStats(){
    '<span>Guards <b>'+guardCount()+'</b></span>'+
    '<span style="cursor:pointer;text-decoration:underline dotted var(--dim)" title="View the company" onclick="showParty()">Party <b>'+(1+livingComps())+'</b></span>'+
    '<span>Health <b>'+hpWord()+'</b></span>'+
-   '<span'+w+' style="cursor:pointer;text-decoration:underline dotted var(--dim)" title="What you are carrying" onclick="showCargo()">Cargo <b'+w+'>'+cargoW()+(cargoCap()>=999999?'':'/'+cargoCap())+'</b></span>'+(typeof ptBar==='function'?ptBar():'');
+   '<span'+w+' style="cursor:pointer;text-decoration:underline dotted var(--dim)" title="'+(_cgPort?'More than your people can carry ashore - but a ship carries it, for porterage by weight':'What you are carrying')+'" onclick="showCargo()">Cargo <b'+w+'>'+cargoW()+(cargoCap()>=999999?'':'/'+cargoCap())+'</b></span>'+(typeof ptBar==='function'?ptBar():'');
   renderCrew();
 }
 function _ribGraph(){ var _mo0=(typeof maritimeOpen==='function')?maritimeOpen():true; var _yr0=0; try{ _yr0=gameDate().y; }catch(e){} if(S._rg&&S._rg.era===S.era&&S._rg.mo===_mo0&&S._rg.yr===_yr0&&S._rg.v===7)return S._rg.g; /* v4 + year key: gates open and close with the calendar (the Song war ends in 1276) - the ribbon must re-route when they do */
@@ -13335,7 +13384,7 @@ function battleStep(){
     if(pr.b.cHP<=0||pr.p.cHP<=0)return;
     pr.p._fought=true;
     var bEff=pr.b.fs/(bC[pr.b._id]||1), pEff=pr.p.fs/(pC[pr.p._id]||1); if(c.sea&&(S.boats||[]).some(function(_b){return /cog/i.test(String((_b&&_b.t)||_b||''));})){ bEff*=0.72; } /* cog fore/sterncastles: boarding uphill into crossbows (Kris) */
-    if(rnd()<bEff/(bEff+pEff)){ var d1=cbDie(pr.b.die); cbHit(pr.p,d1); pr.p._took=(pr.p._took||0)+d1; rl.push(pr.p.cHP<=0?'<span class="red">'+cbName(pr.p)+' is cut down</span>':(pr.p.you?'<span class="hurtyou">'+cbName(pr.p)+' takes a hit</span>':'<span class="hurt">'+cbName(pr.p)+' takes a hit</span>')+' <span class="sub">(HP '+Math.round(100*pr.p.cHP/pr.p.cMax)+'%)</span>'); }
+    if(rnd()<bEff/(bEff+pEff)){ var d1=cbDie(pr.b.die); cbHit(pr.p,d1); pr.p._took=(pr.p._took||0)+d1; rl.push(pr.p.cHP<=0?'<span class="red">'+cbName(pr.p)+' is cut down'+((pr.p.gary||(pr.p.ref&&pr.p.ref.gary))?' with one final shriek':'')+'</span>':(pr.p.you?'<span class="hurtyou">'+cbName(pr.p)+' takes a hit</span>':'<span class="hurt">'+cbName(pr.p)+' takes a hit'+(((pr.p.gary||(pr.p.ref&&pr.p.ref.gary))&&S.battle&&!S.battle._garyShriek&&(S.battle._garyShriek=1))?' and shrieks':'')+'</span>')+' <span class="sub">(HP '+Math.round(100*pr.p.cHP/pr.p.cMax)+'%)</span>'); }
     else { var d2=cbDie(pr.p.die); cbHit(pr.b,d2); if(pr.p.ref&&pr.p.ref.id==='abaskunson' && pr.b.bandit){ /* id-keyed: only THE Sohrab of Abaskun, never a namesake */ if(pr.b.cHP<=0){ if(!S.onceFlags.sohrabKill){ S.onceFlags.sohrabKill=true; S._sohrabKill=true; S._sohrabInjure=false; } } else if(!S.onceFlags.sohrabInjure && !S.onceFlags.sohrabKill){ S.onceFlags.sohrabInjure=true; S._sohrabInjure=true; } } rl.push(pr.b.cHP<=0?'<span class="green">'+cbName(pr.p)+' cuts down a '+(c.sea?'pirate':'bandit')+'</span>':cbName(pr.p)+' wounds a '+(c.sea?'pirate':'bandit')+' <span class="sub">('+(c.sea?'pirate':'bandit')+' HP '+Math.round(100*pr.b.cHP/pr.b.cMax)+'%)</span>'); }
   });
   if(rl.length) c.L.push('Round '+c.round+': '+rl.join('; ')+'.');
@@ -14167,6 +14216,7 @@ function ljiBandBeaten(id){ if(!S||!S.lji||!id)return ''; S.ljiBandsDone=S.ljiBa
 /* A few of the Year 20 names carry their talent in the name, so the draw stops arguing with it (Kris: imafarmgirl
    always handles the animals). Everything not listed here is pot-luck as before. */
 const LJI_TRAITS={
+ aggienaut:{salty:1},   /* Kris 0924: the -naut is a sailor - a salt: Sea Sense 12, fords and fishing like a boatman */
  imafarmgirl:{skill:'handle'}, dizzydog:{skill:'handle'}, oxymoron67:{skill:'handle'}, annofowlshire:{skill:'handle'},
  wolfden:{skill:'hunt'}, wildtalents:{skill:'hunt'}, roina_arwen:{skill:'hunt'},
  gunwithoutmusic:{skill:'fight'}, bsgsix:{skill:'fight'}, n3m3sis43:{skill:'fight'}, yachiru:{skill:'fight'},
@@ -14194,7 +14244,7 @@ function ljiTaken(){ var t={}; try{ (S.party||[]).forEach(function(p){ if(p&&p.n
   for(var k in (S.dispersed||{})){ (S.dispersed[k]||[]).forEach(function(m){ if(m&&m.name)t[m.name]=1; }); } }catch(e){} return t; }
 function ljiMember(u){ var sk=ljiSkills(u); var bee=(u==='aggienaut'), bard=ljiIsBard(u), t=ljiTrait(u);
   var m={name:u, role:ljiRole(u,bard), skills:sk, g:(bee?'m':'they'), lji:true, bees:bee, bard:bard, fs:5+ri(4), hs:3+ri(3)};
-  if(t&&t.digger)m.digger=true; if(t&&t.pitch)m.pitch=t.pitch; if(t&&t.g)m.g=t.g;
+  if(t&&t.digger)m.digger=true; if(t&&t.pitch)m.pitch=t.pitch; if(t&&t.g)m.g=t.g; if(t&&t.salty){ m.salty=true; m.ss=12; }
   return m; }
 function ljiRecruit(){ if(!S||!S.lji)return null;
   var taken=ljiTaken(), pool=LJI_NAMES.filter(function(n){ return !taken[n]; });
@@ -14219,7 +14269,7 @@ function ljiVoteCheck(){ try{
   var gary=(typeof ljiGary==='function')?ljiGary():null, maxN=ljiVoteMax();
   /* the finale: a day out from home, two idolists is one too many - a vote at once, and again tomorrow if it must be */
   if(ljiDaysHome()<=1 && cands.length>=2 && S.ljiFinalVoteDay!==S.day){ S.ljiFinalVoteDay=S.day; S.ljiVoteDay=S.day;
-    return ljiVoteEvent(cands[Math.floor(rnd()*cands.length)], !!gary, true); }
+    return ljiVoteCall(cands, !!gary, true); }
   /* Second Chance Idol: the company has fallen below what the vote allows, and somebody is waiting on the bench */
   var sc=ljiSecondChanceCheck(lp,gary,maxN); if(sc) return sc;
   /* Kris: the clock starts the DAY THE COMPANY CROSSES the line, not at the start of the run - the sixth member
@@ -14230,7 +14280,7 @@ function ljiVoteCheck(){ try{
   if((S.day-S.ljiVoteDay)<7) return null;
   if(!gary && rnd()>=1/30) return null;
   S.ljiVoteDay=S.day;
-  return ljiVoteEvent(cands[Math.floor(rnd()*cands.length)], !!gary); }catch(e){ return null; } }
+  return ljiVoteCall(cands, !!gary); }catch(e){ return null; } }
 function ljiSecondChanceCheck(lp,gary,maxN){ try{
   var bench=(S.ljiBench||[]).filter(function(m){ return m&&m.name; });
   if(!bench.length || lp.length+1>=maxN){ S.ljiSCDay=null; return null; }   /* the clock runs only while there is room and someone to fill it */
@@ -14255,20 +14305,41 @@ function ljiSecondChanceReturn(who){ try{
   S.ljiVoteDay=null; S.ljiSCDay=null;
   log(who.name+' is back in the company, with the same pack and the same boots, and will not discuss the dancing.');
 }catch(e){} }
-function ljiVoteEvent(who,garyHere,finale){
-  var nm=who.name, G=(typeof ljiGary==='function'&&ljiGary())?ljiGary().name:'Gary';
-  if(finale) return {h:(garyHere?'THE LAST VOTE':'THE LAST VOICE'), t:(garyHere
-      ? G+" waits until the lamps of home are all but in sight, then gets up on a pack-saddle for the last time and says, with the air of a man closing a book, that only one of the company can walk in through the gate as an idolist \u2014 and that the rules are the rules. The lot falls on <b>"+nm+"</b>."
-      : "A day out from home the voice comes out of the dark one last time \u2014 patient, amused, unmistakably "+G+"'s \u2014 to say that only one of the company can walk in through the gate as an idolist, and that the rules are the rules. The lot falls on <b>"+nm+"</b>."),
-    ch:[{l:'Let the vote stand',f:function(){ ljiVoteOut(who, garyHere); }},
-        {l:'Say the vote is nonsense \u2014 and watch '+nm+' go anyway',f:function(){ ljiVoteOut(who, garyHere, true); }}]};
-  var t = garyHere
-    ? G+" gets up on a pack-saddle at the evening fire and announces, with the air of a man performing a duty, that the company has grown too large for the road and it is time to vote somebody out. There is grumbling. There is a vote anyway. The lot falls on <b>"+nm+"</b>."
-    : "At the evening fire the talk dies all at once, and a voice comes out of the dark that everyone recognises and nobody can place \u2014 patient, faintly amused, unmistakably Gary's \u2014 saying that the company has grown too large and somebody must be voted out. The fire gutters. The lot falls on <b>"+nm+"</b>.";
-  return {h:(garyHere?'A VOTE AT THE FIRE':'A VOICE AT THE FIRE'), t:t, ch:[
-    {l:'Let the vote stand',f:function(){ ljiVoteOut(who, garyHere); }},
-    {l:'Say the vote is nonsense \u2014 and watch '+nm+' go anyway',f:function(){ ljiVoteOut(who, garyHere, true); }}]};
+/* Kris 0924: the vote is called first and the player chooses how to vote. 'Vote for everyone' leaves the lot
+   to chance; 'Cast your votes' opens a poll of the idolists, as many ticks as you like. A vote is a vote to KEEP someone:
+   with P idolists in the running, your vote counts as one voice more in their favour, so a voted-for idolist's
+   chance of going is P/(P+1) of an unvoted one's (P=5: 5/6). Vote for all or none and the lot is even. */
+function ljiVotePick(cands,keep){ var P=cands.length, w=cands.map(function(c){ return (keep&&keep[c.name])?P/(P+1):1; });
+  var tot=w.reduce(function(a,b){return a+b;},0), r=rnd()*tot; for(var i=0;i<cands.length;i++){ r-=w[i]; if(r<0) return cands[i]; } return cands[cands.length-1]; }
+function ljiVoteCall(cands,garyHere,finale){
+  var G=(typeof ljiGary==='function'&&ljiGary())?ljiGary().name:'Gary';
+  var t = finale
+    ? (garyHere ? G+" waits until the lamps of home are all but in sight, then gets up on a pack-saddle for the last time and says, with the air of a man closing a book, that only one of the company can walk in through the gate as an idolist — and that the rules are the rules. The polls are open."
+                : "A day out from home the voice comes out of the dark one last time — patient, amused, unmistakably "+G+"'s — to say that only one of the company can walk in through the gate as an idolist, and that the rules are the rules. The polls are open.")
+    : (garyHere ? G+" gets up on a pack-saddle at the evening fire and announces, with the air of a man performing a duty, that the company has grown too large for the road and it is time to vote somebody out. There is grumbling. The polls are open."
+                : "At the evening fire the talk dies all at once, and a voice comes out of the dark that everyone recognises and nobody can place — patient, faintly amused, unmistakably "+G+"'s — saying that the company has grown too large and somebody must be voted out. The fire gutters. The polls are open.");
+  var h = finale ? (garyHere?'THE LAST VOTE':'THE LAST VOICE') : (garyHere?'A VOTE AT THE FIRE':'A VOICE AT THE FIRE');
+  return {h:h, t:t, ch:[
+    {l:'Vote for everyone',f:function(){ S.pendingEvent=ljiVoteEvent(ljiVotePick(cands,null),garyHere,finale); }},
+    {l:'Cast your votes',f:function(){ S._ljiPoll={}; S.pendingEvent=ljiVotePoll(cands,garyHere,finale,h); }}]};
 }
+function ljiVotePoll(cands,garyHere,finale,h){
+  var keep=S._ljiPoll||{}, P=cands.length, n=cands.filter(function(c){return keep[c.name];}).length;
+  var ch=cands.map(function(c){ return {l:(keep[c.name]?'☑ ':'☐ ')+c.name, f:function(){ S._ljiPoll=S._ljiPoll||{}; S._ljiPoll[c.name]=!S._ljiPoll[c.name]; S.pendingEvent=ljiVotePoll(cands,garyHere,finale,h); }}; });
+  ch.push({l:'Drop your ballot in the hat'+(n?' ('+n+' vote'+(n>1?'s':'')+')':' (no votes)'),f:function(){ var k=S._ljiPoll; S._ljiPoll=null; S.pendingEvent=ljiVoteEvent(ljiVotePick(cands,k),garyHere,finale); }});
+  return {h:h, t:"Tick every idolist you would keep. You may vote for as many as you like; each vote counts as one voice among the "+P+" in that idolist's favour, so anyone you vote for is a little less likely to go than anyone you don't.", ch:ch};
+}
+function ljiVoteEvent(who,garyHere,finale){   /* Kris 0924: the result, not a second choice - the vote is carried out and the box only reports it */
+  var nm=who.name, G=(typeof ljiGary==='function'&&ljiGary())?ljiGary().name:'Gary';
+  ljiVoteOut(who, garyHere);
+  var t = (garyHere
+      ? G+" tips the ballots out of his hat onto a saddle-blanket and counts them twice, lips moving, while the whole company watches. The lot falls on <b>"+nm+"</b>."
+      : "Nobody sees who counts the ballots. The voice only says, when it is done, that the lot falls on <b>"+nm+"</b>.")
+    + " "+nm+" takes it well enough, shoulders a pack with everything they came with, and walks back down the road you came by."
+    + (finale ? " Only one idolist will walk in through the gate of home." : "");
+  return {h:finale?(garyHere?'THE LAST VOTE':'THE LAST VOICE'):(garyHere?'A VOTE AT THE FIRE':'A VOICE AT THE FIRE'), t:t, ch:[{l:'Close',f:function(){}}]};
+}
+
 function ljiVoteOut(who,garyHere,protested){
   try{ S.party=(S.party||[]).filter(function(p){ return p!==who; });
     S.ljiGone=(S.ljiGone||[]); if(who.name)S.ljiGone.push(who.name);
@@ -14280,7 +14351,7 @@ function ljiStart(){ try{ /* ?start=lji - the quick Samarkand loop the film uses
   var ok=quickStart('Samarkand'); if(!ok)return false;
   try{ var comps=(S.party||[]).filter(function(p){return p&&p.alive&&!p.nephew;}); var g=comps[0]||(S.party||[])[0];
     if(g){ g.name='Gary'; g.full=null; g.role='a stout companion with a lute and a gift for misadventure'; g.gary=true; g.bard=true; }
-    var pool=LJI_NAMES.slice(); comps.slice(1,3).forEach(function(p){ var u=pool.splice(ri(pool.length),1)[0]; var bard=ljiIsBard(u); p.name=u; p.full=null; p.g='they'; p.lji=true; p.bard=bard; p.role=ljiRole(u,bard); if(u==='aggienaut'){ p.bees=true; p.g='m'; } }); }catch(e){}
+    var pool=LJI_NAMES.slice(); comps.slice(1,3).forEach(function(p){ var u=pool.splice(ri(pool.length),1)[0]; var bard=ljiIsBard(u); p.name=u; p.full=null; p.g='they'; p.lji=true; p.bard=bard; p.role=ljiRole(u,bard); if(u==='aggienaut'){ p.bees=true; p.g='m'; } var _t=ljiTrait(u); if(_t&&_t.salty){ p.salty=true; p.ss=12; } }); }catch(e){}
   S.lji=true; S.ljiVoteDay=null; S.ljiBandsDone=[]; S.ljiGone=[]; S.ljiBench=[]; S.ljiSCDay=null;
   S.pendingEvent={h:'#LJI', t:"A trading venture in the year 1271 — out of Samarkand, over the Onion Mountains and back, with Gary.", ch:[{l:'Set out',f(){}}]};
   render(); return true; }catch(e){ return false; } }
