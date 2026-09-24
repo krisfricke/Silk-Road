@@ -143,7 +143,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.24'; const BUILD='0924.secondChance'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.27'; const BUILD='0924.bestDealBold'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -7317,6 +7317,14 @@ function renderNotes(m){
   const noteCols=cols.map(col=>col.here?c:col.city).filter(Boolean);
   const _sellable={}; noteCols.forEach(function(X){ cityShownGoods(X).forEach(function(g){ _sellable[g.id]=1; }); });
   const shownNoteGoods=GOODS.filter(function(g){ return (S.goods[g.id]||0)>0 || dealsIn(g,c); });
+  /* Kris 0924: once every displayed town's prices are remembered, bold the single best deal you can still BUY here (stock > 0)
+     and sell in a displayed town - best = highest sell/buy ratio. Re-picked on every render, so buying out the stock moves the bold on. */
+  let _best=null;
+  try{ const _oc=cols.filter(col=>!col.here&&col.city);
+    if(_oc.length && _oc.every(col=>S.seen&&S.seen[col.city.name])){
+      shownNoteGoods.forEach(function(g){ const av=(S.stock[c.name]||{})[g.id]||0; if(av<=0)return; const hp=price(g,c); if(!(hp>0))return;
+        _oc.forEach(function(col){ const np=notePrice(col.city,g); if(!np.known||!(np.p>hp))return; const r=np.p/hp;
+          if(!_best||r>_best.r) _best={g:g.id,city:col.city.name,r:r}; }); }); } }catch(e){ _best=null; }
   const rows=shownNoteGoods.map(g=>{
     const hp=price(g,c), held=S.goods[g.id], avail=S.stock[c.name][g.id];
     const ref=held>0?(S.basis[g.id]||0):(S.lastBasis[g.id]||0);
@@ -7325,13 +7333,13 @@ function renderNotes(m){
     const cells=cols.map(col=>{
       if(col.here){ return '<td class="num '+pcls+'">'+hp+'</td>'; }
       const np=notePrice(col.city,g);
-      if(np.known){ useful=true; const cls=np.p>hp?'blue':(np.p<hp?'green':'gold'); return '<td class="num '+cls+'">'+np.p+'</td>'; }
+      if(np.known){ useful=true; const cls=np.p>hp?'blue':(np.p<hp?'green':'gold'); const _b=_best&&_best.g===g.id&&_best.city===col.city.name; return '<td class="num '+cls+'"'+(_b?' title="best deal to buy here: +'+Math.round((_best.r-1)*100)+'%"':'')+'>'+(_b?'<b>'+np.p+'</b>':np.p)+'</td>'; }
       let w=rumorWord(hp,np.p); if(w!=='unknown' && hashf((S.runId||'r')+col.city.name+g.id)<0.2) w='unknown'; if(w!=='unknown') useful=true; const cls=w==='higher'?'blue':(w==='lower'?'green':'');
       const style=w==='unknown'?' style="color:var(--dim);font-size:.82em"':' style="font-size:.82em"';
       return '<td class="num"><span class="'+cls+'"'+style+'>'+w+'</span></td>';
     }).join('');
     const availTxt=avail>0?'<span style="color:var(--dim)"> · '+avail+'</span>':'<span class="red"> · none</span>';
-    return '<tr><td>'+g.n+availTxt+'</td>'+cells+
+    return '<tr><td>'+((_best&&_best.g===g.id)?'<b>'+g.n+'</b>':g.n)+availTxt+'</td>'+cells+
       '<td><button class="tiny" '+(avail<=0?'disabled':'')+' onclick="buy(\''+g.id+'\',1)">+1</button>'+
       '<button class="tiny" '+(avail<=0?'disabled':'')+' onclick="buy(\''+g.id+'\',10)">+10</button>'+
       '<button class="tiny" onclick="sell(\''+g.id+'\',1)">−1</button>'+
@@ -14277,15 +14285,50 @@ function ljiStart(){ try{ /* ?start=lji - the quick Samarkand loop the film uses
   S.pendingEvent={h:'#LJI', t:"A trading venture in the year 1271 — out of Samarkand, over the Onion Mountains and back, with Gary.", ch:[{l:'Set out',f(){}}]};
   render(); return true; }catch(e){ return false; } }
 function ljiGary(){ return (S&&S.party||[]).find(function(p){return p&&p.gary&&p.alive;}); }
+/* Apricot country, 1271: the Ferghana and Zarafshan gardens, Khwarazm, Khorasan and the Afghan valleys, the Tarim and Gansu oases,
+   the loess country of north China, Armenia/Anatolia/Azerbaijan, and the Ghouta of Damascus. Not the Levant coast, Egypt, Arabia, India or the tropics.
+   Fresh fruit only June-August (seasonMonth). Returns the orchard phrase for the nearer end of the leg, or null. */
+var APRICOT_LANDS={Andijan:'A Ferghana orchard',Akhsikath:'A Ferghana orchard',Khujand:'A Ferghana orchard',
+  Samarkand:'A Samarkand orchard',Bukhara:'A Bukharan orchard',Dizak:'An orchard outside Dizak',Urgench:'A Khwarazmian orchard',
+  Merv:'An orchard outside Merv',Nishapur:'A Nishapur orchard',Herat:'A Herat orchard',Balkh:'An orchard outside Balkh',Kabul:'A Kabul orchard',
+  Tashkent:'An orchard in Chach',Ispijab:'An orchard under the Ispijab hills',Rey:'An orchard outside Rey',Varamin:'An orchard outside Varamin',
+  Tabriz:'A Tabriz orchard',Maragha:'An orchard below Maragha',Ani:'An Armenian orchard',Iconium:'An orchard outside Konya',Malatya:'A Malatya orchard',
+  Kashgar:'A Kashgar orchard',Yarkand:'A Yarkand orchard',Khotan:'A Khotan orchard',Aksu:'An orchard outside Aksu',Kucha:'A Kucha orchard',
+  Turfan:'A Turfan orchard',Hami:'A Hami orchard',Dunhuang:'A Dunhuang orchard',Jiuquan:'An orchard at Suzhou',Zhangye:'An orchard at Ganzhou',
+  Wuwei:'An orchard at Liangzhou',Lanzhou:'A Lanzhou orchard',"Chang'an":"An orchard outside Chang'an",Luoyang:'A Luoyang orchard',
+  Damascus:'An orchard in the Ghouta of Damascus'};
+function ljiApricotPlace(){ try{
+  var m=(typeof seasonMonth==='function')?seasonMonth():monthNum(); if(m<6||m>8) return null;
+  var a=S.itin&&S.itin[S.idx], b=(typeof nextCity==='function')?nextCity():null;
+  var p=(S.legKm||0)/((typeof legDist==='function'?legDist():0)||1);
+  var near=(p<0.5)?a:b, far=(p<0.5)?b:a;
+  return APRICOT_LANDS[near]||APRICOT_LANDS[far]||null;
+}catch(e){ return null; } }
+/* The irrigation channel Gary falls into, by what the locals call it (Kris 0924): aryk in Turkestan and the Tarim oases (Turkic),
+   juy in Persian-speaking Khorasan, Iran and the Afghan valleys, canal in the Nile and Mesopotamian flood-plains, plain ditch elsewhere. */
+var DITCH_TURK=['Samarkand','Bukhara','Andijan','Akhsikath','Khujand','Dizak','Urgench','Merv','Tashkent','Ispijab','Otrar','Kashgar','Yarkand','Khotan','Aksu','Kucha','Turfan','Hami','Miran','Charchan','Tashkurgan','Balkh','Termez'];
+var DITCH_PERS=['Nishapur','Herat','Kabul','Rey','Varamin','Tabriz','Maragha','Shiraz','Isfahan','Yazd','Kerman','Sarakhs','Damghan','Tus','Bamiyan','Astarabad','Sultaniyya','Qazvin','Hamadan'];
+var DITCH_CANAL=['Baghdad','Basra','Fustat','Alexandria','Qus','Asyut','Cairo','Wasit','Mosul'];
+function ljiDitchWord(){ try{
+  var a=S.itin&&S.itin[S.idx], b=(typeof nextCity==='function')?nextCity():null;
+  var p=(S.legKm||0)/((typeof legDist==='function'?legDist():0)||1); var c=(p<0.5)?a:b;
+  var R=(typeof GUARD_CITY_REGION!=='undefined'&&GUARD_CITY_REGION[c])||'';
+  if(DITCH_TURK.indexOf(c)>=0||R==='steppe') return {w:'aryk',h:'ARYK',t:'an aryk, one of the irrigation channels that feed the fields,'};
+  if(DITCH_PERS.indexOf(c)>=0) return {w:'juy',h:'JUY',t:'a juy, one of the irrigation channels that feed the fields,'};
+  if(DITCH_CANAL.indexOf(c)>=0||R==='egypt') return {w:'canal',h:'CANAL',t:'an irrigation canal'};
+  return {w:'ditch',h:'DITCH',t:'an irrigation ditch'};
+}catch(e){ return {w:'ditch',h:'DITCH',t:'an irrigation ditch'}; } }
 function ljiGaryEvent(terr){ var g=ljiGary(); if(!g)return null; var G=g.name||'Gary';
   function halfDay(){ try{ S.legKm=Math.max(0,(S.legKm||0)-Math.round((typeof daySpeed==='function'?daySpeed():60)*0.5)); }catch(e){} }
   var pool=[];
   pool.push({h:G.toUpperCase()+' IN THE NETTLES', t:G+" steps off the track to answer nature and answers it, at length, in a waist-high stand of stinging nettles. He comes out shrieking — a high, carrying note that turns every head in the string and sets the camels shifting — at a run, then at a hop, then sits down in the road, still shrieking at intervals.", ch:[
     {l:'Dock leaves — or, in this country, cool mud from the ditch',f(){ halfDay(); log(G+' is daubed in ditch-mud to the elbows and forgiven, mostly, by noon. Half a day gone.'); }},
     {l:'Let him itch; it teaches',f(){ log(G+' itches for two days and is philosophical about it on the third.'); }}]});
-  if(terr==='settled'||terr==='steppe') pool.push({h:G.toUpperCase()+' AND THE ARYK', t:"Walking backward to finish a story, "+G+" goes into an irrigation channel to the chest. The story, the caravan agrees, was not that good.", ch:[
-    {l:'Fish him out and dry the packs',f(){ halfDay(); S.food=Math.max(0,(S.food||0)-2); log(G+' and two measures of flour come out of the aryk; only one of them dries usable.'); }}]});
-  if(terr==='settled') pool.push({h:G.toUpperCase()+' AND THE APRICOTS', t:"A Fergana orchard, a low wall, and "+G+" — who eats, by the drover's count, forty-one apricots. The reckoning arrives an hour down the road and keeps arriving.", ch:[
+  var _dw=(typeof ljiDitchWord==='function')?ljiDitchWord():{w:'irrigation ditch',h:'DITCH'};   /* Kris: 'aryk' only in Turkestan; the local word elsewhere */
+  if(terr==='settled'||terr==='steppe') pool.push({h:G.toUpperCase()+' AND THE '+_dw.h, t:"Walking backward to finish a story, "+G+" goes into "+_dw.t+" to the chest. The story, the caravan agrees, was not that good.", ch:[
+    {l:'Fish him out and dry the packs',f(){ halfDay(); S.food=Math.max(0,(S.food||0)-2); log(G+' and two measures of flour come out of the '+_dw.w+'; only one of them dries usable.'); }}]});
+  var _apr=(typeof ljiApricotPlace==='function')?ljiApricotPlace():null;   /* Kris: only where apricots grow, only when they're ripe, and name the real place */
+  if(terr==='settled' && _apr) pool.push({h:G.toUpperCase()+' AND THE APRICOTS', t:_apr+", a low wall, and "+G+" — who eats, by the drover's count, forty-one apricots. The reckoning arrives an hour down the road and keeps arriving.", ch:[
     {l:'Camp early for his sake',f(){ halfDay(); log('The caravan camps early. '+G+' is not seen until morning, and then only from a distance.'); }},
     {l:'March on; he can catch up',f(){ log(G+' catches up at dusk, thinner, and does not speak of apricots again.'); }}]});
   if(terr==='mountain'||terr==='rugged') pool.push({h:G.toUpperCase()+' AND THE MARMOT', t:G+" comes back to the fire delighted, holding a fat Pamir marmot by the tail: supper. The Kirghiz herdsman with you looks at it and does not like it. A marmot that lets itself be caught by "+G+", he says, is a marmot that was already dying; the hill-people eat marmot gladly, but they leave the slow ones lie and they shift camp when the burrows go quiet, and no one has ever told them why.", ch:[
