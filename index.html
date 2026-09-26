@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.45'; const BUILD='0926.kaiduHalf'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.47'; const BUILD='0926.ljiHomeDist'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -4083,7 +4083,8 @@ function evStreetCat(){ markEv('scat');
 function evEatery(){ markEv('eat'); return {h:'THE BEST TABLE IN TOWN', t:'You find the one cookshop in '+eraName(_monthHere())+' worth the name — '+_localDish()+', done better than anywhere on the whole road. You take your supper there every night of the month, and are the fatter and the happier for it.', ch:[{l:'Eat well while you can',f:function(){ if(S.silver>=3)S.silver-=3; S.hp=clamp(S.hp+6,0,100); if(typeof healMembers==='function')healMembers(3); }}]}; }
 function evCobbler(){ markEv('cob'); return {h:'A GOOD COBBLER', t:'A quiet old cobbler near the '+_localHoly()+' takes your road-ruined boots and hands them back rebuilt better than new, for a handful of coppers and a long story about his sons. Small mercies, on a long road.', ch:[{l:'Bless the man and pay him double',f:function(){ if(S.silver>=2)S.silver-=2; S.hp=clamp(S.hp+3,0,100); }}]}; }
 function evBaths(){ markEv('bath'); var pp=(typeof cityPersp==='function'?cityPersp(_monthHere()):'east'); var w=(pp==='arab'||pp==='persian'||pp==='muslimIndia')?'hammam':(pp==='east')?'bath-house':'baths'; return {h:'THE '+w.toUpperCase(), t:'You give yourself over, once a week, to the '+w+' — steam and hot stone and a masseur with hands like a blacksmith — and come out each time looser in the limbs and lighter in the head. A month of the road boiled out of your bones.', ch:[{l:'A clean and easy month',f:function(){ if(S.silver>=2)S.silver-=2; S.hp=clamp(S.hp+7,0,100); }}]}; }
-function evBusker(){ markEv('busk'); var who=pick(['a blind lute-player','an old woman who tells the same three stories',"a boy with a monkey and a drum",'a singer of impossibly sad songs']); return {h:'A FIXTURE OF THE STREET', t:'There is '+who+' at the corner by your lodging, and by the month’s end you find you have come to plan your evenings around it. You leave a coin every night, and mean it.', ch:[{l:'Enjoy the small ritual of it',f:function(){ if(S.silver>=1)S.silver-=1; S.hp=clamp(S.hp+3,0,100); }}]}; }
+function evBusker(){ markEv('busk'); var who=pick(['a blind lute-player','an old woman who tells the same three stories',"a boy with a monkey and a drum",'a singer of impossibly sad songs']); var _sd=(S&&S._stayDays)||0, _when=(_sd>=28)?'by the month’s end':(_sd>=10)?'by the second week':'by the second evening'; /* Kris 0926: a 3-day wait said 'by the month's end' */
+  return {h:'A FIXTURE OF THE STREET', t:'There is '+who+' at the corner by your lodging, and '+_when+' you find you have come to plan your evenings around it. You leave a coin every night, and mean it.', ch:[{l:'Enjoy the small ritual of it',f:function(){ if(S.silver>=1)S.silver-=1; S.hp=clamp(S.hp+3,0,100); }}]}; }
 function evTongue(){ markEv('tongue'); return {h:'A MONTH OF THE LANGUAGE', t:'With time on your hands you pay a clerk of the '+_localMkt()+' to beat some of the local speech into you \u2014 numbers first, then weights, then the dozen phrases that mean a man is about to cheat you. It is slow, humbling work, and by the month\u2019s end you are haggling in it.', ch:[{l:'Worth every hour',f:function(){ if(S.silver>=4)S.silver-=4; S.dealDays=(S.dealDays||0)+4; S.hp=clamp(S.hp+2,0,100); }}]}; }
 function evPhysician(){ markEv('phys'); var pp=(typeof cityPersp==='function'?cityPersp(_monthHere()):'east'); var w=(pp==='east')?'a physician of the needles and the pulse':(pp==='hindu')?'a vaidya of the old books':(pp==='arab'||pp==='persian'||pp==='muslimIndia')?'a physician trained in the bimaristan':'a physician who has read his Galen and says so'; return {h:'THE PHYSICIAN', t:'A month in one place is long enough to be looked at properly. '+w.charAt(0).toUpperCase()+w.slice(1)+' goes over you and yours \u2014 the old wrench in the shoulder, the cough that never quite cleared, the tooth nobody wanted to mention \u2014 and puts most of it right.', ch:[{l:'Pay the man and sleep easier',f:function(){ if(S.silver>=6)S.silver-=6; S.hp=clamp(S.hp+8,0,100); if(typeof healMembers==='function')healMembers(10); }}]}; }
 function evWeddingNextDoor(){ markEv('wed'); return {h:'A WEDDING IN THE LANE', t:'The family two doors down marries a daughter, and by the custom of the street a lodger of a month\u2019s standing is a neighbour and must come. You are fed past bearing, made to dance, and introduced to everyone twice. You understand perhaps a third of it and enjoy all of it.', ch:[{l:'Give a decent gift and stay late',f:function(){ if(S.silver>=5)S.silver-=5; S.hp=clamp(S.hp+6,0,100); if(typeof healMembers==='function')healMembers(4); }}]}; }
@@ -14318,8 +14319,21 @@ function ljiRecruit(){ if(!S||!S.lji)return null;
    call still comes, in his voice, out of nothing at all - about once every two months, never within a week. ---- */
 /* nominal days left to the home pole on the road back: the chart's kilometres at the book's 70 km/day, no
    weather, no pace, no beasts - the number a man would quote at the fire, not the number the road will take */
-function ljiDaysHome(){ try{ if(!S||!S.returning||!S.itin)return Infinity; var km=0;
-  for(var j=(S.idx||0)+1;j<S.itin.length;j++) km+=(S.itin[j].dist||0);
+function _llKm(A,B){ var R=6371, t=Math.PI/180, dLa=(B[1]-A[1])*t, dLo=(B[0]-A[0])*t, x=Math.sin(dLa/2)*Math.sin(dLa/2)+Math.cos(A[1]*t)*Math.cos(B[1]*t)*Math.sin(dLo/2)*Math.sin(dLo/2); return 2*R*Math.asin(Math.min(1,Math.sqrt(x))); }
+function ljiDaysHome(){ try{ if(!S||!S.returning)return Infinity;
+  /* Kris 0926: in the 1271 chart/caravan-quarter world S.itin is a stale 762-shaped list and S.idx doesn't follow you, so the old sum came out 0
+     at Karakorum and THE LAST VOTE fired every day. Measure from where you actually are: great-circle to home x1.25 for the road's bends,
+     plus what is left of a leg in hand, at the book's 70 km/day. */
+  var home=(typeof trueHome==='function')?trueHome():null, H=home&&CITY_LL[home];
+  var at=null, extra=0;
+  if(S.voy&&S.voy.to){ at=S.voy.to; }
+  else if(S.dash&&S.dash.to&&S.screen==='travel'){ at=S.dash.to; extra=Math.max(0,(typeof legDist==='function'?legDist():0)-(S.legKm||0)); }
+  else if(S.seaMode&&S.portName){ at=S.portName; }
+  else { var c=(typeof city==='function')?city():null; at=c&&c.name; if(S.screen==='travel'&&typeof nextCity==='function'&&nextCity()){ at=nextCity().name; extra=Math.max(0,(typeof legDist==='function'?legDist():0)-(S.legKm||0)); } }
+  if(at===home) return extra/70;
+  var A=at&&CITY_LL[at];
+  if(H&&A) return (_llKm(A,H)*1.25+extra)/70;
+  var km=0; for(var j=(S.idx||0)+1;j<S.itin.length;j++) km+=(S.itin[j].dist||0);
   if(S.screen==='travel') km-=(S.legKm||0); return Math.max(0,km)/70; }catch(e){ return Infinity; } }
 /* Kris: the largest company the vote will tolerate. Five on the road; on the run home it tightens - four at
    22 nominal days out, three at 15 - and on the last day only one idolist may walk into Venice. */
