@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.54'; const BUILD='1013.tashkurganFull'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.55'; const BUILD='1013.seaFlat'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -3671,7 +3671,7 @@ const BIGNEWS=[
  {id:'edwardstab', src:'Acre', date:[1272,6,16], only:NEWS_CHR, near:NEWS_LEV, hNear:'BLOOD IN THE ENGLISH QUARTER', hFar:'WORD FROM THE HOLY LAND',
   srcH:'AN ASSASSIN AT ACRE', srcWin:6,
   srcT:"Acre is in an uproar: an assassin has been in LORD EDWARD's own chamber with a poisoned dagger. The prince killed the man with his own hands but is badly hurt \u2014 the wound envenomed, the surgeons cutting at the blackened flesh \u2014 and the city holds its breath over whether the great hope of the crusade will live out the week. Guards are doubled on every Frankish door tonight.",
-  rumor:"the foreign prince who came crusading was knifed by an assassin \u2014 and is dead, or lived, or was never touched at all; the story cannot decide, only that there was blood in it.", full:"AN ASSASSIN'S BLADE FOR LORD EDWARD. A man got into the English prince's chamber at Acre and stabbed him with a poisoned dagger; Edward killed the man with his own hands but took the wound, and for days it was not known whether he would live \u2014 the blade envenomed, the black flesh cut away. He lives, for now.",
+  rumor:"the foreign prince who came crusading was knifed by an assassin \u2014 and is dead, or lived, or was never touched at all; the story cannot decide, only that there was blood in it.", full:"AN ASSASSIN'S BLADE FOR LORD EDWARD. A man got into the chamber of the English prince at Acre \u2014 Edward Longshanks, the men-at-arms call him, for the length of his legs \u2014 and stabbed him with a poisoned dagger; Edward killed the man with his own hands but took the wound, and for days it was not known whether he would live \u2014 the blade envenomed, the black flesh cut away. He lives, for now.",
   headline:"From Acre: an assassin nearly killed the English crusader prince, Lord Edward, with a poisoned knife. He is said to be recovering."},
  {id:'edwardgo', src:'Acre', date:[1272,9,24], only:NEWS_CHR, near:NEWS_LEV, hNear:'THE CRUSADE SAILS HOME', hFar:'WORD FROM THE HOLY LAND',
   srcH:'THE ENGLISH FLEET STANDS OUT', srcWin:6,
@@ -4796,7 +4796,7 @@ function renderBoardInto(el){
   let body;
   if(!list.length){ body='<p class="sub">No ventures of this kind recorded yet.</p>'; }
   else if(fast){ body='<table>'+head+list.map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td class="num gold">'+e.days+'</td><td class="num">'+e.score+'</td><td class="sub">'+(e.route&&e.route!=='-'?(e.route==='N'?'northern':'southern'):'—')+'</td></tr>'; }).join('')+'</table>'; }
-  else { body='<table>'+head+list.map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td class="num gold">'+e.score+'</td><td class="num">'+(e.days||'—')+'</td><td class="num">'+annualROI(e)+'</td><td class="sub">'+(e.version||'\u2014')+'</td><td class="sub">'+(function(o){o=o||'';return o.charAt(0).toUpperCase()+o.slice(1);})(e.outcome)+'</td></tr>'; }).join('')+'</table>'; }
+  else { body='<table>'+head+list.map(function(e,i){ return '<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td class="num gold">'+e.score+'</td><td class="num">'+(e.days||'—')+'</td><td class="num">'+annualROI(e)+'</td><td class="sub">'+(e.version||'\u2014')+'</td><td class="sub">'+(function(o){o=o||''; if(/^happily living in /i.test(o) && e.when && (Date.now()-e.when)<7*86400000) o=o.replace(/^happily living in /i,'last seen in '); return o.charAt(0).toUpperCase()+o.slice(1);})(e.outcome)+'</td></tr>';   /* Kris 1013: a save-and-quit is 'last seen in X' for its first real week, then settles into 'happily living in X' */ }).join('')+'</table>'; }
   el.innerHTML=tabs+body;
 }
 
@@ -8577,6 +8577,7 @@ const CITY_LL={Baku:[49.87,40.37],Abaskun:[54.21,36.81],Tmutarakan:[36.72,45.22]
 const _WIND={deep:1.12,coast:1.28,med:1.16,canal:1.30,land:1.32};
 function legGCLi(a,b){ var pa=CITY_LL[a],pb=CITY_LL[b]; if(!pa||!pb)return 0; var toR=Math.PI/180; var la1=pa[1]*toR,la2=pb[1]*toR,dla=(pb[1]-pa[1])*toR,dlo=(pb[0]-pa[0])*toR; var h=Math.sin(dla/2)*Math.sin(dla/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)*Math.sin(dlo/2); var km=6371*2*Math.asin(Math.sqrt(h)); var lk=findLink(a,b); var w=(lk&&_WIND[lk.terr])||1.18; return Math.round(km/0.536*w); }
 function isSeaExitCity(name){ return name==='Constantinople'||name==='Aleppo'||name==='Baghdad'||name==='Iconium'||name==="Chang'an"; }
+function _hasSeaEdge(name){ try{ return (typeof SEA_EDGES!=='undefined') && SEA_EDGES.some(function(e){ return (e.a===name||e.b===name) && (e.terr==='coast'||e.terr==='deep'||e.terr==='med'); }); }catch(x){ return true; } }   /* Kris 1013: 'Step back ashore' in Aleppo, which has no sea - the button now needs a real sea road out of town */
 
 /* monsoon: one direction favoured at a time. order rises toward the west/homeward end. */
 const SEA_ORDER={"Chang'an":-1,'Luoyang':0,'Yangzhou':0.5,'Guangzhou':1,'Kauthara':2,'Palembang':3,'Mantai':4,'Kollam':5,'Dhofar':6,'Socotra':7,'Aden':7,'Zanzibar':8,'Basra':8,'Baghdad':8,'Qulzum':9,'Fustat':10,'Alexandria':11,'Constantinople':12,'Aleppo':11.3,'Gortyn':11.5,'Ephesus':11.8,'Iconium':12.5,'Trebizond':12.7,'Medina':8.4,'Mecca':8.2,'Yamama':7.9,'Shibam':7.0,'Sanaa':7.4};
@@ -10131,7 +10132,7 @@ function renderPort(m){
   '<button onclick="admireCity()">Admire the city</button>'+
   '<button onclick="tavern()">Tavern (3 s)</button>'+((typeof waitYearAvailable==='function'&&waitYearAvailable())?'<button class="seal" onclick="waitYearAsk()">Wait out the war \u2014 a year as trade factor</button>':'')+((typeof factorAvailable==='function'&&factorAvailable())?'<button class="seal" onclick="factorDesk()">Take a factor\u2019s desk to earn your passage</button>':'')+
   (S.debugExport?'<button onclick="exportLog()" title="Download the run-log for analysis">Export run-log</button>':'')+
-  '</div><div style="margin-top:12px">'+(S.job?'':'<button onclick="huntFood()">Hunt nearby (1 day)</button> <button onclick="openOutfitter()">Outfitter</button> '+((S.goods.slaves>0)?'<button onclick="openCoffle()">The coffle ('+S.goods.slaves+')</button> ':'')+((anatPortMapCity(c.name)&&!chartForCity(c.name))?'<button onclick="openMap()">Open the road map</button> ':'')+(chartForCity(c.name)?'<button onclick="openChart()">Open the map</button> ':'')+((seaEdges(c.name).some(function(e){return e.terr==='land';}))?'<button onclick="S.screen=\'animals\';render()">Livestock market</button> ':'')+(isAmberPlace(c.name)?'<button onclick="S.screen=\'boats\';render()">The boatyard</button> ':'')+travel+((isSeaExitCity(c.name)&&S.seaMode&&totalAnimals()>0)?'<button onclick="stepAshore()">Step back ashore (keep to the land road)</button>':''))+'</div>';
+  '</div><div style="margin-top:12px">'+(S.job?'':'<button onclick="huntFood()">Hunt nearby (1 day)</button> <button onclick="openOutfitter()">Outfitter</button> '+((S.goods.slaves>0)?'<button onclick="openCoffle()">The coffle ('+S.goods.slaves+')</button> ':'')+((anatPortMapCity(c.name)&&!chartForCity(c.name))?'<button onclick="openMap()">Open the road map</button> ':'')+(chartForCity(c.name)?'<button onclick="openChart()">Open the map</button> ':'')+((seaEdges(c.name).some(function(e){return e.terr==='land';}))?'<button onclick="S.screen=\'animals\';render()">Livestock market</button> ':'')+(isAmberPlace(c.name)?'<button onclick="S.screen=\'boats\';render()">The boatyard</button> ':'')+travel+((isSeaExitCity(c.name)&&_hasSeaEdge(c.name)&&S.seaMode&&totalAnimals()>0)?'<button onclick="stepAshore()">Step back ashore (keep to the land road)</button>':''))+'</div>';
 }
 function portDepart(to){ if(!S)return; beginVoyage(S.portName, to); }
 const PORT_BIOME={Kauthara:"steaming coastal jungle, loud with gibbons and hornbills and hung with lianas",Palembang:"dense equatorial rainforest along the muddy river, where the rain falls warm and the leeches are democratic",Guangzhou:"subtropical hills of bamboo and banyan beyond the city wall",Mantai:"palm-fringed lagoons and dry thorn-scrub bright with peacocks",Kollam:"the wet green Malabar backwaters, pepper-vines and coconut and the cries of unseen birds",Dhofar:"monsoon-greened hills falling to a desert coast, frankincense trees gnarled in the gullies",Socotra:"a weird forest of dragon's-blood and bottle-trees on bare red mountains",Zanzibar:"mangrove channels and coastal forest, the air thick with clove and rot",Aden:"black volcanic crags above a near-waterless shore",Basra:"endless date-groves and reed-marshes where the great rivers meet",Fustat:"the green Nile floodplain that ends at once in bone-dry desert below the Pyramids",Alexandria:"flat salt-marsh and lagoon behind the dunes",Gortyn:"olive groves and vineyards under bare limestone mountains",Ephesus:"silted river-flats and dry Anatolian hills of scrub-oak and thyme",Qulzum:"utter desert, the mountains of Sinai shimmering across the gulf",Luoyang:"the loess hills and ploughed plains of the Yellow River",Yangzhou:"a green latticework of canals, paddy, and mulberry",Medina:"black lava-fields ringing the date-palm oasis",Mecca:"barren rock hills where nothing grows but thorn",Sanaa:"terraced highland fields under basalt crags",Yamama:"red dunes and palm-groves around the deep wells",Shibam:"a canyon-oasis of palms walled in by stony plateau"};
@@ -11103,9 +11104,26 @@ var M3=(function(){
      buildFrom(uri,true); }); }
    if(st.taint===true){ payload(); return; }
    buildFrom(spec.img,false); }
+ /* Kris 1013: the painted sea climbed the Taurus at Ayas - the DEM coast and the chart's coast disagree by a cell or two, so blue water rode up
+    the mountain flanks. Where the chart itself is WATER (a 5-point sample per vertex, 4 of 5 blue, so a thin river line does not count) the
+    surface drops to the lowest water vertex within 3 cells: open sea goes to 0, a mountain lake stays at its own level. Once per relief. */
+ function seaFlatten(R,tex){ try{ if(R._seaFlat||!tex||!tex.image||!tex.image.getContext)return; R._seaFlat=true;
+   var cv=tex.image, W=cv.width, H=cv.height, d=cv.getContext('2d').getImageData(0,0,W,H).data;
+   var blue=function(x,y){ x=Math.max(0,Math.min(W-1,x|0)); y=Math.max(0,Math.min(H-1,y|0)); var k=(y*W+x)*4, r=d[k], g2=d[k+1], b=d[k+2]; return b>110 && b>r+35 && b>=g2+5; };
+   var NX=R.NX, NY=R.NY, cx=W/NX, cy=H/NY, M=new Uint8Array((NX+1)*(NY+1));
+   for(var iy=0;iy<=NY;iy++)for(var ix=0;ix<=NX;ix++){ var x=ix*cx, y=iy*cy, n=0;
+     if(blue(x,y))n++; if(blue(x-cx/3,y))n++; if(blue(x+cx/3,y))n++; if(blue(x,y-cy/3))n++; if(blue(x,y+cy/3))n++;
+     if(n>=4)M[iy*(NX+1)+ix]=1; }
+   var h=R.h, out=new Float32Array(h);
+   for(var jy=0;jy<=NY;jy++)for(var jx=0;jx<=NX;jx++){ var i0=jy*(NX+1)+jx; if(!M[i0])continue; var mn=h[i0];
+     for(var oy=-3;oy<=3;oy++)for(var ox=-3;ox<=3;ox++){ var yy=jy+oy, xx=jx+ox; if(yy<0||yy>NY||xx<0||xx>NX)continue; var i1=yy*(NX+1)+xx; if(M[i1]&&h[i1]<mn)mn=h[i1]; }
+     out[i0]=mn; }
+   for(var q=0;q<h.length;q++)h[q]=out[q];
+ }catch(e){} }
  function terrainMesh(spec,tex){ var R=reliefFor(spec);
    var g=new THREE.PlaneGeometry(R.cw,R.chh,R.NX,R.NY); g.rotateX(-Math.PI/2);
    var p=g.attributes.position;
+   seaFlatten(R,tex);
    for(var iy=0;iy<=R.NY;iy++)for(var ix=0;ix<=R.NX;ix++) p.setY(iy*(R.NX+1)+ix,R.h[iy*(R.NX+1)+ix]);
    g.computeVertexNormals();
    var m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:tex}));
@@ -11686,7 +11704,7 @@ var M3=(function(){
        addCities(L.sc,L.rel,(mp.cities||[]).map(function(cc){return {n:cc.n,x:cc.x,y:cc.y,rn:!!cc.rn};}));
        addHalts(L.sc,L.rel,CHARTS[mp._ck]);
        try{ addNeighborCharts(L,spec); }catch(_nb){}
-       L.camR=17; L.ph=0.36; L.th=Math.PI/2;   /* Kris: open low, near his own playing angle - the horizon and the ranges are in frame from the first tick (was 0.5) */ L.mvKey=mvKey; L.mp=mp; L.q=null; L.qT=null; L.pts=null; L.lastMs=Date.now(); L.userUntil=0; L.trail=[]; L.windB=Math.random()*6.283;
+       L.camR=17; L.ph=0.18; L.th=Math.PI/2; /* Kris 1013: open at the LOWEST angle (the drag floor, 0.18) */   /* Kris: open low, near his own playing angle - the horizon and the ranges are in frame from the first tick (was 0.5) */ L.mvKey=mvKey; L.mp=mp; L.q=null; L.qT=null; L.pts=null; L.lastMs=Date.now(); L.userUntil=0; L.trail=[]; L.windB=Math.random()*6.283;
        if(kindModel==='ship'){ L.model=mkVessel(); L.model.scale.setScalar(0.16); L.sc.add(L.model); }
        else { var _sv=(typeof wagonServiced==='function')?wagonServiced():{cart:0,wagon:0};
          if(_sv.wagon>0){ var rig=mkOxWagon(); rig.scale.setScalar(0.19); L.sc.add(rig); L.file.push(rig); }   /* a wagon on the road: FOUR oxen and the covered wagon, one rig (Kris) */
