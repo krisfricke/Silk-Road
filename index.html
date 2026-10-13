@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.55'; const BUILD='1013.seaFlat'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.56'; const BUILD='1013.glSafety'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -11564,7 +11564,8 @@ var M3=(function(){
    for(var n in ch.cities){ var c=ch.cities[n]; out.push({n:n,x:c.x,y:c.y,rn:!!c.ruin,big:(c.r||11)>=13}); }
    return out; }
 
- function ensureR(){ if(!st.R){ st.R=new THREE.WebGLRenderer({antialias:true}); st.R.setPixelRatio(Math.min(devicePixelRatio||1,2)); } return st.R; }
+ function ensureR(){ if(!st.R){ st.R=new THREE.WebGLRenderer({antialias:true}); st.R.setPixelRatio(Math.min(devicePixelRatio||1,2));
+   st.R.domElement.addEventListener('webglcontextlost',function(ev){ try{ ev.preventDefault(); }catch(_e){} st.R=null; try{ var tv=document.getElementById('c3dTrav'); if(tv)tv.remove(); st.live=null; document.body.classList.remove('m3trav'); }catch(_e){} },false); } return st.R; }
  var loopOn=false;
  function loop(){ requestAnimationFrame(loop);
    try{
@@ -11931,13 +11932,15 @@ var M3=(function(){
       3 THE TOWN (lanes, houses or yurts, landmark, green, fields, trees, folk)
       6 smoke, camera, drag/zoom, st.back + its per-frame step
     Leaf builders (mkSkiff, mkBuffalo, mkPalm) live at module scope above. The watcher only calls this. */
- function buildDiorama(here,ch,ck){
+ function buildDiorama(here,ch,ck){ try{ _buildDioramaCore(here,ch,ck); }catch(e){ st.err='diorama: '+e.message; st._dioFail=st._dioFail||{}; st._dioFail[ck]=1; try{ killBack(); }catch(_e){} } }   /* Kris 1013 (white page at Candia): a diorama that throws must not leave the page on a blank canvas - drop back to the plain dark town screen */
+ function _buildDioramaCore(here,ch,ck){
        if(!(typeof S!=="undefined"&&S)||(S.screen!=='city'&&S.screen!=='port'))return;
        killBack();
        var el=document.createElement('div'); el.id='c3dBack';
        el.style.cssText='position:fixed;inset:0;z-index:0;opacity:0;transition:opacity 1.4s';
        document.body.insertBefore(el,document.body.firstChild);
-       if(!st.RB){ st.RB=new THREE.WebGLRenderer({antialias:true}); st.RB.setPixelRatio(1); }
+       if(!st.RB){ st.RB=new THREE.WebGLRenderer({antialias:true}); st.RB.setPixelRatio(1);
+         st.RB.domElement.addEventListener('webglcontextlost',function(ev){ try{ ev.preventDefault(); }catch(_e){} st.RB=null; st._hoverWired=false; try{ killBack(); }catch(_e){} },false); }   /* a lost GPU context (driver reset, too many contexts) leaves a blank white canvas - drop it; the next town visit builds a fresh renderer */
        if(!st._hoverWired){ st._hoverWired=true; st._ms={x:-2,y:-2,cx:0,cy:0,on:false};
          if(!document.getElementById('m3tip')){ var _tp0=document.createElement('div'); _tp0.id='m3tip'; _tp0.style.cssText='position:fixed;z-index:6;display:none;pointer-events:none;background:rgba(20,14,8,0.92);border:1px solid #8a6a34;border-radius:5px;padding:5px 9px;max-width:260px;font:13px Georgia,serif;color:#f0e6d2;box-shadow:0 4px 16px rgba(0,0,0,.5)'; document.body.appendChild(_tp0); }
          st.RB.domElement.addEventListener('pointermove',function(e){ var r=st.RB.domElement.getBoundingClientRect(); st._ms.x=((e.clientX-r.left)/r.width)*2-1; st._ms.y=-((e.clientY-r.top)/r.height)*2+1; st._ms.cx=e.clientX; st._ms.cy=e.clientY; st._ms.on=true; });
@@ -12493,6 +12496,7 @@ var M3=(function(){
    var ch=(ck&&CHARTS[ck])||null;
    if(want&&ck){ boot(function(){
      if(st.back&&st.backCk===ck)return;
+     if(st._dioFail&&st._dioFail[ck])return;   /* failed once this session - stay on the plain screen rather than retry every tick */
      buildDiorama(here,ch,ck);
    }); } else killBack();
    var wantT=(typeof S!=="undefined"&&S)&&(S.screen==='travel'||S.screen==='voyage');
