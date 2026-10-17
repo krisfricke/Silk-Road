@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.56'; const BUILD='1013.glSafety'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.57'; const BUILD='1013.portCargo'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -1660,6 +1660,10 @@ function dateStr(){
   return 'Day '+S.day+' · '+MONTHS[i]+' month';
 }
 function slvWords(t){ return (typeof t==='string')?t.replace(/\b(?:one|1) souls? of slaves\b/g,'one slave').replace(/\b(\d+) souls of slaves\b/g,'$1 slaves'):t; } /* Kris 0924: slaves go into the auto-haggles; 'one soul of slaves' reads as nonsense */
+/* Kris 0924/1013: over your own backs in a seaport with no beasts is fine - a ship carries it for porterage - so the stat is blue, and the buy lines and
+   the donate-food button don't nag. One test for all of them. */
+function overCapAtPort(){ try{ var _t=S.seaMode?S.portName:(city()&&city().name); return cargoW()>cargoCap() && totalAnimals()===0 && !S.journeying && !S.voyaging && !!_t && typeof _hasSeaEdge==='function' && _hasSeaEdge(_t); }catch(e){ return false; } }   /* a real SEA road out of town (coast/deep/med) - S.seaMode alone is also true in the inland caravan-quarter towns, and seaEdges() lists land roads too */
+function overCapWarn(){ try{ return cargoW()>cargoCap() && !overCapAtPort(); }catch(e){ return false; } }
 function log(t){ t=slvWords(t); S.log.unshift({d:S.day,t}); if(S.log.length>40)S.log.pop(); if(!S.fullLog)S.fullLog=[]; S.fullLog.push({d:S.day,t:t,hp:(S&&S.hp!=null?Math.round(S.hp):null),ag:(S&&S.silver!=null?Math.round(S.silver):null)}); if(S.fullLog.length>800)S.fullLog.shift();}
 function outcomeBox(h,msg){ log(msg); if(S&&!S.dead) S.pendingEvent={h:h,t:msg,ch:[{l:'Go on',f:function(){}}]}; }
 
@@ -4239,8 +4243,8 @@ function buy(gid,n){
   if(S.priceLock[gid]==null) S.priceLock[gid]=p;   // only a completed deal settles the price for the visit
   S.silver-=q*p; addGoods(gid,q,p); S.stock[c.name][gid]-=q; townCredit(c,q*p);
   var _wineFriend=(gid==='wine' && p<mp && ((c.name==='Turfan'&&S.turfanWineDeal)||(c.name==='Tabriz'&&S.tabrizWineDeal))) ? (c.name==='Turfan'?(S.turfanWineFriend||'Kalergis'):'Nana-vandak') : null; /* Kris 8/13: a settled friend's standing deal should get the credit line, not whichever traveling specialist happens to also know wine */
-  if(gid!=='slaves') log("Bought "+q+" "+g.u+(q>1?'s':'')+" of "+goodLogName(g,c)+" at "+p+" s"+(p<mp?" (haggled from "+mp+")":(p>mp?" (the price you settled here)":""))+(_wineFriend?" — your old friend "+_wineFriend+" gets you a good price":((hg&&p<mp)?" — "+hg.p.name+" knows this trade":""))+(cargoW()>cargoCap()?" — the packs are over capacity; arrange more carriers before you set out":"")+".");
-  if(gid==='slaves'){ if(typeof soulsBuy==='function'){ soulsBuy(q,c.name); var _ad=souls().slice(Math.max(0,souls().length-q)).map(function(z){return z.name;}); log("Bought "+(_ad.length===1?"1 slave named <b>"+_ad[0]+"</b>":q+" slaves ("+_ad.join(', ')+")")+" at "+p+" s"+(q>1?" each":"")+(p<mp?" (haggled from "+mp+")":"")+(cargoW()>cargoCap()?" \u2014 the packs are over capacity; arrange more carriers before you set out":"")+"."); } var _left=livingParty().filter(function(p){return p.noSlaves && !p.slaveWrath;}); _left.forEach(function(o){ S.party=S.party.filter(function(p){return p!==o;}); log("<b>"+o.name+"</b>, "+o.role+", learns what you have bought and is finished with you \u2014 he gathers his gear in silence, refuses your coin, and walks out of the caravan. A slaver travels without him."); }); var _cn=livingParty().find(function(p){return p.slaveWrath;}); if(_cn){ S.pendingEvent=conanSlaveWrath(_cn); } else if(_left.length){ var _one=_left.length===1; var _nm=_left.map(function(o){return "<b>"+o.name+"</b>, "+o.role;}).join("; and "); S.pendingEvent={h:'A PARTING OVER THE CHAINS', t:_nm+(_one?" learns":" learn")+" what you have bought and"+(_one?" is":" are")+" finished with you. "+(_one?"He gathers his gear in silence, refuses your coin, and walks out of the caravan":"They gather their gear in silence, refuse your coin, and walk out of the caravan")+" \u2014 a slaver travels without "+(_one?"him":"them")+".", ch:[{l:'Let '+(_one?'him':'them')+' go',f:function(){}}]}; } }
+  if(gid!=='slaves') log("Bought "+q+" "+g.u+(q>1?'s':'')+" of "+goodLogName(g,c)+" at "+p+" s"+(p<mp?" (haggled from "+mp+")":(p>mp?" (the price you settled here)":""))+(_wineFriend?" — your old friend "+_wineFriend+" gets you a good price":((hg&&p<mp)?" — "+hg.p.name+" knows this trade":""))+(overCapWarn()?" — the packs are over capacity; arrange more carriers before you set out":"")+".");
+  if(gid==='slaves'){ if(typeof soulsBuy==='function'){ soulsBuy(q,c.name); var _ad=souls().slice(Math.max(0,souls().length-q)).map(function(z){return z.name;}); log("Bought "+(_ad.length===1?"1 slave named <b>"+_ad[0]+"</b>":q+" slaves ("+_ad.join(', ')+")")+" at "+p+" s"+(q>1?" each":"")+(p<mp?" (haggled from "+mp+")":"")+(overCapWarn()?" \u2014 the packs are over capacity; arrange more carriers before you set out":"")+"."); } var _left=livingParty().filter(function(p){return p.noSlaves && !p.slaveWrath;}); _left.forEach(function(o){ S.party=S.party.filter(function(p){return p!==o;}); log("<b>"+o.name+"</b>, "+o.role+", learns what you have bought and is finished with you \u2014 he gathers his gear in silence, refuses your coin, and walks out of the caravan. A slaver travels without him."); }); var _cn=livingParty().find(function(p){return p.slaveWrath;}); if(_cn){ S.pendingEvent=conanSlaveWrath(_cn); } else if(_left.length){ var _one=_left.length===1; var _nm=_left.map(function(o){return "<b>"+o.name+"</b>, "+o.role;}).join("; and "); S.pendingEvent={h:'A PARTING OVER THE CHAINS', t:_nm+(_one?" learns":" learn")+" what you have bought and"+(_one?" is":" are")+" finished with you. "+(_one?"He gathers his gear in silence, refuses your coin, and walks out of the caravan":"They gather their gear in silence, refuse your coin, and walk out of the caravan")+" \u2014 a slaver travels without "+(_one?"him":"them")+".", ch:[{l:'Let '+(_one?'him':'them')+' go',f:function(){}}]}; } }
   render();
 }
 function townCashNow(c){ if(!S||!c||(c.hub!=='minor' && !isBaghdadVillage(c.name)))return Infinity; S.townCash=S.townCash||{}; S.townCashDay=S.townCashDay||{}; var cap=c.cash||(isBaghdadVillage(c.name)?110:300);
@@ -8577,7 +8581,7 @@ const CITY_LL={Baku:[49.87,40.37],Abaskun:[54.21,36.81],Tmutarakan:[36.72,45.22]
 const _WIND={deep:1.12,coast:1.28,med:1.16,canal:1.30,land:1.32};
 function legGCLi(a,b){ var pa=CITY_LL[a],pb=CITY_LL[b]; if(!pa||!pb)return 0; var toR=Math.PI/180; var la1=pa[1]*toR,la2=pb[1]*toR,dla=(pb[1]-pa[1])*toR,dlo=(pb[0]-pa[0])*toR; var h=Math.sin(dla/2)*Math.sin(dla/2)+Math.cos(la1)*Math.cos(la2)*Math.sin(dlo/2)*Math.sin(dlo/2); var km=6371*2*Math.asin(Math.sqrt(h)); var lk=findLink(a,b); var w=(lk&&_WIND[lk.terr])||1.18; return Math.round(km/0.536*w); }
 function isSeaExitCity(name){ return name==='Constantinople'||name==='Aleppo'||name==='Baghdad'||name==='Iconium'||name==="Chang'an"; }
-function _hasSeaEdge(name){ try{ return (typeof SEA_EDGES!=='undefined') && SEA_EDGES.some(function(e){ return (e.a===name||e.b===name) && (e.terr==='coast'||e.terr==='deep'||e.terr==='med'); }); }catch(x){ return true; } }   /* Kris 1013: 'Step back ashore' in Aleppo, which has no sea - the button now needs a real sea road out of town */
+function _hasSeaEdge(name){ try{ var _era=(S&&S.era)||'762'; return (typeof SEA_EDGES!=='undefined') && SEA_EDGES.some(function(e){ if(e.era&&e.era!=='both'&&e.era!==_era)return false; if(!e.era&&_era==='1271')return false; return (e.a===name||e.b===name) && (e.terr==='coast'||e.terr==='deep'||e.terr==='med'); }); }catch(x){ return true; } }   /* era-aware, as findLink is: Aleppo's 762 sea lane is no sea road in 1271 */   /* Kris 1013: 'Step back ashore' in Aleppo, which has no sea - the button now needs a real sea road out of town */
 
 /* monsoon: one direction favoured at a time. order rises toward the west/homeward end. */
 const SEA_ORDER={"Chang'an":-1,'Luoyang':0,'Yangzhou':0.5,'Guangzhou':1,'Kauthara':2,'Palembang':3,'Mantai':4,'Kollam':5,'Dhofar':6,'Socotra':7,'Aden':7,'Zanzibar':8,'Basra':8,'Baghdad':8,'Qulzum':9,'Fustat':10,'Alexandria':11,'Constantinople':12,'Aleppo':11.3,'Gortyn':11.5,'Ephesus':11.8,'Iconium':12.5,'Trebizond':12.7,'Medina':8.4,'Mecca':8.2,'Yamama':7.9,'Shibam':7.0,'Sanaa':7.4};
@@ -10122,7 +10126,7 @@ function renderPort(m){
   '<table><tr><th>Bazaar</th><th style="text-align:right">price</th><th style="text-align:right">avg&nbsp;paid</th><th style="text-align:right">held</th><th>buy / sell</th></tr>'+rows+'</table>'+
   '<p class="sub" style="margin:-2px 0 10px">Price is <span class="green">green</span> below what you last paid, <span class="blue">blue</span> above.'+(tradeSkill()>0?' Your haggling shaves every price in your favour; longer stays sharpen the edge.':'')+'</p>'+
   '<div>'+
-  '<button onclick="buyFood()">Provisions +'+(((city()||{}).name==='Fustat')?40:30)+' ('+((typeof _plagueHere==='function'&&_plagueHere())?15:10)+' s)</button>'+(((typeof cityFodderRelevant==='function'&&cityFodderRelevant(c))||(S.fodder||0)>0)?'<button onclick="openFodderOffice()">Fodder \u2014 buy / shed</button>':'')+(cargoW()>cargoCap()?'<button onclick="donateFood()">Donate excess food to the poor</button>':'')+
+  '<button onclick="buyFood()">Provisions +'+(((city()||{}).name==='Fustat')?40:30)+' ('+((typeof _plagueHere==='function'&&_plagueHere())?15:10)+' s)</button>'+(((typeof cityFodderRelevant==='function'&&cityFodderRelevant(c))||(S.fodder||0)>0)?'<button onclick="openFodderOffice()">Fodder \u2014 buy / shed</button>':'')+(overCapWarn()?'<button onclick="donateFood()">Donate excess food to the poor</button>':'')+
   '<button onclick="S.screen=\'notes\';render()">Prices &amp; notes</button>'+
   (!S.job?'<button onclick="openHire()">Hire / release guards</button>':'')+
   ((typeof KHABIR_TOWNS!=='undefined'&&!S.job&&city()&&KHABIR_TOWNS.has(city().name)&&!khabirAboard())?'<button onclick="hireKhabir()">Hire a desert guide (100 s)</button>':'')+
@@ -10641,7 +10645,7 @@ function ptBar(){ if(!S||!S.playtest)return ''; return '<div style="margin:5px 0
 function renderStats(){
   const el=$('stats');
   if(!S){el.innerHTML='';return;}
-  var _cgPort=false; try{ _cgPort=cargoW()>cargoCap() && totalAnimals()===0 && !S.journeying && !S.voyaging && (S.seaMode || (typeof seaEdges==='function' && city() && seaEdges(city().name).length>0)); }catch(e){}
+  var _cgPort=(typeof overCapAtPort==='function')&&overCapAtPort();
   const w=cargoW()>cargoCap()?(_cgPort?' class="blue"':' class="bad"'):'';   /* Kris 0924: over your own backs in a seaport with no beasts is fine - the ship carries it for porterage - so blue, not red */
   el.innerHTML=
    'Silver <b>'+Math.round(S.silver)+'</b>'+
@@ -10779,7 +10783,7 @@ function renderCity(m){
   '<table><tr><th>Bazaar</th><th style="text-align:right">price</th><th style="text-align:right">avg&nbsp;paid</th><th style="text-align:right">held</th><th>buy / sell</th></tr>'+rows+'</table>'+
   '<p class="sub" style="margin:-2px 0 10px">Price is <span class="green">green</span> below what you last paid (worth buying), <span class="blue">blue</span> above (worth selling). <i>Italic</i> avg-paid means you\'ve sold out — your old cost, for reference.'+(tradeSkill()>0?' Your haggling shaves every price in your favour; longer stays sharpen the edge.':'')+'</p>'+
   '<div>'+
-  '<button onclick="buyFood()">Provisions +'+(((city()||{}).name==='Fustat')?40:30)+' ('+((typeof _plagueHere==='function'&&_plagueHere())?15:10)+' s)</button>'+(((typeof cityFodderRelevant==='function'&&cityFodderRelevant(c))||(S.fodder||0)>0)?'<button onclick="openFodderOffice()">Fodder \u2014 buy / shed</button>':'')+(cargoW()>cargoCap()?'<button onclick="donateFood()">Donate excess food to the poor</button>':'')+
+  '<button onclick="buyFood()">Provisions +'+(((city()||{}).name==='Fustat')?40:30)+' ('+((typeof _plagueHere==='function'&&_plagueHere())?15:10)+' s)</button>'+(((typeof cityFodderRelevant==='function'&&cityFodderRelevant(c))||(S.fodder||0)>0)?'<button onclick="openFodderOffice()">Fodder \u2014 buy / shed</button>':'')+(overCapWarn()?'<button onclick="donateFood()">Donate excess food to the poor</button>':'')+
   '<button onclick="S.screen=\'animals\';render()">Livestock market</button>'+
   '<button onclick="S.screen=\'notes\';render()">Prices &amp; notes</button>'+
   (!S.job?'<button onclick="openHire()">Hire / release guards</button>':'')+
