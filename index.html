@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.57'; const BUILD='1013.portCargo'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.59'; const BUILD='1018.redSeaWinds'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -4795,7 +4795,7 @@ function renderBoardInto(el){
   const fastHead='<tr><th>#</th><th>Merchant</th><th style="text-align:right">Days</th><th style="text-align:right">Estate</th><th>Route</th></tr>';
   let head=estHead, list, fast=false;
   if(BOARD_VIEW==='fastest'){ fast=true; head=fastHead; list=fairTop(all.filter(function(e){return e.roundtrip&&e.days;}),3,function(a,b){return a.days-b.days;}); }
-  else if(BOARD_VIEW==='recent'){ list=all.slice().sort(function(a,b){return (b.when||0)-(a.when||0);}).slice(0,3); }
+  else if(BOARD_VIEW==='recent'){ list=all.slice().sort(function(a,b){return (b.when||0)-(a.when||0);}).slice(0,10); }   /* Kris 1018: the ten most recent, not three */
   else { list=all.slice(); if(BOARD_VIEW==='caravan')list=list.filter(function(e){return e.mode!=='donkey';}); else if(BOARD_VIEW==='humble')list=list.filter(function(e){return e.mode==='donkey';}); /* Kris: caravan/humble span BOTH eras; only the 1271 tab is era-gated */ else if(BOARD_VIEW==='era1271')list=list.filter(function(e){return /\[1271\]/.test(e.outcome||'');}); list=fairTop(list,10); }
   let body;
   if(!list.length){ body='<p class="sub">No ventures of this kind recorded yet.</p>'; }
@@ -8590,7 +8590,13 @@ const MON_EAST=[4,5,6,7,8,9,10];  // toward India/China — the SW monsoon, summ
 function monsoonGated(link){ return link && !link.noMon && (link.terr==='coast'||link.terr==='deep'); } /* noMon: legs whose wind regime is NOT seasonal (the northern Red Sea's year-round northerlies) - they model wind via windEasy/windHardMul instead (Fadak 8/08 monsoon audit) */
 function monsoonDir(a,b){ return (SEA_ORDER[b]>SEA_ORDER[a])?'west':'east'; }
 function monsoonWinterward(a,b,link){ /* Fadak 8/31 (Fable 5.1 elegance pass): the OLD test was longitude-only, blind to north-south legs - Zaiton->Butuan had to be fixed by swapping the edge (Barid 4.2.3). The NE monsoon (winter window) carries a ship WEST or SOUTH; the SW monsoon EAST or NORTH. So the heading's (dLon + dLat) sign decides, on either axis or a diagonal. Fallback to edge order only when a coordinate is missing. */
-  try{ if(typeof CITY_LL!=='undefined'&&CITY_LL[a]&&CITY_LL[b]){ var dLon=CITY_LL[b][0]-CITY_LL[a][0], dLat=CITY_LL[b][1]-CITY_LL[a][1]; return (dLon+dLat)<0; } }catch(e){}
+  try{ if(typeof CITY_LL!=='undefined'&&CITY_LL[a]&&CITY_LL[b]){ var A=CITY_LL[a], B=CITY_LL[b];
+    /* Kris 1018 (Aden, March: no ship out in ANY direction Nov-Mar): the Red Sea keeps its own winds. In winter the southern Red Sea blows from the
+       SSE - a ship runs NORTH up from Aden to Jeddah and Aydhab; in summer northerlies fill the whole sea and the traffic runs SOUTH to Aden for the
+       India monsoon. So on a Red Sea leg (one end in the Red Sea, both west of 46E) northbound is the winter course, southbound the summer one -
+       the reverse of the open-ocean heading rule. */
+    if(typeof redSeaLL==='function' && (redSeaLL(A)||redSeaLL(B)) && A[0]<46 && B[0]<46) return B[1]>A[1];
+    var dLon=B[0]-A[0], dLat=B[1]-A[1]; return (dLon+dLat)<0; } }catch(e){}
   if(!link) link=findLink(a,b); return !!(link&&link.a===a); }
 function monsoonOpen(a,b){ const link=findLink(a,b); if(!monsoonGated(link)) return true; const m=gameDate().m; if(link.coreMon) return link.coreMon.indexOf(m)>=0; var westb=monsoonWinterward(a,b,link); return westb ? MON_WEST.indexOf(m)>=0 : MON_EAST.indexOf(m)>=0; } /* Fadak: direction from real longitudes - the endpoint-order test shut EVERY course out of Dhofar at once */
 function monsoonWhen(a,b){ var westb=monsoonWinterward(a,b,null); return westb ? 'the winter monsoon (roughly November to March)' : 'the summer monsoon (roughly May to September)'; }
@@ -11660,7 +11666,7 @@ var M3=(function(){
    var grow=0.5, W9=Pg[0]-(Pg[1]-Pg[0])*grow, E9=Pg[1]+(Pg[1]-Pg[0])*grow, S9=Pg[2]-(Pg[3]-Pg[2])*grow, N9=Pg[3]+(Pg[3]-Pg[2])*grow;
    var era=((typeof S!=='undefined'&&S)&&S.era)||'1271';
    var cands=[];
-   for(var ck in CHARTS){ var ch=CHARTS[ck]; if(!ch.geo||ck===spec.key)continue; if(ch.era&&ch.era!==era)continue;
+   for(var ck in CHARTS){ var ch=CHARTS[ck]; if(!ch.geo||ck===spec.key)continue; if(ch.era&&ch.era!==era&&ch.era!=='both')continue; if(!ch.era&&era==='1271')continue;   /* Kris 1018 (Dhofar): an untagged chart is a 762 overview in the old style - arabia762.png was being draped beside the 1271 charts as a big patch of 'different-looking map' */
      var g=ch.geo; var ox=Math.min(E9,g[1])-Math.max(W9,g[0]), oz=Math.min(N9,g[3])-Math.max(S9,g[2]);
      if(ox<=0||oz<=0)continue;
      if(g[0]<=Pg[0]&&g[1]>=Pg[1]&&g[2]<=Pg[2]&&g[3]>=Pg[3])continue;
