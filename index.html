@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.65'; const BUILD='1018.linkVsSave'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.66'; const BUILD='1018.twoRuns'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -6541,6 +6541,7 @@ function fillResumeSlot(){
       '<p class="sub" style="margin:0 0 8px">'+(s.name||'A merchant')+' — '+(s.returning?'homeward':'outbound')+', day '+((s.day||1)-1)+', last seen at '+where+'. Saved under v'+(o.v||'?')+'.</p>'+
       '<button class="seal" onclick="resumeGame()">Take up the journey again</button> '+
       '<span class="sub">resuming clears the save — one continuity only</span>'+
+      (window._autoAlso&&window._autoAlso.S?('<p class="sub" style="margin:10px 0 0">There is also a run you left running without saving — '+((window._autoAlso.S.name)||'a merchant')+', day '+(((window._autoAlso.S.day)||1)-1)+', at '+((window._autoAlso.S.seaMode&&window._autoAlso.S.portName)||((window._autoAlso.S.itin&&window._autoAlso.S.itin[window._autoAlso.S.idx])||{}).name||'the road')+'. <button onclick="window._autoAlso=null;window._autoForce=true;autoResume()">Continue that run instead</button></p>'):'')+
       (window._linkStartPending?('<p class="sub" style="margin:10px 0 0">You opened a quick-start link. <button onclick="window._linkStartPending=false;quickStartFromURL()||render()">Start fresh from the link instead</button></p>'):'')+'</div>';
   });
 }
@@ -14249,6 +14250,10 @@ async function autoResume(){
     if(S) return false; /* a run is already live */
     var r=await STORE.get('silkroad_autosave'); if(!r||!r.value) return false;
     var o=JSON.parse(r.value); if(!o||!o.S||o.S.dead) return false;
+    /* Kris 1018: a set-aside journey (save-and-quit) must never be silently passed over for a later autosaved run - with both waiting, show the
+       title screen and let the player choose (the set-aside one, or 'Continue the run you left running'). */
+    if(!window._autoForce){ try{ var _ms=await STORE.get('silkroad_save'); if(_ms&&_ms.value){ var _mo=JSON.parse(_ms.value); if(_mo&&_mo.S){ window._autoAlso=o; S=null; render(); return false; } } }catch(e){} }
+    window._autoForce=false;
     S=migrate(o.S);
     S.pendingEvent=null; S.eventOutcome=null; S.journeying=false;
     try{ clearJourney(); }catch(e){}
