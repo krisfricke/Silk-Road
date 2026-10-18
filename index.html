@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.66'; const BUILD='1018.twoRuns'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.68'; const BUILD='1018.waterline2'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -11157,14 +11157,36 @@ var M3=(function(){
  function seaFlatten(R,tex){ try{ if(R._seaFlat||!tex||!tex.image||!tex.image.getContext)return; R._seaFlat=true;
    var cv=tex.image, W=cv.width, H=cv.height, d=cv.getContext('2d').getImageData(0,0,W,H).data;
    var blue=function(x,y){ x=Math.max(0,Math.min(W-1,x|0)); y=Math.max(0,Math.min(H-1,y|0)); var k=(y*W+x)*4, r=d[k], g2=d[k+1], b=d[k+2]; return b>110 && b>r+35 && b>=g2+5; };
-   var NX=R.NX, NY=R.NY, cx=W/NX, cy=H/NY, M=new Uint8Array((NX+1)*(NY+1));
+   var NX=R.NX, NY=R.NY, cx=W/NX, cy=H/NY, NV=(NX+1)*(NY+1), M=new Uint8Array(NV), P=new Uint8Array(NV);
+   /* each vertex owns the half-cell around it; a 5x5 grid of samples over that footprint (every ~2 texture px on
+      a 1400-px chart) so no sliver of painted sea between two vertices escapes the shore pass (Kris: blue still
+      creeping up the slopes at 4.3.67 - the old five samples left 3-px gaps the slope could show through) */
    for(var iy=0;iy<=NY;iy++)for(var ix=0;ix<=NX;ix++){ var x=ix*cx, y=iy*cy, n=0;
-     if(blue(x,y))n++; if(blue(x-cx/3,y))n++; if(blue(x+cx/3,y))n++; if(blue(x,y-cy/3))n++; if(blue(x,y+cy/3))n++;
-     if(n>=4)M[iy*(NX+1)+ix]=1; }
-   var h=R.h, out=new Float32Array(h);
-   for(var jy=0;jy<=NY;jy++)for(var jx=0;jx<=NX;jx++){ var i0=jy*(NX+1)+jx; if(!M[i0])continue; var mn=h[i0];
-     for(var oy=-3;oy<=3;oy++)for(var ox=-3;ox<=3;ox++){ var yy=jy+oy, xx=jx+ox; if(yy<0||yy>NY||xx<0||xx>NX)continue; var i1=yy*(NX+1)+xx; if(M[i1]&&h[i1]<mn)mn=h[i1]; }
-     out[i0]=mn; }
+     for(var sy=-2;sy<=2;sy++)for(var sx=-2;sx<=2;sx++){ if(blue(x+sx*cx/4,y+sy*cy/4))n++; }
+     if(n>=19)M[iy*(NX+1)+ix]=1; if(n>=1)P[iy*(NX+1)+ix]=1; }
+   /* Kris 10/18: the sea used to be flattened vertex by vertex to the lowest water within 3 cells, so a coarse
+      DEM's shore cells (land height, blue paint) carried the water up the slopes, and a bay could sit higher than
+      the open sea beside it. Now each connected body of water is one surface: a body that reaches the chart's
+      DEM's sea (height 0) lies at 0 as a whole; an inland body is a lake and lies at its own lowest point
+      (Sayram stays up in its mountains). Every shore vertex - blue paint, but not quite water - is pulled down
+      to the level of the water it touches, so the texture's blue lies flat and the land rises from the water's
+      edge, not under it. Blue that touches no body of water (a river thread in the hills) is left alone. */
+   var h=R.h, comp=new Int32Array(NV); for(var q0=0;q0<NV;q0++)comp[q0]=-1;
+   var levels=[], stack=[];
+   for(var v0=0;v0<NV;v0++){ if(!M[v0]||comp[v0]>=0)continue;
+     var id=levels.length, mn=h[v0], size=0, edge=false; stack.length=0; stack.push(v0); comp[v0]=id;
+     while(stack.length){ var v=stack.pop(); size++; if(h[v]<mn)mn=h[v];
+       var vx=v%(NX+1), vy=(v/(NX+1))|0; if(vx===0||vy===0||vx===NX||vy===NY)edge=true;
+       var nb=[v-1,v+1,v-(NX+1),v+(NX+1)];
+       if(vx===0)nb[0]=-1; if(vx===NX)nb[1]=-1;
+       for(var k2=0;k2<4;k2++){ var w=nb[k2]; if(w<0||w>=NV||!M[w]||comp[w]>=0)continue; comp[w]=id; stack.push(w); } }
+     levels.push(mn); }   /* the body's own lowest point: 0 for any body that reaches the sea (the DEM reads the sea as 0), its own height for a mountain lake - size and the chart edge do not decide it, so a lake cut by the frame is not dropped into a pit */
+   var out=new Float32Array(h);
+   for(var q1=0;q1<NV;q1++){ if(comp[q1]>=0)out[q1]=levels[comp[q1]]; }
+   for(var q2=0;q2<NV;q2++){ if(!P[q2]||comp[q2]>=0)continue;   /* the shore: blue paint touching a body of water takes that water's level */
+     var qx=q2%(NX+1), qy=(q2/(NX+1))|0, lv=null;
+     for(var oy=-2;oy<=2;oy++)for(var ox=-2;ox<=2;ox++){ var yy=qy+oy, xx=qx+ox; if(yy<0||yy>NY||xx<0||xx>NX)continue; var i1=yy*(NX+1)+xx; if(comp[i1]>=0){ var l1=levels[comp[i1]]; if(lv===null||l1<lv)lv=l1; } }
+     if(lv!==null&&lv<out[q2])out[q2]=lv; }
    for(var q=0;q<h.length;q++)h[q]=out[q];
  }catch(e){} }
  function terrainMesh(spec,tex){ var R=reliefFor(spec);
@@ -11255,7 +11277,7 @@ var M3=(function(){
    var o4=mkOx(); o4.scale.setScalar(0.98); o4.position.set(0.54,0,6.75); g.add(o4);
    g.userData.wheels=[]; g.traverse(function(o){ if(o.userData&&o.userData.wheel)g.userData.wheels.push(o); });
    return g; }
- function mkShip(){ var g=new THREE.Group(), pl=mkMat(0x6b4b2e), sl=new THREE.MeshStandardMaterial({color:0xe8ddc2,side:THREE.DoubleSide,roughness:1});
+ function mkShip(){ var g=new THREE.Group(); g.userData.draft=3.5; /* waterline: the round hull (0..6.4) floats more than half under - above it only the tumblehome and the bulwark show (Kris: hulls in the water, not on it) */ var pl=mkMat(0x6b4b2e), sl=new THREE.MeshStandardMaterial({color:0xe8ddc2,side:THREE.DoubleSide,roughness:1});
    var prof=[]; for(var i=0;i<=8;i++){ var q=i/8; prof.push(new THREE.Vector2(0.9+Math.sin(Math.pow(q,0.75)*Math.PI*0.52)*4.4,q*6.4)); }
    var hull=new THREE.Mesh(new THREE.LatheGeometry(prof,14),pl); hull.scale.set(1,1,2.6); g.add(hull);
    var deck=new THREE.Mesh(new THREE.CylinderGeometry(4.75,4.75,0.5,16),mkMat(0xc9b489)); deck.scale.set(1,1,2.62); deck.position.y=6.05; g.add(deck);
@@ -11280,7 +11302,7 @@ var M3=(function(){
  /* ---------------- THE FLEET (Fadak 8/16): the moving map sails the right hull ----------------
     junk on the China seas, dhow on the Arab sea-roads, roundship on the Med (voySeaVessel's own
     call), longship on the 762 northern waters. Compact three.js builds of the full scene models. */
- function mkDhow(){ var g=new THREE.Group(), pl=mkMat(0x8a6a42), sl=new THREE.MeshStandardMaterial({color:0xefe8d2,side:THREE.DoubleSide,roughness:1});
+ function mkDhow(){ var g=new THREE.Group(); g.userData.draft=2.7; /* waterline on the 0..5 hull: half under */ var pl=mkMat(0x8a6a42), sl=new THREE.MeshStandardMaterial({color:0xefe8d2,side:THREE.DoubleSide,roughness:1});
    var prof=[]; for(var i=0;i<=8;i++){ var q=i/8; prof.push(new THREE.Vector2(0.6+Math.sin(Math.pow(q,0.8)*Math.PI*0.5)*3.2,q*5)); }
    var hull=new THREE.Mesh(new THREE.LatheGeometry(prof,12),pl); hull.scale.set(1,1,3.1); g.add(hull);
    /* the sharp raked bow: a long stem */
@@ -11294,7 +11316,7 @@ var M3=(function(){
    grp.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([A,B]),2,0.16,5,false),mkMat(0x5d452a)));
    g.add(grp); g.userData.sails=[grp];
    return g; }
- function mkJunk(){ var g=new THREE.Group();
+ function mkJunk(){ var g=new THREE.Group(); g.userData.draft=2.6; /* waterline: the flat bottom sits at ~0.55, the sheer at ~4.6 - laden, half under */
    var cDark=new THREE.Color(0x4a3524), cRed=new THREE.Color(0x8a2f26), cPale=new THREE.Color(0xb99a6a);
    var NS=9,pos=[],col=[],idx=[];
    function sec(t){ var b=Math.max(1.6,3.9*(0.62+0.55*Math.cos((t-0.18)*1.05)));
@@ -11343,7 +11365,7 @@ var M3=(function(){
      g.add(sg2); (g.userData.sails=g.userData.sails||[]).push(sg2); });
    var rud=new THREE.Mesh(new THREE.BoxGeometry(0.3,4.5,2.2),mkMat(0x5d452a)); rud.position.set(0,2.2,-12.4); g.add(rud);
    return g; }
- function mkLongship(){ var g=new THREE.Group();
+ function mkLongship(){ var g=new THREE.Group(); g.userData.draft=1.4; /* shallow: keel ~0.1, sheer 2.5 */
    var oakL=new THREE.Color(0x7a5c38), oakD=new THREE.Color(0x5a4128), tar=new THREE.Color(0x3a2c1c);
    var NS=11,NK=5,pos=[],col=[],idx=[];
    function sec(t){ var b=2.55*Math.pow(Math.max(0.001,1-Math.pow(Math.abs(t),2.4)),0.62);
@@ -11381,7 +11403,7 @@ var M3=(function(){
    sail.position.set(0,9.4,0.3); sail.userData.base=0; g.add(sail); g.userData.sails=[sail];
    var yd=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,8.8,5),oak); yd.rotation.z=1.5708; yd.position.set(0,3.5,0); sail.add(yd);
    return g; }
- function mkBarge(){ var g=new THREE.Group(), wood=mkMat(0x6e5236);   /* the flat river barge - sweeps, no mast */
+ function mkBarge(){ var g=new THREE.Group(); g.userData.draft=1.3; /* a laden barge: the 0.45..2.15 hull half under */ var wood=mkMat(0x6e5236);   /* the flat river barge - sweeps, no mast */
    var hull=new THREE.Mesh(new THREE.BoxGeometry(4.6,1.7,15),wood); hull.position.y=1.3; g.add(hull);
    /* the bow is a WEDGE IN PLAN: a 3-sided prism, axis vertical (no rotation - the earlier double rotation stood the
       triangle on end and stuck it to the front, Kris 9/3). Inscribed radius 2.66 gives a 4.6-wide back face flush with the hull. */
@@ -11885,7 +11907,8 @@ var M3=(function(){
    if(L.trail){ var tl=L.trail[L.trail.length-1];
      if(!tl||Math.hypot(x-tl.x,z-tl.z)>0.012){ L.trail.push({x:x,z:z}); if(L.trail.length>500)L.trail.shift(); } }
    var hd2=(L.hd===null?0:L.hd);
-   if(L.model){ L.model.position.set(x,y+0.02,z); L.model.rotation.y=hd2;
+   if(L.model){ var _dr=(L.model.userData&&L.model.userData.draft)?L.model.userData.draft*L.model.scale.y:0;   /* a hull rides IN the water: the sea surface is the flattened relief, so the keel goes below it by the draft (Kris) */
+     L.model.position.set(x,y+(_dr?0:0.02)-_dr,z); L.model.rotation.y=hd2;
      if(L.model.userData&&L.model.userData.sails){ var wB=(L.windB!=null?L.windB:hd2+2.2);
        var rel9=wB-hd2; while(rel9>Math.PI)rel9-=6.283; while(rel9<-Math.PI)rel9+=6.283;
        var trim=Math.max(-1.15,Math.min(1.15,rel9))*0.7;      /* the sheets are eased, never flat aback */
