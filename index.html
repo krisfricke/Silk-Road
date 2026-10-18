@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.59'; const BUILD='1018.redSeaWinds'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.65'; const BUILD='1018.linkVsSave'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -1662,7 +1662,9 @@ function dateStr(){
 function slvWords(t){ return (typeof t==='string')?t.replace(/\b(?:one|1) souls? of slaves\b/g,'one slave').replace(/\b(\d+) souls of slaves\b/g,'$1 slaves'):t; } /* Kris 0924: slaves go into the auto-haggles; 'one soul of slaves' reads as nonsense */
 /* Kris 0924/1013: over your own backs in a seaport with no beasts is fine - a ship carries it for porterage - so the stat is blue, and the buy lines and
    the donate-food button don't nag. One test for all of them. */
-function overCapAtPort(){ try{ var _t=S.seaMode?S.portName:(city()&&city().name); return cargoW()>cargoCap() && totalAnimals()===0 && !S.journeying && !S.voyaging && !!_t && typeof _hasSeaEdge==='function' && _hasSeaEdge(_t); }catch(e){ return false; } }   /* a real SEA road out of town (coast/deep/med) - S.seaMode alone is also true in the inland caravan-quarter towns, and seaEdges() lists land roads too */
+function overCapAtPort(){ try{ if(cargoW()<=cargoCap())return false;
+   if((S.voyaging||S.voy) && S.screen!=='travel' && !(typeof fleet==='function'&&fleet().length)) return true;   /* Kris 1018: on a hired passage (the Nile, the sea) the boat carries the load for porterage - blue, not red. With your OWN hulls the cap is the fleet's hold, and over it is real. */
+   var _t=S.seaMode?S.portName:(city()&&city().name); return totalAnimals()===0 && !S.journeying && !S.voyaging && !!_t && typeof _hasSeaEdge==='function' && _hasSeaEdge(_t); }catch(e){ return false; } }   /* a real SEA road out of town (coast/deep/med) - S.seaMode alone is also true in the inland caravan-quarter towns, and seaEdges() lists land roads too */
 function overCapWarn(){ try{ return cargoW()>cargoCap() && !overCapAtPort(); }catch(e){ return false; } }
 function log(t){ t=slvWords(t); S.log.unshift({d:S.day,t}); if(S.log.length>40)S.log.pop(); if(!S.fullLog)S.fullLog=[]; S.fullLog.push({d:S.day,t:t,hp:(S&&S.hp!=null?Math.round(S.hp):null),ag:(S&&S.silver!=null?Math.round(S.silver):null)}); if(S.fullLog.length>800)S.fullLog.shift();}
 function outcomeBox(h,msg){ log(msg); if(S&&!S.dead) S.pendingEvent={h:h,t:msg,ch:[{l:'Go on',f:function(){}}]}; }
@@ -5580,10 +5582,36 @@ function haramAttempt(cn){ var pr=haramOdds();
    S.pendingEvent={h:'<span class="red">DISCOVERED</span>', t:'Something gives you away \u2014 an accent, a hesitation at the gate, the way your lips move wrong through the responses. The crowd\u2019s mood turns in a breath. You are beaten to the camp bounds and thrown past them ('+_dmg+' hurt), and the qadi\u2019s men relieve you of '+fine+' silver as the fine for your presumption. It will be a month at least before the gate-keepers stop looking for your face.', ch:[{l:'Count your bones and your blessings',f:function(){}}]};
    if(S.hp<=0){ S.cause='the crowd at the haram bounds'; die(); } }
  render(); }
-function haramEnterMuslim(cn){ S.onceFlags=S.onceFlags||{}; S.onceFlags['hajj_'+cn]=true; if(typeof ach==='function'){ try{ ach(cn==='Mecca'?'hajjMecca':'ziyaraMedina'); }catch(e){} }
-  var t=(cn==='Mecca')?"No disguise, no borrowed manners \u2014 you enter as one of the faithful. The valley funnels down and there it is: the Kaaba, black-draped, the crowd wheeling about it like one breathing thing. You make the circuits, and something in you goes quiet that you did not know was loud.":"You come to the Mosque of the Prophet in the green heart of Medina and pray beneath the dome, among pilgrims from every land the faith has reached. The road feels lighter leaving than it felt coming.";
-  S.hp=clamp(S.hp+6,0,100); S.pendingEvent={h:(cn==='Mecca'?'THE PILGRIMAGE':'AT THE PROPHET\u2019S MOSQUE'), t:t, ch:[{l:'Give thanks, and go on',f:function(){}}]}; render(); }
-function haramChoice(c){ if(!c||(c.name!=='Mecca'&&c.name!=='Medina'))return []; if(typeof isMuslim==='function'&&isMuslim()){ if(S.onceFlags&&S.onceFlags['hajj_'+c.name])return []; return [{l:(c.name==='Mecca'?'Make the pilgrimage to the Kaaba':'Pray at the Mosque of the Prophet'), f:function(){ haramEnterMuslim(c.name); }}]; } var a=(S&&S.ach)||{}; if(c.name==='Mecca'&&a.haramMecca)return []; if(c.name==='Medina'&&a.haramMedina)return []; if(S.day<(S._haramBar||0))return []; var pr=Math.round(haramOdds()*100); return [{l:'Attempt the forbidden city in disguise ('+pr+'%)', f:function(){ haramAttempt(c.name); }}]; }
+/* Kris 1018: the full Hajj belongs to one month - Dhu al-Hijja, the 12th of the Islamic year - and its rites run on fixed days, 8th-13th. Arrive by the
+   9th (the Standing at Arafat, the heart of it: miss Arafat and there is no Hajj that year) and you make the whole of it, spending the days it takes.
+   Any other time it is the umrah, the lesser pilgrimage, which can be made in any month. The Hajj marks hajj_Mecca (done for good); the umrah marks
+   umrah_Mecca, so a merchant who made the umrah can still come back in the season for the Hajj. */
+function hijriNow(){ try{ return gToHijri(gameDate().t); }catch(e){ return {y:0,m:0,d:0}; } }
+function hajjSeason(){ var h=hijriNow(); return h.m===12 && h.d<=9; }
+function haramEnterMuslim(cn){ S.onceFlags=S.onceFlags||{};
+  if(cn==='Medina'){ S.onceFlags.hajj_Medina=true; try{ ach('ziyaraMedina'); }catch(e){}
+    S.hp=clamp(S.hp+6,0,100); S.pendingEvent={h:'AT THE PROPHET’S MOSQUE', t:"You come to the Mosque of the Prophet in the green heart of Medina and pray beneath the dome, among pilgrims from every land the faith has reached. The road feels lighter leaving than it felt coming.", ch:[{l:'Give thanks, and go on',f:function(){}}]}; render(); return; }
+  var h=hijriNow();
+  if(h.m===12 && h.d<=9){
+    var wait=Math.max(0,8-h.d), days=Math.max(1,13-h.d+1);
+    try{ passDays(days); }catch(e){} if(S.dead){ render(); return; }
+    S.onceFlags.hajj_Mecca=true; S.onceFlags.umrah_Mecca=true; try{ ach('hajjMecca'); }catch(e){}
+    /* Kris 1018: the title goes before the name, as it was used - 'al-Hajj' in the Arabic lands, 'Hajji' in Persian and Turkic and Indian usage */
+    try{ if(typeof finalizeMerchantName==='function')finalizeMerchantName(); var _hp=(S.origin==='arab')?'al-Hajj ':'Hajji ';
+      if(S.name && !/^(al-)?hajj/i.test(S.name) && !/hajji of /i.test(S.name)){ S.preHajjName=S.name; S.name=/^the merchant of /i.test(S.name)?S.name.replace(/^the merchant of /i,'The Hajji of '):(_hp+S.name); } }catch(e){}   /* an unnamed 'Merchant of X' becomes 'The Hajji of X' */
+    S.hp=clamp(S.hp+15,0,100); if(typeof healMembers==='function')healMembers(10);
+    var t=(wait>0?"You come into Mecca in the first days of Dhu al-Hijja, with the city swelling by the hour — caravans in from Cairo and Damascus and Baghdad, the Yemen road, the ships at Jeddah — and you wait out the "+wait+" day"+(wait>1?"s":"")+" to the 8th in the two white cloths of ihram, making the circuits of the Kaaba as you arrived. ":"You come into Mecca in the very days of the Hajj, already in ihram, and make the circuits of the Kaaba as you arrive. ")
+      +"On the 8th the whole multitude goes out to the tent-valley of Mina and sleeps there. On the 9th, at noon, you stand at Arafat — the plain below the Mount of Mercy, tens of thousands in white under the open sun, and no rite at all but standing, and praying, and asking forgiveness, until the sun goes down. That is the Hajj; everything else is around it. At dusk the plain empties all at once toward Muzdalifah, where you pray under the stars and gather the small stones in the dark. "
+      +"On the 10th, the Day of the Sacrifice, you cast seven of them at the great pillar of Aqaba at Mina, as Abraham stoned the tempter; a sheep is sacrificed for you and the meat goes to the poor; your head is shaved; and you go down to the Kaaba for the circuits of the Return and walk again between Safa and Marwa. Three days more at Mina, stoning the three pillars each afternoon, and then the farewell circuits, and it is done. "
+      +"You are hajji now, and will be called so wherever you go: "+(S.name||"Hajji")+". Something in you goes quiet that you did not know was loud.";
+    S.pendingEvent={h:'THE HAJJ', t:t, ch:[{l:'Give thanks, and go on',f:function(){}}]}; render(); return; }
+  S.onceFlags.umrah_Mecca=true; try{ ach('umrahMecca'); }catch(e){}
+  var late=(h.m===12 && h.d>9 && h.d<=13);
+  var t2=(late?"You come into Mecca in the last days of the Hajj — too late for this year's Standing at Arafat, which is the Hajj itself; the multitude is still at Mina, stoning the pillars, and the city smells of the Eid sacrifices. So you make the umrah, the lesser pilgrimage, as any month allows. ":"")
+    +"In the two white cloths of ihram you come down the valley among the pilgrims, and there it is: the Kaaba, black-draped, the crowd wheeling about it like one breathing thing. You make the seven circuits, salute the Black Stone across the press of bodies, drink from the well of Zamzam, and walk the seven lengths between Safa and Marwa as Hagar ran them. Something in you goes quiet that you did not know was loud."
+    +(late?"":" The Hajj itself is made only in Dhu al-Hijja, the last month of the year; the pilgrims say the Standing at Arafat on the 9th is the whole of it.");
+  S.hp=clamp(S.hp+6,0,100); S.pendingEvent={h:'THE UMRAH', t:t2, ch:[{l:'Give thanks, and go on',f:function(){}}]}; render(); }
+function haramChoice(c){ if(!c||(c.name!=='Mecca'&&c.name!=='Medina'))return []; if(typeof isMuslim==='function'&&isMuslim()){ var _of=S.onceFlags||{}; if(_of['hajj_'+c.name])return []; if(c.name==='Medina') return [{l:'Pray at the Mosque of the Prophet', f:function(){ haramEnterMuslim('Medina'); }}]; if(hajjSeason()){ var _hd=hijriNow().d; return [{l:'Make the Hajj ('+(Math.max(1,14-_hd))+' days, through the Standing at Arafat)', f:function(){ haramEnterMuslim('Mecca'); }}]; } if(_of.umrah_Mecca)return []; return [{l:'Make the umrah, the lesser pilgrimage', f:function(){ haramEnterMuslim('Mecca'); }}]; } var a=(S&&S.ach)||{}; if(c.name==='Mecca'&&a.haramMecca)return []; if(c.name==='Medina'&&a.haramMedina)return []; if(S.day<(S._haramBar||0))return []; var pr=Math.round(haramOdds()*100); return [{l:'Attempt the forbidden city in disguise ('+pr+'%)', f:function(){ haramAttempt(c.name); }}]; }
 function songSouthAdmire(name){ var t; try{ t=gameDate().t; }catch(e){ return null; } var fall={"Kinsay":Date.UTC(1276,1,1),"Zaiton":Date.UTC(1277,0,1),"Guangzhou":Date.UTC(1277,2,1)}[name]; if(fall==null||t>=fall) return null; if(name==="Zaiton") return "Zaiton \u2014 for every ship of pepper Alexandria sees, they say, Zaiton sees a hundred, and the harbour makes the boast believable: junks like floating towns, Arab and Tamil factors with their own mosques and temples, silk and porcelain going out by the fleet-load. This is where the land road hands its cargo to the monsoon; from here the sea-lanes run south and west, all the long way home. The Song emperor\u2019s maritime office \u2014 the Shibosi \u2014 takes its tenth and the world pays it gladly; though every factor in the harbour trades an ear for word of the war upriver, where the Khan\u2019s armies press down toward the great river and the last of the Song."; if(name==="Kinsay") return "Kinsay \u2014 Quinsai, the City of Heaven, capital of the Southern Song and the greatest city the earth has yet carried: lakes inside the city, twelve thousand bridges (do not count; men have gone mad), markets that make Tabriz look a village fair, pleasure-barges, fire-brigades, paper money and printed books. The Son of Heaven keeps his court here still \u2014 though the talk in every teahouse is of the war on the Yangtze, and how long the river-wall can hold against the Khan\u2019s engineers. A western merchant here understands, suddenly and permanently, which end of the world has been civilised longest."; if(name==="Guangzhou") return "Guangzhou \u2014 Canton, the old southern gate of the sea-trade, its harbour thick with Arab, Persian and Malay shipping and a foreign quarter older than memory. It answers still to the Son of Heaven in the south, and its merchants watch the war on the great river the way sailors watch a rising glass."; return null; }
 function admireCity(){
   const c=city();
@@ -5772,6 +5800,8 @@ function ach(k,n){ if(!S)return; S.ach=S.ach||{}; S.ach[k]=(S.ach[k]||0)+(n||1);
 function achDeeds(){ var a=(S&&S.ach)||{}; var out=[];
   if(a.haramMecca)out.push('walked the forbidden sanctuary of Mecca in disguise');
   if(a.haramMedina)out.push('stood at the Prophet\u2019s tomb in Medina, unknown');
+  if(a.hajjMecca)out.push('made the Hajj, and stood at Arafat'); else if(a.umrahMecca)out.push('made the umrah at Mecca');
+  if(a.ziyaraMedina)out.push('prayed at the Mosque of the Prophet');
   if(a.banditsBeaten)out.push(a.banditsBeaten+' war-band'+(a.banditsBeaten>1?'s':'')+' broken');
   if(a.rapidsRun)out.push(a.rapidsRun+' rapid'+(a.rapidsRun>1?'s':'')+' run alive');
   if(a.stormsSurvived)out.push(a.stormsSurvived+' storm'+(a.stormsSurvived>1?'s':'')+' outlived');
@@ -6506,11 +6536,12 @@ function fillResumeSlot(){
   const el=$('resumeslot'); if(!el) return;
   loadSave().then(o=>{
     if(!el || !o || !o.S) return;
-    const s=o.S, where=(s.itin && s.itin[s.idx])?s.itin[s.idx].name:'the road';
+    const s=o.S, where=(s.seaMode&&s.portName)?s.portName:((s.itin && s.itin[s.idx])?s.itin[s.idx].name:'the road');   /* the 1271 world stands in port mode - the stale itin named the wrong town */
     el.innerHTML='<div class="panel" style="border-color:var(--silk)"><h3 class="gold" style="margin-bottom:4px">A journey set aside</h3>'+
       '<p class="sub" style="margin:0 0 8px">'+(s.name||'A merchant')+' — '+(s.returning?'homeward':'outbound')+', day '+((s.day||1)-1)+', last seen at '+where+'. Saved under v'+(o.v||'?')+'.</p>'+
       '<button class="seal" onclick="resumeGame()">Take up the journey again</button> '+
-      '<span class="sub">resuming clears the save — one continuity only</span></div>';
+      '<span class="sub">resuming clears the save — one continuity only</span>'+
+      (window._linkStartPending?('<p class="sub" style="margin:10px 0 0">You opened a quick-start link. <button onclick="window._linkStartPending=false;quickStartFromURL()||render()">Start fresh from the link instead</button></p>'):'')+'</div>';
   });
 }
 
@@ -9525,14 +9556,17 @@ function evRiverStop(nm){ var RT={
   {l:(S.silver>=10)?'Buy grain at the landing \u2014 10 s for 40 food':'Barter with the grain-merchants',f(){ starvBuy(10,40,'grain-merchants','food'); }},
   {l:'Rest two days ashore',f(){ passDays(2); if(S.dead)return; S.hp=clamp(S.hp+8,0,100); healMembers(10); log('You lie over two days at '+nm+', and the river rocks the boat like a cradle.'); }},
   {l:'Push on with the morning wind',f(){ log('You cast off from '+nm+' at first light.'); }}]}; }
+/* Kris 1018: each first sighting is 1 / (days of a typical Alexandria->Qus transit) per river day. Upstream by the game's own river rates:
+   Alexandria-Fustat 5.2 d (poling, 78 li/day), Fustat-Asyut 3.9 d and Asyut-Qus 2.7 d (sailing on the etesian wind, 175) = ~12 days. */
+var NILE_TRANSIT_DAYS=12;
 function riverNightEvent(v){ try{
  var NL={'Fustat':1,'Asyut':1,'Qus':1,'Alexandria':1};
  var nile=NL[v.from]&&NL[v.to];
  var ss=((S.party||[]).filter(function(p){return p&&p.alive!==false&&(p.salty||(((p.skills||{}).ss)||0)>=8);}).length);
  S.onceFlags=S.onceFlags||{};
- if(nile&&!S.onceFlags.crocSeen&&rnd()<0.109){ S.onceFlags.crocSeen=true; if(typeof metaBeast==='function')metaBeast('crocodile');
+ if(nile&&!S.onceFlags.crocSeen&&rnd()<1/NILE_TRANSIT_DAYS){ S.onceFlags.crocSeen=true; if(typeof metaBeast==='function')metaBeast('crocodile');
   return {h:'A LOG OPENS AN EYE', t:"On the mudbank a grey log the length of the boat opens a yellow eye and watches you pass. Then it is not like a log at all: it stands on short bowed legs, hisses like a kettle the size of a room, and slides into the river without a splash. The boatmen pull a little harder. The NILE CROCODILE \u2014 sacred once, hungry still."}; }
- if(nile&&!S.onceFlags.hippoSeen&&rnd()<0.109){ S.onceFlags.hippoSeen=true; if(typeof metaBeast==='function')metaBeast('hippo');
+ if(nile&&!S.onceFlags.hippoSeen&&rnd()<1/NILE_TRANSIT_DAYS){ S.onceFlags.hippoSeen=true; if(typeof metaBeast==='function')metaBeast('hippo');
   return {h:'THE RIVER-HORSE', t:"A vast grey back rolls up out of the shallows \u2014 then another \u2014 and the nearest yawns a cavern of pegs and tusks that could bite a felucca's bow off. The steersman gives the pod the whole width of the river and counts them aloud, unhappily. The HIPPOPOTAMUS: the boatmen fear it above the crocodile, and they are right to."}; }
  if(nile&&S.onceFlags.hippoSeen&&rnd()<0.07){
   return {h:'THE BULL HIPPO DISPUTES THE CHANNEL', t:"A bull hippopotamus surfaces a boat's length ahead, jaws wide, and comes ON \u2014 the river humping over his charge. The steersman screams for a decision.", ch:[
@@ -9849,6 +9883,8 @@ function checkSeaHistory(port){
   if(port==='Basra' && S.onceFlags && !S.onceFlags.basraRising && ((_g.y===762&&_g.m>=11)||(_g.y===763&&_g.m===1&&_g.d<=21))){ S.onceFlags.basraRising=true; S.pendingEvent={h:'BASRA UNDER WHITE BANNERS', t:"Basra has declared for the Alids. Ibrahim, brother of Medina's Pure Soul, holds the city; white banners hang where the black should be, and volunteers drill on the maidan by the mosque with more zeal than order. Trade goes on \u2014 Basra is Basra \u2014 but every merchant is quietly settling accounts and keeping a camel saddled.", ch:[{l:'Note which way the wind blows',f(){}}]}; return; }
   if(port==='Trebizond' && (S.era||'762')!=='1271' && S.onceFlags && !S.onceFlags.trebizondSea){ S.onceFlags.trebizondSea=true; S.pendingEvent={h:'THE BLACK SEA ROAD', t:"Having found your way overland to Trebizond, you have also found the captains who run the wild Black Sea coast west to the capital. It is a stormy passage \u2014 the old Greeks named this the Inhospitable Sea before they dared flatter it as the Euxine \u2014 but it is swift, and direct. You may now take ship between Trebizond and Constantinople without the long road back through Iconium.", ch:[{l:'Good to know',f(){}}]}; return; }
   if(port==='Yangzhou' && _g.y<=772 && !S.onceFlags.yangzhouMassacre){ S.onceFlags.yangzhouMassacre=true; S.pendingEvent={h:'A CITY THAT REMEMBERS', t:"In the foreigners' quarter an old Persian factor, hearing your trade, grips your sleeve. 'Two years,' he says. 'Two years since the soldiers came over the wall and cut the throats of every Tazi and Persian merchant they could find — thousands of us, for the silver in our chests. My sons among them.' He lets go, and straightens. 'And yet here I am, and here you are, and the ships still sail. Trade is a kind of forgetting.' He wishes you good trade in his own tongue's nearest equivalent, and is gone back into the crowd.", ch:[{l:'Take his meaning, and trade on',f(){}}]}; return; }
+  if(port==='Mecca' && !S.onceFlags.meccaHaram && typeof isMuslim==='function' && isMuslim()){ S.onceFlags.meccaHaram=true;   /* Kris 1018 (Dhofar start): a Muslim merchant is not stopped at the stones - he goes in with the faithful */
+    S.pendingEvent={h:'THE BOUNDARY-STONES OF THE HARAM', t:"At the edge of Mecca's sacred territory the road divides: the faithful go on into the sanctuary, and the unbelievers' caravans turn aside to the fairs. You are of the faithful. At the boundary-stones you and your people bathe, put off your travelling clothes for the two white cloths of ihram, and go on down the valley among the pilgrims, the talbiya rising around you \u2014 Here I am, O God, here I am. The fairs outside the haram will still be there for your trade; the Kaaba will not wait so patiently on a merchant's conscience.", ch:[{l:'Go in with the pilgrims',f(){}}]}; return; }
   if(port==='Mecca' && !S.onceFlags.meccaHaram){ S.onceFlags.meccaHaram=true; S.pendingEvent={h:'THE BOUNDARY-STONES OF THE HARAM', t:"At the edge of Mecca's sacred territory the road divides: the faithful go on into the sanctuary, and everyone else stops here, at the boundary-stones, on pain of worse than confiscation. It is less hindrance than you feared. The fairs outside the haram have handled the unbeliever's trade since before the Prophet's day \u2014 brokers of the Quraysh come out to you, pilgrim silver is the readiest coin on earth, and no one who wants your silk cares what you worship. You camp, you trade, and the holy city hums beyond the stones, heard but unseen.", ch:[{l:'Trade at the fairs',f(){}}]}; return; }
   if(port==='Medina' && dateBetween(762,9,25,762,12,14) && !S.onceFlags.medinaRising){ S.onceFlags.medinaRising=true; S.pendingEvent={h:'MEDINA IN REVOLT', t:"You arrive to find the Prophet's city risen against the Caliph: Muhammad, whom they call the Pure Soul \u2014 al-Nafs al-Zakiyya, of the Prophet's own line \u2014 holds Medina, and his brother Ibrahim raises Basra behind you. The markets run on nerves and rumour; the governor's men wait in the wells-country for the Caliph's army, and every trader in the oasis is quietly reckoning which way to be facing when it comes.", ch:[{l:'Trade carefully, and keep your papers close',f(){}}]}; return; }
   if(port==='Basra'){ if(bakhamraTalk('Basra')) return; }
@@ -14598,7 +14634,14 @@ function mangoTick(){ try{
  }catch(e){} }
 /* ==================== end MANGO QUEST ==================== */
 /* boot LAST, so every const/function above is initialized before any ?start= quick-start runs (Kris: MANGO_SRC TDZ crash) */
-if(!quickStartFromURL()) autoResume(); try{ heal1271GhostLeg(); }catch(e){} try{ trafficFetch(true); }catch(e){}
+/* Kris 1018: save-and-quit, then reload with ?start=Dhofar still in the address bar -> the link started a FRESH Dhofar game over the saved one.
+   Now a ?start= link only fires straight away when nothing is saved; with a save (or an autosave) waiting, you get the title screen with the
+   saved journey AND a button to start fresh from the link instead. */
+(async function(){ var _hasSave=false, _hasAuto=false;
+  try{ if(/[?#&]start=/.test(location.href)){ var _a=await STORE.get('silkroad_autosave'), _b=await STORE.get('silkroad_save'); _hasAuto=!!(_a&&_a.value); _hasSave=!!(_b&&_b.value); } }catch(e){}
+  if(_hasSave||_hasAuto){ window._linkStartPending=true; if(_hasAuto) autoResume(); else { S=null; render(); } }
+  else if(!quickStartFromURL()) autoResume();
+  try{ heal1271GhostLeg(); }catch(e){} try{ trafficFetch(true); }catch(e){} })();
 </script>
 </body>
 </html>
