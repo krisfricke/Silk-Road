@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.72'; const BUILD='1019.beastBarter'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.74'; const BUILD='1019.bukhtFirst'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -6871,6 +6871,16 @@ function bxPropose(c,id,n,ex){ var T=animalPrice(id,c)*n, rows=bxRank(c,ex), tak
       else { var rem2=T-acc; if(rem2>0){ payS=rem2; } else { var over=-rem2, tc=(typeof townCashNow==='function')?townCashNow(c):Infinity; chgS=Math.min(over,tc===Infinity?over:Math.max(0,Math.floor(tc))); chgF=Math.floor((over-chgS)/0.4); } } } }
   else if(rem<0){ var over2=-rem, tc2=(typeof townCashNow==='function')?townCashNow(c):Infinity; chgS=Math.min(over2,tc2===Infinity?over2:Math.max(0,Math.floor(tc2))); chgF=Math.floor((over2-chgS)/0.4); }
   return {id:id,n:n,T:T,take:take,payS:payS,chgS:chgS,chgF:chgF,ok:ok}; }
+/* Kris 1019: start from the number of beasts that would carry the load AFTER the trade - the bartered goods leave the packs (and change-in-fodder
+   joins them), so it is worked by trial: the smallest n where the cargo left over fits what the herd plus n can carry. */
+function bxSuggestN(c,id,ex){ try{ var h0=(S.herd&&S.herd[id])||0, best=null;
+  for(var n=1;n<=60;n++){ var P=bxPropose(c,id,n,ex||{}); if(!P.ok)break;
+    var out=0; P.take.forEach(function(t){ out+=t.k*(t.g.wt||1); }); var w=cargoW()-out+(P.chgF||0)*FODDER_WT;
+    S.herd=S.herd||{}; S.herd[id]=h0+n; var cap=cargoCap(); S.herd[id]=h0; if(!S.herd[id])delete S.herd[id];
+    if(w<=cap){ best=n; break; } }
+  return best; }catch(e){ return null; } }
+function bxSuggestFill(){ try{ var c=city(), sel=document.getElementById('bxId'), num=document.getElementById('bxN'), note=document.getElementById('bxNote'); if(!sel||!num)return;
+  var n=bxSuggestN(c,sel.value,{}); if(n){ num.value=n; if(note)note.textContent=n+' would carry what is left in your packs after the trade.'; } else if(note){ note.textContent=(cargoW()<=cargoCap())?'Your packs are already carried.':'No number of these your goods can buy would carry it all.'; } }catch(e){} }
 function bxStart(){ var c=city(); var sel=document.getElementById('bxId'), num=document.getElementById('bxN'); var id=sel?sel.value:null, n=Math.max(1,Math.min(60,parseInt(num&&num.value,10)||1)); if(!id||!animalAvailable(id,c))return; S._bx={id:id,n:n,ex:{}}; render(); }
 function bxExclude(gid){ if(!S._bx)return; S._bx.ex[gid]=1; render(); }
 function bxReset(){ if(S._bx){ S._bx.ex={}; } render(); }
@@ -6888,7 +6898,9 @@ function bxAgree(){ var c=city(); if(!S._bx||!c)return; var P=bxPropose(c,S._bx.
 function bxPanelHtml(c){ if(!bxTownOK(c))return '';
   var avail=ANIMAL_ORDER.filter(function(id){ return animalAvailable(id,c); }); if(!avail.length)return '';
   var h='<div class="panel" style="margin-top:10px"><h3 style="margin-top:0">Barter for livestock</h3><p class="sub" style="margin:0 0 6px">'+cityLabel(c)+' has little ready silver, but its dealers will take goods for beasts — the goods this town prizes most.</p>';
-  if(!S._bx){ h+='<select id="bxId">'+avail.map(function(id){ return '<option value="'+id+'">'+(id==='hybrid'?'Hybrid bukht':cap1(ANIMALS[id].pl))+' ('+animalPrice(id,c)+' s each)</option>'; }).join('')+'</select> × <input id="bxN" type="number" min="1" max="60" value="4" style="width:60px"> <button onclick="bxStart()">Work out a trade</button></div>'; return h; }
+  if(!S._bx){ var _id0=(avail.indexOf('hybrid')>=0)?'hybrid':(avail.indexOf('bactrian')>=0)?'bactrian':(avail.indexOf('dromedary')>=0)?'dromedary':avail[avail.length-1]   /* Kris 1019: the bukht first - the strongest carrier (100) wherever it is sold */, _n0=bxSuggestN(c,_id0,{});
+    h+='<select id="bxId" onchange="bxSuggestFill()">'+avail.map(function(id){ return '<option value="'+id+'"'+(id===_id0?' selected':'')+'>'+(id==='hybrid'?'Hybrid bukht':cap1(ANIMALS[id].pl))+' ('+animalPrice(id,c)+' s each)</option>'; }).join('')+'</select> × <input id="bxN" type="number" min="1" max="60" value="'+(_n0||1)+'" style="width:60px"> <button onclick="bxStart()">Work out a trade</button>'+
+      '<p class="sub" id="bxNote" style="margin:6px 0 0">'+(_n0?(_n0+' would carry what is left in your packs after the trade.'):((cargoW()<=cargoCap())?'Your packs are already carried.':'No number of these your goods can buy would carry it all.'))+'</p></div>'; return h; }
   var P=bxPropose(c,S._bx.id,S._bx.n,S._bx.ex), A=ANIMALS[P.id];
   h+='<p><b>'+P.n+' '+(P.n>1?A.pl:A.n)+'</b> — '+P.T+' s of beasts. The dealers would take:</p>';
   if(!P.take.length) h+='<p class="sub">Nothing in your packs they want.</p>';
