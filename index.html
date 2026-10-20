@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.74'; const BUILD='1019.bukhtFirst'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.77'; const BUILD='1020.broVillage'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -6531,6 +6531,9 @@ function resumeEmbedded(){ try{ var json=decodeURIComponent(escape(atob(RESUME_B
 function fillResumeSlot(){
   const el=$('resumeslot'); if(!el) return;
   loadSave().then(o=>{
+    if(el && (!o || !o.S) && window._autoAlso && window._autoAlso.S){ var _a=window._autoAlso.S;   /* no set-aside journey, but a run left running and a quick-start link */
+      el.innerHTML='<div class="panel" style="border-color:var(--silk)"><h3 class="gold" style="margin-bottom:4px">A journey under way</h3><p class="sub" style="margin:0 0 8px">'+(_a.name||'A merchant')+' — day '+((_a.day||1)-1)+', at '+((_a.seaMode&&_a.portName)||((_a.itin&&_a.itin[_a.idx])||{}).name||'the road')+'.</p>'+
+        '<button class="seal" onclick="window._autoAlso=null;window._autoForce=true;autoResume()">Continue that journey</button>'+(window._linkStartPending?(' <button onclick="window._linkStartPending=false;window._autoAlso=null;quickStartFromURL()||render()">Start fresh from the link instead</button>'):'')+'</div>'; return; }
     if(!el || !o || !o.S) return;
     const s=o.S, where=(s.seaMode&&s.portName)?s.portName:((s.itin && s.itin[s.idx])?s.itin[s.idx].name:'the road');   /* the 1271 world stands in port mode - the stale itin named the wrong town */
     el.innerHTML='<div class="panel" style="border-color:var(--silk)"><h3 class="gold" style="margin-bottom:4px">A journey set aside</h3>'+
@@ -6850,7 +6853,7 @@ function sellAnimal(id){
    at what they would pay for them here. Not enough of the first good, and the second makes up the rest, and so on. The odd remainder is
    settled in silver (from your purse if you owe; from the town's if they owe, short of that in fodder). Strike out any good and it is
    worked again without it. ===== */
-var BARTER_LIVESTOCK={'Mangyshlak':1,'Abaskun':1,'Jeddah':1};
+var BARTER_LIVESTOCK={'Mangyshlak':1,'Abaskun':1,'Jeddah':1,'Chittagong':1};
 function bxLot(g,k){ var u=g.u; return slvWords((k>1?k+' '+(/(s|x|z|ch|sh)$/.test(u)?u+'es':u+'s'):'one '+u)+' of '+g.n.toLowerCase()); }
 function bxTownOK(c){ return !!(c&&BARTER_LIVESTOCK[c.name]); }
 function bxNeighbours(nm){ var out={}, era=(S&&S.era)||'762'; try{ SEA_EDGES.forEach(function(e){ if(e.era&&e.era!=='both'&&e.era!==era)return; if(!e.era&&era==='1271')return; if(e.a===nm)out[e.b]=1; else if(e.b===nm)out[e.a]=1; }); }catch(x){} return Object.keys(out).map(function(n){ return (typeof cityByName==='function')&&cityByName(n); }).filter(Boolean); }
@@ -6898,7 +6901,7 @@ function bxAgree(){ var c=city(); if(!S._bx||!c)return; var P=bxPropose(c,S._bx.
 function bxPanelHtml(c){ if(!bxTownOK(c))return '';
   var avail=ANIMAL_ORDER.filter(function(id){ return animalAvailable(id,c); }); if(!avail.length)return '';
   var h='<div class="panel" style="margin-top:10px"><h3 style="margin-top:0">Barter for livestock</h3><p class="sub" style="margin:0 0 6px">'+cityLabel(c)+' has little ready silver, but its dealers will take goods for beasts — the goods this town prizes most.</p>';
-  if(!S._bx){ var _id0=(avail.indexOf('hybrid')>=0)?'hybrid':(avail.indexOf('bactrian')>=0)?'bactrian':(avail.indexOf('dromedary')>=0)?'dromedary':avail[avail.length-1]   /* Kris 1019: the bukht first - the strongest carrier (100) wherever it is sold */, _n0=bxSuggestN(c,_id0,{});
+  if(!S._bx){ var _id0=(avail.indexOf('hybrid')>=0)?'hybrid':(avail.indexOf('bactrian')>=0)?'bactrian':(avail.indexOf('dromedary')>=0)?'dromedary':avail.slice().sort(function(a,b){ return (ANIMALS[b].cap||0)-(ANIMALS[a].cap||0); })[0]   /* no camels (Chittagong): the strongest carrier on sale - the buffalo */   /* Kris 1019: the bukht first - the strongest carrier (100) wherever it is sold */, _n0=bxSuggestN(c,_id0,{});
     h+='<select id="bxId" onchange="bxSuggestFill()">'+avail.map(function(id){ return '<option value="'+id+'"'+(id===_id0?' selected':'')+'>'+(id==='hybrid'?'Hybrid bukht':cap1(ANIMALS[id].pl))+' ('+animalPrice(id,c)+' s each)</option>'; }).join('')+'</select> × <input id="bxN" type="number" min="1" max="60" value="'+(_n0||1)+'" style="width:60px"> <button onclick="bxStart()">Work out a trade</button>'+
       '<p class="sub" id="bxNote" style="margin:6px 0 0">'+(_n0?(_n0+' would carry what is left in your packs after the trade.'):((cargoW()<=cargoCap())?'Your packs are already carried.':'No number of these your goods can buy would carry it all.'))+'</p></div>'; return h; }
   var P=bxPropose(c,S._bx.id,S._bx.n,S._bx.ex), A=ANIMALS[P.id];
@@ -7997,8 +8000,8 @@ const SEA=[
    adm:"Stockholm is newer than some of your boots \u2014 a palisaded knot of islets where the whole trade of Lake Malaren must pass a single channel, which is precisely why the Jarl built it. The iron and copper of the Bergslagen come down the lake; German merchants are thick on the quay; and old men still call the water beyond the bar by the names the Vikings gave it."},
  {name:"Uppsala", terr:'settled', frac:0.97, era:'1271', hub:'minor', cash:800, desc:"The archbishop's town on the Fyris \u2014 the old pagan Uppsala's mounds brood a short ride north, ploughland to the horizon.",
    adm:"Uppsala keeps two ages within sight of each other: the new cathedral rising for the archbishop of all Sweden, and \u2014 north along the river \u2014 the three great mounds of the old kings, where the heathen temple stood within living memory of men's grandfathers' grandfathers. The plain around feeds half the Malaren country; the ting still meets where it always met."},
- {name:"Vadet", terr:'rugged', frac:0.99, hub:'minor', cash:0, camp:true, desc:"A jetty, a rest-camp and a rack of drying nets at Lake Vanern's north-eastern corner \u2014 no town at all, but the roads and the lake meet here, and travellers pause to plan.",
-   adm:"There is nothing here to admire but the lake itself, iron-grey to the horizon like a sea that has wandered inland \u2014 and the quiet. A few fisher families, a jetty, the stumps of many campfires. From this shore the forest road runs east toward the Malaren country, and the lake road south toward the falls and the western sea."},
+ {name:"Vadet", terr:'rugged', frac:0.99, hub:'minor', cash:130, desc:"A farm village where the Varnan comes down into Lake Vanern's north-eastern corner \u2014 a timber bridge, a scatter of farmsteads and fishermen's boats, and a landing where bar iron from the forest smithies waits for the lake boats.",   /* Kris 1020: Bro (Kristinehamn) as a lasting village, not a rest-camp: the bridge that names it, Iron Age farms all round, osmund iron coming down to the lake for Lodose. A small purse; food, fodder and a little trade */
+   adm:"There is not much here to admire but the lake itself, iron-grey to the horizon like a sea that has wandered inland \u2014 and the bridge, which is the whole reason for the place. Farmsteads that have stood since before anyone wrote anything down; boats drawn up on the shingle; and on the landing, stacked like firewood, the little bars of osmund iron the forest smiths send down to go by lake to Lodose and the western sea. From here the forest road runs east toward the Malaren country, and the lake road south toward the falls."},
  {name:"Lodose", terr:'settled', frac:0.995, era:'1271', hub:'minor', cash:150, desc:"The Swedish west-coast port up the Gota river \u2014 the kingdom's one window on the Kattegat, below the thundering falls.",
    adm:"Lodose is Sweden's back door to the western sea, a river town of shipwrights and toll-men. Everything bound between Vanern and the salt water must portage past the falls upstream \u2014 the river drops like a staircase and takes no argument \u2014 so the town lives well on other men's unloading."},
  {name:"Riga", terr:'settled', frac:0.94, era:'1271', desc:"The Livonian Order's city at the Daugava mouth \u2014 the crusader gate through which the east's furs and wax come down to the sea.",
@@ -8252,7 +8255,7 @@ const SEA=[
  {name:'Lahore', terr:'settled', zh:'', frac:.5, era:'1271', cash:500, desc:"Lahore on the Ravi, half-ruined and stubbornly alive \u2014 sacked by the Mongols within living memory, refortified by Sultan Balban as the Sultanate's shield; the frontier is a fact here, not a rumour."},
  {name:'Delhi', terr:'settled', zh:'', frac:.53, era:'1271', cash:1500, desc:"Delhi of Sultan Balban \u2014 the Iron Pillar older than memory, the Qutb tower needling heaven, and an iron order to match: the roads policed, the amirs terrified, and half the exiled scholars of the Mongol-broken world selling their learning in its bazaars."},
  {name:'Cambay', terr:'settled', zh:'', frac:.56, era:'1271', desc:"Cambay at the head of its gulf, where the tide comes in faster than a horse \u2014 Gujarat's great door: cotton, indigo, carnelian, and ships of every nation of the western sea careened on the mud between tides."},
- {name:'Chittagong', terr:'marsh', zh:'', frac:.42, era:'1271', hub:'minor', cash:2500, desc:"The port the Arab pilots call Samandar, at the mouths of the Ganges \u2014 rice, cotton, elephants and river-gold, where Bengal's delta breathes in and out with the tide."},
+ {name:'Chittagong', terr:'marsh', zh:'', frac:.42, era:'1271', hub:'minor', cash:600,   /* Kris 1020: back down from 2500 (raised in 4.1.x only to ease buying a beast train) now that it barters for livestock; a middling frontier port in 1271, not yet the Porto Grande */ desc:"The port the Arab pilots call Samandar, at the mouths of the Ganges \u2014 rice, cotton, elephants and river-gold, where Bengal's delta breathes in and out with the tide."},
  {name:'Asyut', terr:'settled', zh:'', frac:.5, era:'1271', hub:'minor', cash:420, desc:"Asyut, chief city of Upper Egypt \u2014 grain barges nosing the west-bank wharves, and up out of the western desert the DARB AL-ARBA'IN, the Road of Forty Days: Darfur's caravans dropping slaves, ivory, ostrich feathers and gum arabic into the river trade, forty days of sand behind every load."},
  {name:'Butuan', terr:'jungle', zh:'', frac:.15, era:'1271', hub:'minor', cash:250, desc:"Butuan of the gold rivers, on its island beyond the outer sea \u2014 the balangay boats drawn up on the bank, gold worked plain as iron elsewhere, and chiefs who once sent tribute fleets to the Song court."},
  {name:'Hakata', terr:'settled', zh:'', frac:.1, era:'1271', cash:700, desc:"Hakata bay in Japan \u2014 the one door of an island empire: Song copper coin by the shipload, swords going out sharper than anything the mainland forges, and the samurai of Kyushu watching the western horizon with increasing attention."},
@@ -11105,7 +11108,7 @@ function travMapEntry(){ if(!LIVE_TRAVEL_MAP||!S||S.seaMode)return null;
 /* CITY_LL COMPLETION (Fadak 8/31): 34 of 87 edge endpoints had no coordinates - Khanbaliq, Zaiton, Kinsay, Tabriz, Konya among them - so every CITY_LL consumer (monsoon direction, hunt latitude, dioramas, wagon-monsoon, squalls) silently defaulted. The georeferenced set-out charts KNOW where their cities are: fill CITY_LL from chart pixel + geo for every missing name, plus eight hand coordinates for the Gansu/Tarim names no chart carries. Existing entries are never overwritten. */
 (function(){ try{ if(typeof CITY_LL==='undefined'||typeof CHARTS==='undefined')return;
   var HAND={'Champa':[109.22,13.9],'Charchan':[85.53,38.13],'Etzina':[101.08,41.77],'Ganzhou':[100.45,38.93],'Kamul':[93.51,42.83],'Kenjanfu':[108.94,34.26],'Shazhou':[94.66,40.14],'Suzhou':[98.51,39.74],
-    'the Perevoloka':[44.65,48.7],'the Don landing':[43.5,48.75],'the Samara portage':[37.6,48.0],'Berezan camp':[31.4,46.6],'the Neva landing':[30.3,59.95],'Vadet':[12.28,58.28],'Holmgard camp':[31.3,58.5],'Luki camp':[30.5,56.35],'Polotsk camp':[28.8,55.5],'Gnezdovo camp':[31.9,54.8],'the Msta portage camp':[34.5,57.6],'the Tvertsa mouth camp':[35.9,56.86],'the Kotorosl mouth':[39.87,57.63],'the Bulgar camps':[49.0,54.98],'the Burtas shore':[47.2,52.8]};
+    'the Perevoloka':[44.65,48.7],'the Don landing':[43.5,48.75],'the Samara portage':[37.6,48.0],'Berezan camp':[31.4,46.6],'the Neva landing':[30.3,59.95],'Vadet':[14.11,59.31],'Holmgard camp':[31.3,58.5],'Luki camp':[30.5,56.35],'Polotsk camp':[28.8,55.5],'Gnezdovo camp':[31.9,54.8],'the Msta portage camp':[34.5,57.6],'the Tvertsa mouth camp':[35.9,56.86],'the Kotorosl mouth':[39.87,57.63],'the Bulgar camps':[49.0,54.98],'the Burtas shore':[47.2,52.8]};
   for(var h in HAND) if(!CITY_LL[h]) CITY_LL[h]=HAND[h];
   var added=0;
   for(var ck in CHARTS){ var ch=CHARTS[ck]; if(!ch||!ch.geo||!ch.cities||!ch.vbw||!ch.vbh)continue; var g=ch.geo;
@@ -14383,8 +14386,12 @@ function quickStartFromURL(){ try{
   if(/^lji/.test(want) && typeof ljiSetup==='function') return ljiSetup();               /* ?start=LJI - the scenario proper */
   SETUP.era='1271';
   var all=[].concat(MAIN1,NORTH,SOUTH,MAIN2,STEPPE,SEA);
-  for(var i=0;i<all.length;i++){ var c=all[i]; if(!c||!c.name||c.era==='762'||c.camp)continue;
-    if(c.name.toLowerCase()===want) return quickStart(c.name); }
+  /* Kris 1020 (?start=bro): match the name the 1271 game SHOWS too (Bro, Cairo, Kamul, Shazhou...), not only the internal one (Vadet, Fustat...),
+     and let a named campsite be a start - you asked for it by name; you begin at the jetty with no bazaar and move on. */
+  var _rn={}; try{ var _R=Object.assign({}, (typeof ERA1271_NET!=='undefined'&&ERA1271_NET.rename)||{}, (typeof RENAME1271!=='undefined')?RENAME1271:{}); for(var _k in _R) _rn[String(_R[_k]).toLowerCase()]=_k; }catch(e){}
+  var _wantInt=_rn[want]||null;
+  for(var i=0;i<all.length;i++){ var c=all[i]; if(!c||!c.name||c.era==='762')continue;
+    var _cn=c.name.toLowerCase(); if(_cn===want||(_wantInt&&c.name===_wantInt)) return quickStart(c.name); }
   return false;
  }catch(e){ return false; } }
 try{ window.autoResume=autoResume; window.quickStart=quickStart; }catch(e){}
@@ -14731,7 +14738,9 @@ function mangoTick(){ try{
    saved journey AND a button to start fresh from the link instead. */
 (async function(){ var _hasSave=false, _hasAuto=false;
   try{ if(/[?#&]start=/.test(location.href)){ var _a=await STORE.get('silkroad_autosave'), _b=await STORE.get('silkroad_save'); _hasAuto=!!(_a&&_a.value); _hasSave=!!(_b&&_b.value); } }catch(e){}
-  if(_hasSave||_hasAuto){ window._linkStartPending=true; if(_hasAuto) autoResume(); else { S=null; render(); } }
+  if(_hasSave||_hasAuto){ window._linkStartPending=true;   /* Kris 1020: a run left running no longer silently swallows the link either - the title screen offers it, the save (if any) and the fresh start */
+    if(_hasAuto){ try{ var _ao=JSON.parse((await STORE.get('silkroad_autosave')).value); if(_ao&&_ao.S&&!_ao.S.dead) window._autoAlso=_ao; }catch(e){} }
+    S=null; render(); }
   else if(!quickStartFromURL()) autoResume();
   try{ heal1271GhostLeg(); }catch(e){} try{ trafficFetch(true); }catch(e){} })();
 </script>
