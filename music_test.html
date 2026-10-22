@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<title>Silk Road — music test</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+ :root{--ink:#16110b;--panel:#211a12;--line:#4a3826;--bone:#efe3c8;--dim:#a8977a;--gold:#d9a54a;--seal:#b5432b}
+ body{background:var(--ink);color:var(--bone);font:16px Georgia,serif;margin:0;padding:24px}
+ .wrap{max-width:860px;margin:0 auto}
+ h1{font-weight:normal;letter-spacing:.2em;color:var(--gold);font-size:22px;margin:0 0 4px}
+ .sub{color:var(--dim);font-style:italic}
+ .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:14px 0}
+ button{background:transparent;color:var(--gold);border:1px solid #8a6d3b;border-radius:3px;padding:6px 14px;font:inherit;cursor:pointer;margin:2px}
+ button.on{background:#8a6d3b;color:var(--ink)}
+ button.big{font-size:18px;padding:8px 22px}
+ input[type=range]{width:100%}
+ .stops{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-top:2px}
+ .stops span{cursor:pointer;flex:1;text-align:center}
+ .stops span:first-child{text-align:left}.stops span:last-child{text-align:right}
+ .bar{display:flex;align-items:center;margin:3px 0;font-size:13px}
+ .bar .lbl{width:150px;color:var(--dim)}
+ .bar .track{flex:1;height:10px;background:#120d08;border:1px solid var(--line);border-radius:3px;overflow:hidden}
+ .bar .fill{height:100%;background:var(--gold);width:0;transition:width .3s}
+ .row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+ #now{color:var(--gold)}
+ #status{color:var(--dim);font-size:13px;margin-top:6px}
+ label{color:var(--dim);font-size:14px}
+</style></head>
+<body><div class="wrap">
+<h1>絲路 THE SILK ROAD · MUSIC TEST</h1>
+<div class="sub">Generated live in the browser — no recordings. Drag the traveller along the road and listen to the regions hand over.</div>
+
+<div class="panel">
+ <div class="row"><button class="big" id="play">▶ Play</button>
+  <label style="margin-left:14px">Volume <input type="range" id="vol" min="0" max="100" value="55" style="width:160px;vertical-align:middle"></label>
+  <label style="margin-left:14px">Ambience <input type="range" id="amb" min="0" max="100" value="60" style="width:120px;vertical-align:middle"></label>
+  <label style="margin-left:14px"><input type="checkbox" id="wander"> Wander (let it travel on its own)</label>
+  <label style="margin-left:14px"><input type="checkbox" id="breaks"> Take breaks (a few minutes on, a minute or so of quiet)</label></div>
+ <div id="status">Press play to begin (browsers only allow sound after a click).</div>
+</div>
+
+<div class="panel">
+ <div><b>The road</b> <span class="sub">— drag slowly, as a caravan would</span></div>
+ <input type="range" id="route" min="0" max="1000" value="0">
+ <div class="stops" id="stops"></div>
+ <div style="margin-top:10px">Now: <span id="now">Venice</span></div>
+ <div id="bars" style="margin-top:8px"></div>
+</div>
+
+<div class="panel">
+ <div style="margin-bottom:6px"><b>Or jump straight to a region</b> <span class="sub">(including two off this road)</span></div>
+ <div class="row" id="jumps"></div>
+</div>
+
+<div class="panel">
+ <div class="row"><b style="margin-right:8px">Time</b><button id="day" class="on">Day</button><button id="night">Night</button>
+ <b style="margin:0 8px 0 18px">Setting</b><span id="terr"></span></div>
+ <div class="sub" style="margin-top:6px;font-size:13px">Night is softer and slower. Town is fuller, with a crowd murmuring; the tavern plays each region's merrier street music, with the crowd closer, cups and laughter; the desert keeps a steady drum and wind hisses over sand; mountains thin to drone and a few notes, with wind and the odd whistle off the rocks; at sea the drums fall away under the swell.</div>
+</div>
+
+<div class="panel">
+ <div style="margin-bottom:6px"><b>Sound effects &amp; events</b> <span class="sub">(these work whether or not the music is playing)</span></div>
+ <div class="row"><b style="margin-right:6px">Bazaar</b><button data-sfx="buy1">Buy 1</button><button data-sfx="buy10">Buy 10</button><button data-sfx="sell1">Sell 1</button><button data-sfx="sell10">Sell 10</button></div>
+ <div class="row" style="margin-top:6px"><b style="margin-right:6px">A fixture of the street</b><button data-busk="lute">the blind lute-player</button><button data-busk="drum">the boy with a monkey and a drum</button><button data-busk="singer">the singer of impossibly sad songs</button><button data-busk="story">the old woman who tells stories</button></div>
+ <div class="row" style="margin-top:6px"><b style="margin-right:6px">The road</b><button id="bandits">Bandits!</button><button id="fightover">The fight is over</button></div>
+ <div class="sub" id="evstat" style="margin-top:6px;font-size:13px"></div>
+</div>
+<div class="panel sub" style="font-size:14px" id="notes"></div>
+</div>
+
+<script>
+"use strict";
+/* ====================== REGIONS ======================
+   scale: cents above the tonic (quarter-tones allowed - the maqam and dastgah intervals)
+   leads: which voices carry the melody; drone: intervals held under it; perc: an 8th-note pattern per bar
+   D = low drum, T = high drum, k = soft high, B/R = tabla bass/ring, W/w = woodblock, G = bell, . = rest   */
+const REG={
+ latin:  {name:'Latin West',  note:'Plainchant in the First Mode (Dorian on D): a men\'s choir, now and then a vielle taking up the same line; reciting on F or A, closing on D. A bell from the campanile. No drum.',
+          scale:[0,200,300,500,700,900,1000], leads:['chant','chant','vielle'], chant:true, drone:[0,700], droneLvl:.05, perc:null, bell:.15, tempo:60, durs:[2,2,2,3,4,4], orn:0, density:.8},
+ byz:    {name:'Byzantium',   note:'Sung chant in the First Mode (Echos Protos) in its soft diatonic - the three-quarter-tone steps of Greek church music - a men\'s choir over the held ison, which shifts to the note the phrase comes to rest on. Melodies are formulaic, as the real chant is: rise to a reciting tone, intone on it, cadence.',
+          scale:[0,167,300,500,700,867,1000], leads:['chant'], chant:true, drone:[0], droneLvl:.11, perc:null, bell:.1, tempo:62, durs:[1,1,2,2,4], orn:.2, density:.95},
+ arab:   {name:'Arab lands',  note:'Maqam Hijaz (the augmented step everyone hears as "Middle Eastern"); plucked oud; frame drum in maqsum: dum-tak-.-tak-dum-.-tak-.',
+          scale:[0,100,400,500,700,800,1000], leads:['oud','oud','ney'], drone:[0], droneLvl:.06, perc:['D','T','.','T','D','.','T','.'], tempo:92, durs:[1,1,1,2,2,3], orn:.45, density:.95},
+ persian:{name:'Persia & Sogdia', note:'Dastgah Shur, with its three-quarter-tone second step; a long-necked tar and a reed ney; a lilting 6/8.',
+          scale:[0,150,300,500,700,800,1000], leads:['tar','ney','tar'], drone:[0,700], droneLvl:.07, perc:['D','.','k','T','.','k'], tempo:84, durs:[1,1,2,2,3], orn:.4, density:.85},
+ steppe: {name:'The steppe',  note:'Pentatonic over a deep two-note drone (a nod to throat-singing); a horsehead fiddle; the galloping three-beat of a horse.',
+          scale:[0,200,500,700,1000], leads:['morin','morin','flute'], drone:[0,700], droneLvl:.18, perc:['D','.','k','D','.','k'], tempo:104, durs:[1,2,2,3,4], orn:.2, density:.8},
+ china:  {name:'Cathay',      note:'Gong-mode pentatonic; a plucked zither and a bamboo dizi; spacious, with a woodblock marking the time.',
+          scale:[0,200,400,700,900], leads:['zither','zither','dizi'], drone:[], droneLvl:0, perc:['W','.','.','.','w','.','.','.'], tempo:70, durs:[1,2,2,3,4], orn:.1, density:.7},
+ india:  {name:'Hind',        note:'Raga Yaman over the humming tanpura drone (Sa-Pa-Sa); a sitar-like pluck; tabla theka.',
+          scale:[0,200,400,600,700,900,1100], leads:['sitar','sitar','flute'], drone:[0,700,1200], droneLvl:.16, perc:['B','R','R','B','B','R','R','B'], tempo:76, durs:[1,1,2,2,3], orn:.5, density:.9},
+ north:  {name:'The North',   note:'Old folk modes with a fiddle\'s open-string drone; a plain walking pulse.',
+          scale:[0,200,400,500,700,900,1000], leads:['fiddle','fiddle','lute'], drone:[0,700], droneLvl:.12, perc:['D','.','.','.','k','.','.','.'], tempo:88, durs:[1,1,2,2,3,4], orn:.15, density:.8}
+};
+/* Kris 1021: the TAVERN plays the street's music, not the church's - each region's merrier variant, used while you sit in a tavern */
+const TAV={
+ latin:  {note:'In the tavern, an estampie: lute and pipe in a bright mode over a tabor in a skipping 6/8.',
+          scale:[0,200,400,500,700,900,1100], leads:['lute','lute','flute'], perc:['D','.','k','D','k','.'], tempo:108, durs:[1,1,1,2,2], orn:.15, density:.95, droneLvl:.04, bell:0},
+ byz:    {note:'In the taverna, a dance: a bowed lyra and a long-necked pandoura in a bright mode, frame drum and finger-cymbals in a limping 7/8 (3+2+2) - the step the Greeks still dance.',
+          scale:[0,200,400,500,700,900,1000], leads:['vielle','lute','lute'], perc:['D','.','k','T','k','T','k'], tempo:116, durs:[1,1,1,2,2], orn:.25, density:.95, droneLvl:.05, bell:0},
+ arab:   {note:'In the tavern, maqam Rast - the sunnier maqam, with its three-quarter thirds - quick oud and a jingling riq.',
+          scale:[0,200,350,500,700,900,1050], leads:['oud','oud','ney'], perc:['D','k','T','k','D','T','k','T'], tempo:108, durs:[1,1,1,2], orn:.5, density:1},
+ persian:{note:'In the tavern, the bright dastgah Mahur; the tar takes the lead and the 6/8 quickens.',
+          scale:[0,200,400,500,700,900,1000], leads:['tar','tar','ney'], perc:['D','k','T','D','T','k'], tempo:104, durs:[1,1,2,2], orn:.35, density:.95},
+ steppe: {note:'In the yurt-tavern, a two-stringed lute strums a fast gallop.',
+          scale:[0,200,500,700,1000], leads:['lute','lute','morin'], perc:['D','k','k','D','k','k'], tempo:126, durs:[1,1,2,2], orn:.2, density:.95, droneLvl:.08},
+ china:  {note:'In the wine-house, the zither and dizi turn quicker and brighter over a busier woodblock.',
+          scale:[0,200,400,700,900], leads:['zither','dizi'], perc:['W','w','.','w','W','.','w','.'], tempo:96, durs:[1,1,2,2], orn:.15, density:.9},
+ india:  {note:'In the tavern, Yaman at a lively tempo, the tabla doubling its pace.',
+          scale:[0,200,400,600,700,900,1100], leads:['sitar','sitar','flute'], perc:['B','R','B','R','B','R','R','B'], tempo:100, durs:[1,1,2], orn:.5, density:.95},
+ north:  {note:'In the hall, a fiddler plays a turning dance in three.',
+          scale:[0,200,400,500,700,900,1100], leads:['fiddle','fiddle','lute'], perc:['D','.','k','.','D','k'], tempo:110, durs:[1,1,2,2], orn:.2, density:.95}
+};
+const BUSK_LEAD={latin:'lute',byz:'lute',arab:'oud',persian:'tar',steppe:'lute',china:'zither',india:'sitar',north:'fiddle'};
+const BUSK_SING={latin:'vielle',byz:'vielle',arab:'ney',persian:'ney',steppe:'morin',china:'dizi',india:'flute',north:'fiddle'};
+let busker=null, bandits=null;
+function P(k){ let R=(terrain==='tavern'&&TAV[k])?Object.assign({},REG[k],TAV[k]):REG[k];
+  if(bandits){ R=Object.assign({},R,{leads:['morin'], perc:['D','D','T','D','.','D','T','T'], tempo:132, durs:[1,1,2], orn:0, density:.8, droneLvl:R.droneLvl*.4, bell:0}); }   /* war-drums under a low, rough fiddle */
+  else if(busker){ if(busker.kind==='lute') R=Object.assign({},R,{leads:[BUSK_LEAD[k]], perc:null, durs:[1,1,1,2,2,3], density:1, orn:Math.max(R.orn,.35), droneLvl:R.droneLvl*.5, bell:0, tempo:R.tempo*1.05});
+    else if(busker.kind==='drum') R=Object.assign({},R,{leads:[BUSK_LEAD[k]], perc:['D','k','T','k','D','D','T','k'], durs:[2,3,4], density:.35, tempo:Math.max(R.tempo,100), bell:0});
+    else if(busker.kind==='singer') R=Object.assign({},R,{leads:[BUSK_SING[k]], perc:null, durs:[3,4,4,6], density:1, orn:Math.max(R.orn,.4), tempo:R.tempo*.7, droneLvl:R.droneLvl*.8, bell:0});
+    else if(busker.kind==='story') R=Object.assign({},R,{perc:null, density:0, droneLvl:0, bell:0}); }
+  if(R.chant&&(bandits||busker||(terrain==='tavern'&&TAV[k]))) R=Object.assign({},R,{chant:false});   /* the tavern, the street and the fight are not the church */
+  return R; }
+const ROUTE=[['Venice','latin'],['Constantinople','byz'],['Aleppo','arab'],['Baghdad','arab'],['Tabriz','persian'],['Samarkand','persian'],['Almaliq','steppe'],['Karakorum','steppe'],['Khanbaliq','china']];
+const TONIC=146.83;   /* D3 - every region keeps the same home note, so the hand-overs never lurch */
+
+/* ====================== AUDIO SETUP ====================== */
+let ctx=null, master, verb, dryBus, wetBus, playing=false;
+let weights={latin:1}, fixedRegion=null, night=false, terrain='road', breaks=false, resting=false, nextSwitch=0;
+const drones={};
+function makeImpulse(sec,decay){ const sr=ctx.sampleRate, n=Math.floor(sr*sec), b=ctx.createBuffer(2,n,sr);
+  for(let c=0;c<2;c++){ const d=b.getChannelData(c); for(let i=0;i<n;i++) d[i]=(Math.random()*2-1)*Math.pow(1-i/n,decay); } return b; }
+function initAudio(){ const AC=window.AudioContext||window.webkitAudioContext; ctx=new AC();
+  master=ctx.createGain(); master.gain.value=vol();
+  const comp=ctx.createDynamicsCompressor(); comp.threshold.value=-18; comp.ratio.value=3;
+  master.connect(comp); comp.connect(ctx.destination);
+  dryBus=ctx.createGain(); dryBus.gain.value=1; dryBus.connect(master);
+  verb=ctx.createConvolver(); verb.buffer=makeImpulse(3.2,2.6); wetBus=ctx.createGain(); wetBus.gain.value=.32; verb.connect(wetBus); wetBus.connect(master);
+  for(const k in REG) buildDrone(k);
+  buildAmbience(); }
+let noteBoost=1;   /* a featured player (the street musician) stands in front of the room */
+function out(node,send){ let n=node; if(noteBoost!==1){ const m=ctx.createGain(); m.gain.value=noteBoost; node.connect(m); n=m; } n.connect(dryBus); const s=ctx.createGain(); s.gain.value=send==null?.5:send; n.connect(s); s.connect(verb); }
+function vol(){ const v=+document.getElementById('vol').value/100; return v*v*.9; }
+const cents=(f,c)=>f*Math.pow(2,c/1200);
+
+/* ====================== INSTRUMENTS ====================== */
+const ksCache={};
+function ksBuffer(freq,dur,damp,bright){ const key=Math.round(freq)+'|'+dur+'|'+damp+'|'+bright; if(ksCache[key])return ksCache[key];
+  const sr=ctx.sampleRate, N=Math.floor(sr*dur), p=Math.max(2,Math.round(sr/freq)), b=ctx.createBuffer(1,N,sr), d=b.getChannelData(0), ring=new Float32Array(p);
+  for(let i=0;i<p;i++) ring[i]=(Math.random()*2-1)*(1-bright*.5)+(i<p*bright?.3:0);
+  let ix=0; for(let i=0;i<N;i++){ const nx=(ix+1)%p; d[i]=ring[ix]; ring[ix]=damp*(.5*(ring[ix]+ring[nx])); ix=nx; }
+  return (ksCache[key]=b); }
+function pluck(t,f,len,opt){ opt=opt||{}; const src=ctx.createBufferSource(); src.buffer=ksBuffer(f,3,opt.damp||.996,opt.bright||.3);
+  if(opt.slide&&src.playbackRate){ src.playbackRate.setValueAtTime(opt.slide,t); src.playbackRate.setTargetAtTime(1,t+.02,.05); }   /* slide in from the last note's pitch */   /* one 3-second buffer per pitch and timbre - cached, so memory stays small */
+  const g=ctx.createGain(); g.gain.setValueAtTime((opt.gain||.35)*(opt.acc||1),t); g.gain.setTargetAtTime(0,t+len,0.25);
+  let last=g; if(opt.lp){ const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=opt.lp; g.connect(lp); last=lp; }
+  if(opt.buzz){ const ws=ctx.createWaveShaper(); const c=new Float32Array(256); for(let i=0;i<256;i++){ const x=i/128-1; c[i]=Math.tanh(x*2.2); } ws.curve=c; last.connect(ws); last=ws; }
+  src.connect(g); out(last,opt.send); src.start(t); src.stop(t+len+1.5); }
+function blown(t,f,len,opt){ opt=opt||{}; const o=ctx.createOscillator(); o.type='sine'; o.frequency.value=f;
+  const o2=ctx.createOscillator(); o2.type='triangle'; o2.frequency.value=f*2; const g2=ctx.createGain(); g2.gain.value=.08; o2.connect(g2);
+  const vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=5.2; vg.gain.setValueAtTime(0,t); vg.gain.linearRampToValueAtTime(f*.006,t+Math.min(len,.5)); vib.connect(vg); vg.connect(o.frequency);
+  const n=ctx.createBufferSource(); n.buffer=noiseBuf(); const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=f*1.5; bp.Q.value=2; const ng=ctx.createGain(); ng.gain.value=opt.breath||.05; n.connect(bp); bp.connect(ng);
+  const g=ctx.createGain(); const a=opt.gain||.22; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(a,t+.07); g.gain.setTargetAtTime(a*.8,t+.1,.3); g.gain.setTargetAtTime(0,t+len,.12);
+  o.connect(g); g2.connect(g); ng.connect(g); out(g,.6); [o,o2,vib,n].forEach(x=>{ x.start(t); x.stop(t+len+.8); }); }
+function bowed(t,f,len,opt){ opt=opt||{}; const o=ctx.createOscillator(); o.type='sawtooth'; o.frequency.value=f;
+  const o2=ctx.createOscillator(); o2.type='sawtooth'; o2.frequency.value=f*1.003;
+  const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=opt.lp||1600; lp.Q.value=1.2;
+  const vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=opt.vibr||5; vg.gain.setValueAtTime(0,t); vg.gain.linearRampToValueAtTime(f*(opt.vibd||.005),t+Math.min(len,.6)); vib.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);
+  const g=ctx.createGain(), a=opt.gain||.12; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(a,t+(opt.att||.14)); g.gain.setTargetAtTime(0,t+len,.18);
+  o.connect(lp); o2.connect(lp); lp.connect(g); out(g,.55); [o,o2,vib].forEach(x=>{ x.start(t); x.stop(t+len+1); }); }
+function bell(t,f,gain){ const c=ctx.createOscillator(), m=ctx.createOscillator(), mg=ctx.createGain(); c.frequency.value=f; m.frequency.value=f*3.5;
+  mg.gain.setValueAtTime(f*2.5,t); mg.gain.exponentialRampToValueAtTime(1,t+2.5); m.connect(mg); mg.connect(c.frequency);
+  const g=ctx.createGain(); g.gain.setValueAtTime(gain||.12,t); g.gain.exponentialRampToValueAtTime(.0001,t+3.5); c.connect(g); out(g,.8); c.start(t); m.start(t); c.stop(t+3.6); m.stop(t+3.6); }
+let _nb=null; function noiseBuf(){ if(_nb)return _nb; const n=ctx.sampleRate, b=ctx.createBuffer(1,n,n), d=b.getChannelData(0); for(let i=0;i<n;i++)d[i]=Math.random()*2-1; return (_nb=b); }
+function drum(t,kind,gain){ gain=gain||1;
+  if(kind==='D'||kind==='B'){ const o=ctx.createOscillator(), g=ctx.createGain(); const f0=kind==='B'?120:95; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f0*(kind==='B'?1.25:.6),t+.25);
+    g.gain.setValueAtTime(.5*gain,t); g.gain.exponentialRampToValueAtTime(.001,t+.35); o.connect(g); out(g,.25); o.start(t); o.stop(t+.4); }
+  if(kind==='T'||kind==='k'||kind==='B'){ const n=ctx.createBufferSource(); n.buffer=noiseBuf(); const bp=ctx.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=kind==='B'?1800:2600; bp.Q.value=1.4;
+    const g=ctx.createGain(); g.gain.setValueAtTime((kind==='k'?.12:.28)*gain,t); g.gain.exponentialRampToValueAtTime(.001,t+.07); n.connect(bp); bp.connect(g); out(g,.3); n.start(t,Math.random()*.5); n.stop(t+.1); }
+  if(kind==='R'){ const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=TONIC*4; g.gain.setValueAtTime(.16*gain,t); g.gain.exponentialRampToValueAtTime(.001,t+.45); o.connect(g); out(g,.3); o.start(t); o.stop(t+.5); }
+  if(kind==='W'||kind==='w'){ const o=ctx.createOscillator(), g=ctx.createGain(); o.type='triangle'; o.frequency.value=kind==='W'?820:1050; g.gain.setValueAtTime((kind==='W'?.22:.14)*gain,t); g.gain.exponentialRampToValueAtTime(.001,t+.08); o.connect(g); out(g,.3); o.start(t); o.stop(t+.1); }
+  if(kind==='G'){ bell(t,TONIC*4,.07*gain); } }
+const VOICE={   /* o: {acc (accent), slide (start pitch ratio)} */
+ lute:  (t,f,l,o)=>pluck(t,f,l,Object.assign({damp:.995,bright:.35,gain:.32,lp:2600},o)),
+ oud:   (t,f,l,o)=>pluck(t,f*.5,l,Object.assign({damp:.994,bright:.25,gain:.42,lp:1800},o)),
+ tar:   (t,f,l,o)=>pluck(t,f,l,Object.assign({damp:.995,bright:.6,gain:.3,lp:3400},o)),
+ zither:(t,f,l,o)=>pluck(t,f*2,l,Object.assign({damp:.997,bright:.7,gain:.24,lp:5000,send:.7},o)),
+ sitar: (t,f,l,o)=>pluck(t,f,l,Object.assign({damp:.997,bright:.6,gain:.22,lp:4200,buzz:true},o)),
+ ney:   (t,f,l)=>blown(t,f,l,{breath:.09,gain:.2}),
+ dizi:  (t,f,l)=>blown(t,f*2,l,{breath:.05,gain:.14}),
+ flute: (t,f,l)=>blown(t,f,l,{breath:.06,gain:.18}),
+ vielle:(t,f,l)=>bowed(t,f,l,{lp:1400,gain:.11,vibd:.004}),
+ morin: (t,f,l)=>bowed(t,f*.5,l,{lp:1100,gain:.15,vibd:.007,vibr:4.5}),
+ fiddle:(t,f,l)=>bowed(t,f,l,{lp:2400,gain:.09,vibd:.003,att:.06}),
+ chant: (t,f,l)=>bowed(t,f*.5,l,{lp:900,gain:.12,vibd:.004})   /* single notes only; the chant proper is sung a phrase at a time (chantPhrase) */
+};
+const droneOsc={};
+function setIson(k,c,t){ (droneOsc[k]||[]).forEach(function(d){ if(d.i===0) d.o.frequency.setTargetAtTime(cents(TONIC/2,c)*(1+(d.j?.0025:-.0025)),t,.35); }); }   /* the isokratai move to the phrase's resting note */
+function buildDrone(k){ const R=REG[k], g=ctx.createGain(); g.gain.value=0; const lp=ctx.createBiquadFilter(); lp.type=k==='byz'?'bandpass':'lowpass'; lp.frequency.value=k==='india'?1200:k==='byz'?560:520; lp.Q.value=k==='byz'?1.6:.8;   /* byz: an 'o' vowel band - men holding the ison */
+  const lfo=ctx.createOscillator(), lg=ctx.createGain(); lfo.frequency.value=.07+Math.random()*.05; lg.gain.value=k==='india'?300:120; lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
+  (R.drone||[]).forEach(function(c,i){ [0,1].forEach(function(j){ const o=ctx.createOscillator(); o.type=(k==='india'||k==='north'||k==='byz')?'sawtooth':'triangle'; o.frequency.value=cents(TONIC/2,c)*(1+(j?.0025:-.0025)); const og=ctx.createGain(); og.gain.value=(i===0?.5:.32)*(k==='byz'?1.8:1); o.connect(og); og.connect(lp); o.start(); (droneOsc[k]=droneOsc[k]||[]).push({o:o,i:i,j:j}); }); });
+  lp.connect(g); out(g,.6); drones[k]=g; }
+
+/* ====================== AMBIENCE (Kris 1021) ======================
+   Noise shaped into weather and people: wind (low roar + gusts), the whistle of wind over rock, sand hiss, sea swell, and a crowd made of
+   eight 'voices' - bands of noise that rise and fall at the pace of syllables. It plays under the music, and on through the music's breaks. */
+let ambOut, amb={}, gust=.5, gustT=.5, swellPh=0, murVoices=[];
+function loopNoise(off){ const n=ctx.createBufferSource(); n.buffer=noiseBuf(); n.loop=true; n.start(0,off||Math.random()); return n; }
+function bed(chain,send){ const g=ctx.createGain(); g.gain.value=0; let src=loopNoise(), last=src; chain.forEach(function(f){ last.connect(f); last=f; }); last.connect(g); g.connect(ambOut); return g; }
+function filt(type,freq,q){ const f=ctx.createBiquadFilter(); f.type=type; f.frequency.value=freq; if(q)f.Q.value=q; return f; }
+function buildAmbience(){ ambOut=ctx.createGain(); ambOut.gain.value=ambVol(); ambOut.connect(master); const s=ctx.createGain(); s.gain.value=.25; ambOut.connect(s); s.connect(verb);
+  amb.wind=bed([filt('lowpass',420,.7)]);
+  amb.whistleF=filt('bandpass',900,14); amb.whistle=bed([amb.whistleF]);
+  amb.sand=bed([filt('highpass',2600,.7),filt('lowpass',7000,.5)]);
+  amb.wave=bed([filt('lowpass',700,.6)]);
+  /* the crowd: eight voices, each a formant-ish band of noise, pulsed like speech */
+  amb.mur=ctx.createGain(); amb.mur.gain.value=0; amb.murLP=filt('lowpass',1600,.6); amb.mur.connect(amb.murLP); amb.murLP.connect(ambOut);
+  for(let i=0;i<8;i++){ const bp=filt('bandpass',260+Math.random()*700,3+Math.random()*3), g=ctx.createGain(); g.gain.value=0; const src=loopNoise(); src.connect(bp); bp.connect(g); g.connect(amb.mur); murVoices.push({g:g,bp:bp,talk:Math.random()<.5,until:0}); } }
+function ambVol(){ const v=+document.getElementById('amb').value/100; return v*v*1.4; }
+const AMB_MIX={ road:{wind:.035}, town:{wind:.015,mur:.07,murLP:1500}, tavern:{mur:.17,murLP:3200,clink:true}, desert:{wind:.06,sand:.045}, mountain:{wind:.13,whistle:.035}, sea:{wind:.045,wave:.14} };
+function ambTick(now){ if(!amb.wind)return; const M=AMB_MIX[terrain]||{}, nf=night?.75:1, on=playing?1:0;
+  /* gusts: a slow random walk the wind and sand ride on */
+  if(Math.random()<.02) gustT=.2+Math.random()*1.3; gust+=(gustT-gust)*.015;
+  amb.wind.gain.setTargetAtTime(on*(M.wind||0)*(.45+gust*.8),now,.4);
+  amb.sand.gain.setTargetAtTime(on*(M.sand||0)*Math.max(0,gust-.25)*1.4,now,.3);
+  amb.whistle.gain.setTargetAtTime(on*(M.whistle||0)*Math.max(0,gust-.6)*2.2,now,.5); amb.whistleF.frequency.setTargetAtTime(650+gust*650,now,.8);
+  swellPh+=.04*2*Math.PI*.09; amb.wave.gain.setTargetAtTime(on*(M.wave||0)*(.35+.65*Math.pow(.5+.5*Math.sin(swellPh),2)),now,.25);
+  const mt=on*(M.mur||0)*(night&&terrain!=='tavern'?.45:1)*(busker?(busker.kind==='story'?.35:.55):1); amb.mur.gain.setTargetAtTime(mt,now,.8);   /* the crowd quiets to listen */ if(M.murLP)amb.murLP.frequency.setTargetAtTime(M.murLP,now,.5);
+  if(mt>0){ murVoices.forEach(function(v,vi){ if(vi===0&&busker&&busker.kind==='story')return;   /* the storyteller's voice is driven in evTick */
+      if(now>v.until){ v.talk=Math.random()<(terrain==='tavern'?.7:.55); v.until=now+(v.talk?1+Math.random()*4:.5+Math.random()*2.5); }
+      v.g.gain.setTargetAtTime(v.talk&&Math.random()<.6?(.25+Math.random()*.75):.02,now,.05); });   /* syllables: the band flickers up and down a few times a second */
+    if(M.clink&&Math.random()<.012){ const t=now+.05, o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=1900+Math.random()*1600; g.gain.setValueAtTime(.025,t); g.gain.exponentialRampToValueAtTime(.0001,t+.25); o.connect(g); g.connect(ambOut); o.start(t); o.stop(t+.3); }
+    if(M.clink&&Math.random()<.003){ const v=murVoices[Math.floor(Math.random()*murVoices.length)], t=now; for(let i=0;i<7;i++) v.g.gain.setValueAtTime(i%2?1.4:.1,t+i*.11); v.until=t+.9; }   /* a burst of laughter */
+  } }
+
+/* ====================== SOUND EFFECTS & EVENTS (Kris 1021) ======================
+   Coins: three inharmonic partials, as a struck coin rings. BUYING sets coins DOWN on the counter (a sack thumps, coins fall in a falling run);
+   SELLING takes coins IN (they climb as they drop into your purse, the purse rustles). Ten is a handful where one is a single coin. */
+function coin(t,f,g){ [1,2.76,5.4].forEach(function(m,i){ const o=ctx.createOscillator(), a=ctx.createGain(); o.frequency.value=f*m*(1+(Math.random()-.5)*.01); a.gain.setValueAtTime((g||.09)/(i+1),t); a.gain.exponentialRampToValueAtTime(.0001,t+.18+.12/(i+1)); o.connect(a); a.connect(master); o.start(t); o.stop(t+.35); }); }
+function thud(t,big){ const n=ctx.createBufferSource(); n.buffer=noiseBuf(); const lp=filt('lowpass',big?260:380,.7), g=ctx.createGain(); g.gain.setValueAtTime(big?.5:.3,t); g.gain.exponentialRampToValueAtTime(.001,t+(big?.22:.12)); n.connect(lp); lp.connect(g); g.connect(master); n.start(t,Math.random()*.5); n.stop(t+.3);
+  const o=ctx.createOscillator(), og=ctx.createGain(); o.frequency.setValueAtTime(big?75:95,t); o.frequency.exponentialRampToValueAtTime(45,t+.15); og.gain.setValueAtTime(big?.35:.2,t); og.gain.exponentialRampToValueAtTime(.001,t+.2); o.connect(og); og.connect(master); o.start(t); o.stop(t+.25); }
+function rustle(t,len){ const n=ctx.createBufferSource(); n.buffer=noiseBuf(); const bp=filt('bandpass',1400,1.2), g=ctx.createGain(); g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(.07,t+.03); g.gain.exponentialRampToValueAtTime(.001,t+len); n.connect(bp); bp.connect(g); g.connect(master); n.start(t,Math.random()*.5); n.stop(t+len+.05); }
+function sfx(kind){ if(!ctx)initAudio(); if(ctx.state==='suspended')ctx.resume(); const t=ctx.currentTime+.03;
+  if(kind==='buy1'){ thud(t,false); coin(t+.12,3300); }
+  if(kind==='buy10'){ thud(t,true); for(let i=0;i<10;i++) coin(t+.14+i*.055+Math.random()*.02,4200-i*130+Math.random()*200,.07); }
+  if(kind==='sell1'){ coin(t,3000); coin(t+.07,3500,.06); rustle(t+.12,.18); }
+  if(kind==='sell10'){ for(let i=0;i<11;i++) coin(t+i*.05+Math.random()*.02,2700+i*140+Math.random()*200,.065); rustle(t+.6,.3); bell(t+.75,TONIC*8,.025); } }
+/* the street musician: the region's own instrument, played to you; the crowd hushes to listen. The storyteller is a voice, and no music at all. */
+function startBusker(kind){ if(!playing){ document.getElementById('play').click(); } busker={kind:kind, until:ctx.currentTime+45}; bandits=null; noteBoost=kind==='drum'?1.2:1.7; phrase=[]; barPerc=null;
+  if(terrain!=='town'){ setTerrain('town'); } evStat(); }
+function startBandits(){ if(!playing){ document.getElementById('play').click(); } bandits={until:ctx.currentTime+40}; busker=null; noteBoost=1; phrase=[]; barPerc=null; const t=ctx.currentTime+.05;
+  [0,.32,.64,.8,.96].forEach(function(d,i){ drum(t+d,'D',1.6); if(i>2)drum(t+d+.08,'T',1.2); });   /* the stinger: war-drums */
+  bowed(t+.1,TONIC/2,2.2,{lp:700,gain:.16,vibd:.01}); bowed(t+.1,cents(TONIC/2,600),2.2,{lp:700,gain:.12,vibd:.012});   /* a low, rough tritone */
+  evStat(); }
+function endFight(){ if(!bandits)return; bandits=null; phrase=[]; barPerc=null; const t=ctx.currentTime+.05; drum(t,'D',1.2); bowed(t+.1,TONIC,2.5,{lp:1200,gain:.1}); bowed(t+.1,cents(TONIC,700),2.5,{lp:1200,gain:.08}); evStat(); }
+function evTick(now){ if(busker&&now>busker.until){ busker=null; noteBoost=1; phrase=[]; barPerc=null; evStat(); } if(bandits&&now>bandits.until){ endFight(); }
+  if(busker&&busker.kind==='story'&&murVoices[0]){ const v=murVoices[0]; if(Math.random()<.5) v.g.gain.setTargetAtTime(Math.random()<.75?1.6+Math.random():.05,now,.05); v.until=now+1; } }   /* one voice, close, telling it */
+function evStat(){ document.getElementById('evstat').textContent=bandits?'Bandits: war-drums until you press "The fight is over" (or about 40 s).':busker?(busker.kind==='story'?'An old woman is telling a story for about 45 s; the music stops and the crowd hushes.':('A street musician is playing ('+({lute:'the lute',drum:'the drum, monkey dancing',singer:'a sad song'})[busker.kind]+') for about 45 s; the crowd hushes.')):''; }
+
+/* ====================== BLENDING ====================== */
+function pickRegion(){ let r=Math.random(), acc=0, last=null; for(const k in weights){ acc+=weights[k]; last=k; if(r<=acc)return k; } return last||'latin'; }
+function blended(field){ let s=0,w=0; for(const k in weights){ s+=P(k)[field]*weights[k]; w+=weights[k]; } return w?s/w:0; }
+function setRoute(v){ const n=ROUTE.length-1, x=v*n, i=Math.min(n-1,Math.floor(x)), f=x-i, sm=f*f*(3-2*f); const a=ROUTE[i][1], b=ROUTE[i+1][1];
+  weights={}; weights[a]=(weights[a]||0)+(1-sm); weights[b]=(weights[b]||0)+sm;
+  document.getElementById('now').textContent=(f<.15?ROUTE[i][0]:f>.85?ROUTE[i+1][0]:('on the road from '+ROUTE[i][0]+' to '+ROUTE[i+1][0])); drawBars(); }
+function drawBars(){ const el=document.getElementById('bars'); el.innerHTML=Object.keys(REG).map(function(k){ const w=weights[k]||0; return '<div class="bar"><span class="lbl">'+REG[k].name+'</span><span class="track"><span class="fill" style="display:block;width:'+Math.round(w*100)+'%"></span></span></div>'; }).join('');
+  const top=Object.keys(weights).sort((a,b)=>weights[b]-weights[a])[0]; document.getElementById('notes').innerHTML='<b>'+REG[top].name+':</b> '+P(top).note; }
+
+/* ====================== SEQUENCER ======================
+   Kris 1022: 'make all areas' music more melodiously cohesive'. The old sequencer walked the scale at random, a note at a time, with random
+   lengths and random dropped notes - which is what 'leaning on random keys' sounds like. Now every region plays TUNES:
+   - METRE: each bar's rhythm is a cell that fills the bar of the region's own drum pattern (6/8, 7/8 = 3+2+2, 8 = maqsum/teentaal-ish),
+     and a tune starts on the downbeat, so melody and drum agree; the downbeat note is accented.
+   - SHAPE: phrases are contours between structural tones - out from the final, up to the dominant (a half-close), back down to the final
+     (the full close) - moving mostly by step, the longest note at the end of the phrase.
+   - FORM: a tune is A (ends on the dominant), A' (the same first bar, home to the final), B (higher, around the dominant), A' again - then
+     played through a second time, often on the region's second instrument. Tunes are remembered per region and come back, varied.
+   - BREATH: winds, bows and voices play each phrase as one legato line (gliding, a tongue or bow-change dip per note, vibrato on long notes);
+     plucked instruments keep their notes but gain the region's ornaments - the oud's and sitar's slides into a note, the tar's tremolo
+     (riz) on held notes, the zither's run up into a phrase.
+   - SPACE: density no longer drops random notes out of a tune; it sets how long the silences between tunes are.
+   Byzantium and the Latin West sing CHANT instead (free rhythm, the formula melodies). Hind opens each piece with a free alap on the sitar
+   (no tabla), built on Yaman's pakad, before the metred gat. */
+let nextT=0, step=0, barPerc=null, barRegion=null, phrase=[], phraseRegion='latin', phraseVoice='lute', memory={}, restSteps=0;
+let piece=null, lastKey='', lineEnvs=[], alapNow=false;
+function terrMod(){ return {town:{dens:1.15,perc:1.1,drone:1}, tavern:{dens:1.1,perc:.9,drone:.9}, road:{dens:1,perc:1,drone:1}, desert:{dens:.9,perc:1.2,drone:1.1}, mountain:{dens:.55,perc:.25,drone:1.4}, sea:{dens:.8,perc:0,drone:.8}}[terrain]; }
+/* ---- CHANT (Kris 1022: 'Byzantium sounds like someone leaning on random keys') ----
+   The fix is two things the random walk lacked. (1) A VOICE, legato: one sung line per phrase, gliding note to note, the vowel changing with
+   each syllable (two formant bands over detuned saws), vibrato settling in on held notes - so the phrase is a breath, not a row of key-presses.
+   (2) FORMULAS, as real chant is built: rise by step to a reciting tone, intone on it with neighbour-note inflections, a small melisma, then a
+   cadence by step to a resting note (medial on Ga or Ke, final on Pa), longest at the end. Pieces run 3-4 phrases and end on the final. */
+const VOWELS=[[730,1090],[570,840],[530,1840],[730,1090],[570,840],[440,1020]];   /* a, o, e, a, o, u - male formants */
+function chantPhrase(t,notes,stepDur,R,k){ const tot=notes.reduce(function(a,n){return a+n.dur;},0)*stepDur;
+  const mix=ctx.createGain(); mix.gain.value=1; const oscs=[];
+  [[-7,'sawtooth',.5],[6,'sawtooth',.5],[0,'triangle',.7]].forEach(function(q){ const o=ctx.createOscillator(); o.type=q[1]; if(o.detune)o.detune.value=q[0]; const og=ctx.createGain(); og.gain.value=q[2]; o.connect(og); og.connect(mix); oscs.push(o); });
+  const body=filt('lowpass',520,.7), bg=ctx.createGain(); bg.gain.value=.3; mix.connect(body); body.connect(bg);
+  const f1=filt('bandpass',730,4), g1=ctx.createGain(); g1.gain.value=1.5; mix.connect(f1); f1.connect(g1);
+  const f2=filt('bandpass',1090,5), g2=ctx.createGain(); g2.gain.value=.8; mix.connect(f2); f2.connect(g2);
+  const env=ctx.createGain(); bg.connect(env); g1.connect(env); g2.connect(env);
+  const f0=degFreq(R,notes[0].deg)*.5, vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=5; vg.gain.value=0; vib.connect(vg); oscs.forEach(function(o){ vg.connect(o.frequency); });
+  const a=.24; env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(a,t+.3);
+  let tn=t, vi=Math.floor(Math.random()*VOWELS.length);
+  notes.forEach(function(n,i){ const f=degFreq(R,n.deg)*.5, len=n.dur*stepDur;   /* an octave down: a men's choir, D3 to D4 */
+    if(i===0) oscs.forEach(function(o){ o.frequency.setValueAtTime(f,tn); });
+    else { oscs.forEach(function(o){ o.frequency.setTargetAtTime(f,tn,.035); }); }   /* glide, not jump */
+    if(n.syl!==false){ vi=(vi+1+Math.floor(Math.random()*2))%VOWELS.length; f1.frequency.setTargetAtTime(VOWELS[vi][0],tn,.04); f2.frequency.setTargetAtTime(VOWELS[vi][1],tn,.04);
+      if(i>0){ env.gain.setTargetAtTime(a*.62,tn-.02,.02); env.gain.setTargetAtTime(a,tn+.05,.05); } }   /* a new syllable: the breath dips and the vowel turns */
+    vg.gain.setTargetAtTime(len>.9?f*.009:f*.002,tn+Math.min(.35,len*.4),.25);   /* vibrato blooms only on held notes */
+    tn+=len; });
+  env.gain.setTargetAtTime(0,t+tot-.05,.3);
+  out(env,.75); oscs.concat([vib]).forEach(function(o){ o.start(t); o.stop(t+tot+2); });
+  if(k){ const last=notes[notes.length-1].deg; setIson(k,R.scale[((last%R.scale.length)+R.scale.length)%R.scale.length]*(last===0||last===2?1:0),t+tot*.55); } }   /* ison follows to Ga; otherwise back to Pa */
+let chantLeft=0;
+function chantMelody(R){ const n=R.scale.length, out=[]; if(chantLeft<=0) chantLeft=3+Math.floor(Math.random()*2);
+  const prev=(memory.__chantEnd!=null)?memory.__chantEnd:0, final=(chantLeft===1);
+  const rt=[2,4,4,3,2][Math.floor(Math.random()*5)];   /* the reciting tone: Ga/Ke/Di in Byzantium; F/A/G in Latin Dorian */
+  let d=prev; const push=function(deg,dur,syl){ out.push({deg:deg,dur:dur,syl:syl}); d=deg; };
+  push(d,1);
+  while(d!==rt){ const st=rt>d?1:-1; if(Math.abs(rt-d)>=3&&Math.random()<.5) push(d+2*st,1); else push(d+st,1); }
+  const k=3+Math.floor(Math.random()*4);
+  for(let i=0;i<k;i++){ const r=Math.random();
+    if(r<.18&&rt+1<=n) { push(rt+1,1); push(rt,1,false); }
+    else if(r<.3) { push(rt-1,1); push(rt,1,false); }
+    else push(rt,Math.random()<.25?2:1); }
+  if(Math.random()<.6){ push(rt+1,1); push(rt,1,false); push(rt-1,1,false); }
+  const tgt=final?0:[2,4,0,2][Math.floor(Math.random()*4)];
+  while(d!==tgt){ const st=tgt>d?1:-1; push(d+st,(Math.abs(tgt-d)===1)?2:1); }
+  if(final&&Math.random()<.5){ out.pop(); push(1,2); push(0,1,false); push(1,1,false); }
+  if(out[out.length-1].deg!==tgt) push(tgt,1);
+  out[out.length-1].dur=final?6:4;
+  memory.__chantEnd=tgt; chantLeft--;
+  return {notes:out, rest:final?(8+Math.floor(Math.random()*6)):(2+Math.floor(Math.random()*2)), final:final}; }
+
+/* ---- legato lines: winds and bows breathe a whole phrase ---- */
+const LINE={ ney:{kind:'blown',oct:1,breath:.09,gain:.2,glide:.05,vib:.006,dip:.7}, dizi:{kind:'blown',oct:2,breath:.05,gain:.14,glide:.03,vib:.005,dip:.6},
+  flute:{kind:'blown',oct:1,breath:.06,gain:.18,glide:.035,vib:.005,dip:.65}, vielle:{kind:'bowed',oct:1,lp:1400,gain:.11,glide:.03,vib:.004,dip:.6},
+  morin:{kind:'bowed',oct:.5,lp:1100,gain:.15,glide:.07,vib:.007,vibr:4.5,dip:.65}, fiddle:{kind:'bowed',oct:1,lp:2400,gain:.09,glide:.02,vib:.003,dip:.35} };
+function linePhrase(t,notes,stepDur,R,voice){ const L=LINE[voice]; if(!L)return; const tot=notes.reduce(function(a,n){return a+n.dur;},0)*stepDur;
+  const env=ctx.createGain(); env.gain.setValueAtTime(0,t); const oscs=[], fr=[];   /* fr: [param, multiple] - every pitch-following parameter */
+  const vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=L.vibr||5.2; vg.gain.value=0; vib.connect(vg);
+  if(L.kind==='blown'){ const o=ctx.createOscillator(); o.type='sine'; const o2=ctx.createOscillator(); o2.type='triangle'; const g2=ctx.createGain(); g2.gain.value=.08; o2.connect(g2);
+    const n=ctx.createBufferSource(); n.buffer=noiseBuf(); n.loop=true; const bp=filt('bandpass',600,2), ng=ctx.createGain(); ng.gain.value=L.breath; n.connect(bp); bp.connect(ng);
+    o.connect(env); g2.connect(env); ng.connect(env); vg.connect(o.frequency); oscs.push(o,o2,n); fr.push([o.frequency,1],[o2.frequency,2],[bp.frequency,1.5]); }
+  else { const o=ctx.createOscillator(); o.type='sawtooth'; const o2=ctx.createOscillator(); o2.type='sawtooth'; const lp=filt('lowpass',L.lp,1.2);
+    o.connect(lp); o2.connect(lp); lp.connect(env); vg.connect(o.frequency); vg.connect(o2.frequency); oscs.push(o,o2); fr.push([o.frequency,1],[o2.frequency,1.003]); }
+  let tn=t, prevRest=true; const a0=L.gain;
+  notes.forEach(function(nt,i){ const len=nt.dur*stepDur;
+    if(nt.deg==null){ env.gain.setTargetAtTime(0,tn,.04); prevRest=true; tn+=len; return; }
+    const f=degFreq(R,nt.deg)*L.oct, a=a0*(nt.acc||1);
+    fr.forEach(function(p){ if(prevRest) p[0].setValueAtTime(f*p[1],tn); else p[0].setTargetAtTime(f*p[1],tn,L.glide); });
+    if(prevRest){ env.gain.setTargetAtTime(a,tn,.03); }
+    else { env.gain.setTargetAtTime(a*L.dip,tn-.012,.012); env.gain.setTargetAtTime(a,tn+.03,.03); }   /* tongue / bow change */
+    vg.gain.setTargetAtTime(len>.6?f*L.vib:f*L.vib*.2,tn+Math.min(.3,len*.4),.2);
+    prevRest=false; tn+=len; });
+  env.gain.setTargetAtTime(0,t+tot-.04,.09);
+  out(env,L.kind==='blown'?.6:.55); oscs.concat([vib]).forEach(function(o){ o.start(t); o.stop(t+tot+1.5); });
+  lineEnvs.push({env:env,until:t+tot+1}); }
+function fadeLines(now){ lineEnvs.forEach(function(l){ try{ if(l.env.gain.cancelScheduledValues)l.env.gain.cancelScheduledValues(now); l.env.gain.setTargetAtTime(0,now,.12); }catch(e){} }); lineEnvs=[]; }
+
+/* ---- rhythm cells: each fills one bar of the region's metre ---- */
+const CELLS={6:[[3,3],[2,1,3],[1,1,1,3],[2,1,2,1],[3,1,2],[1,2,1,2],[2,2,2],[3,2,1]],
+  7:[[3,2,2],[2,1,2,2],[1,1,1,2,2],[3,1,1,2],[3,4],[1,2,2,2]],
+  8:[[2,2,2,2],[2,1,1,2,2],[1,1,2,4],[3,1,2,2],[2,2,4],[4,2,2],[3,3,2],[1,1,1,1,2,2],[2,1,1,4],[2,2,1,1,2]]};
+const ENDCELLS={6:[[2,1,3],[3,3],[1,1,1,3],[6],[1,2,3]], 7:[[3,4],[2,1,4],[1,2,4],[7]], 8:[[2,2,4],[1,1,2,4],[4,4],[2,6],[3,1,4],[8]]};
+function barLenOf(R){ const n=R.perc?R.perc.length:8; return CELLS[n]?n:8; }
+const pickA=function(a){ return a[Math.floor(Math.random()*a.length)]; };
+/* the structural tones: final (0), dominant, and how far a tune may climb */
+const DOM={arab:3, persian:3, india:2, china:3, steppe:3, north:4};   /* Hijaz's ghammaz G; Shur's G; Yaman's vadi Ga; the pentatonic fifths; the fiddler's A */
+function domOf(k,R){ return DOM[k]!=null?DOM[k]:(R.scale.length>5?4:3); }
+const PAKAD=[[-1,1,2,1,0],[2,1,-1,1,0],[-1,1,2,3,5,3,2],[5,3,2,1,2,1,0]];   /* Yaman's catch-phrases: Ni Re Ga Re Sa ... Ga Ma Dha */
+/* a contour through waypoints, mostly by step, the last note on the target */
+function contour(R,count,from,to,peak,leap){ const out=[]; if(count<=0)return out; const n=R.scale.length;
+  const way=(peak==null)?[[0,from],[1,to]]:[[0,from],[.55,peak],[1,to]];
+  let d=from; for(let i=0;i<count;i++){ const x=count===1?1:i/(count-1); let w=0; while(w<way.length-2&&x>way[w+1][0])w++;
+      const a=way[w], b=way[w+1], u=(x-a[0])/((b[0]-a[0])||1), ideal=a[1]+(b[1]-a[1])*u;
+      let nd=Math.round(ideal+(Math.random()-.5)*1.1); const mx=leap?2:(Math.random()<.15?2:1); if(i===0)nd=from;   /* mostly steps, now and then a third */
+      nd=Math.max(d-mx,Math.min(d+mx,nd)); if(i>1&&nd===d&&out[i-2]===d)nd=d+(ideal>d?1:-1);   /* no more than two of a note running */
+      nd=Math.max(-2,Math.min(n+3,nd)); out.push(nd); d=nd; }
+  out[out.length-1]=to; if(count>1&&(Math.abs(out[count-1]-out[count-2])>2||(count>2&&out[count-2]===to))) out[count-2]=to+((count>2?out[count-3]:out[count-2])>to?1:-1);   /* arrive by step, from the side you came */
+  return out; }
+function rhythmPhrase(bl,bars){ const r=[]; for(let b=0;b<bars-1;b++) r.push(pickA(CELLS[bl])); r.push(pickA(ENDCELLS[bl])); return r; }
+function toNotes(rh,degs){ const out=[]; let i=0; rh.forEach(function(cell){ let pos=0; cell.forEach(function(d){ out.push({deg:degs[i++],dur:d,acc:pos===0?1.15:(pos%2===0?1:.85),pos:pos}); pos+=d; }); }); return out; }
+function makeTune(k,R){ const bl=barLenOf(R), dom=domOf(k,R), n=R.scale.length, leap=(k==='steppe');
+  const rA=rhythmPhrase(bl,2), cA=rA.reduce(function(a,c){return a+c.length;},0), n1=rA[0].length;
+  let dA=contour(R,cA,Math.random()<.6?0:dom-1,dom,dom+(Math.random()<.5?1:2),leap);
+  if(k==='india'&&Math.random()<.6){ const p=pickA(PAKAD), m=Math.min(p.length,cA-2); if(m>=3){ dA=p.slice(0,m).concat(contour(R,cA-m+1,p[m-1],dom,null,false).slice(1)); } }   /* open on the pakad, then on to Ga */
+  const A=toNotes(rA,dA);
+  const dA2=dA.slice(0,n1).concat(contour(R,cA-n1,dA[n1-1],0,Math.random()<.5?dA[n1-1]+1:null,leap)); const A2=toNotes(rA,dA2);   /* the same opening, home this time */
+  const rB=rhythmPhrase(bl,2), cB=rB.reduce(function(a,c){return a+c.length;},0);
+  const B=toNotes(rB,contour(R,cB,dom,dom,Math.min(n+2,dom+(Math.random()<.5?2:3)),leap));   /* up in the higher register, then hang on the dominant */
+  return {bl:bl, A:A, A2:A2, B:B}; }
+function vary(notes){ return notes.map(function(x){ return {deg:x.deg,dur:x.dur,acc:x.acc,pos:x.pos,slide:x.slide}; }); }
+function makePiece(){ const k=pickRegion(), R=P(k); if(!(R.density>0)) return null;
+  const leads=R.leads||['lute'], v1=pickA(leads), v2=leads.length>1?pickA(leads.filter(function(x){return x!==v1;}).concat([v1])):v1;
+  const secs=[];
+  if(R.chant){ chantLeft=0; for(let i=0;i<5;i++){ const c=chantMelody(R); secs.push({notes:c.notes, voice:(v1==='chant'||Math.random()<.7)?v1:v2, rest:c.rest, free:true}); if(c.final)break; }
+    return {region:k, secs:secs, i:0, kind:'chant'}; }
+  if(k==='india'&&R.perc&&!busker&&!bandits&&terrain!=='tavern'){   /* the alap: free, slow, no tabla */
+    for(let j=0;j<2;j++){ const p=pickA(PAKAD), lead=[]; let d=p[0]; lead.push({deg:j?2:0,dur:4});
+      p.forEach(function(x,i){ lead.push({deg:x,dur:i===p.length-1?6:(Math.random()<.4?3:2),slide:Math.random()<.5}); });
+      secs.push({notes:lead, voice:'sitar', rest:2, free:true, alap:true}); } }
+  const mk=memory[k+(terrain==='tavern'?'|tav':'')+'|'+barLenOf(R)]=memory[k+(terrain==='tavern'?'|tav':'')+'|'+barLenOf(R)]||[];
+  let tune; if(mk.length&&Math.random()<.5) tune=pickA(mk); else { tune=makeTune(k,R); mk.push(tune); if(mk.length>4)mk.shift(); }   /* old tunes come round again */
+  const reps=Math.random()<.3?1:2;   /* through once, or twice - the second time often on the other instrument */
+  [[tune.A,v1],[tune.A2,v1],[tune.B,v2],[tune.A2,v1],[tune.A,v2],[tune.A2,v2],[tune.B,v1],[tune.A2,v1]].slice(0,4*reps).forEach(function(q){ secs.push({notes:vary(q[0]), voice:q[1], rest:0, metric:true, bl:tune.bl}); });
+  return {region:k, secs:secs, i:0, kind:'tune'}; }
+function degFreq(R,deg){ const n=R.scale.length, o=Math.floor(deg/n), i=((deg%n)+n)%n; return cents(TONIC*2,R.scale[i]+1200*o); }
+let noteLeft=0, prevF=null;
+function playNote(R,k,voice,nt,len){ const f=degFreq(R,nt.deg), o={acc:nt.acc||1};
+  if((voice==='sitar'||voice==='oud')&&prevF&&(nt.slide||Math.random()<(voice==='sitar'?.3:.15))&&Math.abs(prevF/f-1)<.2) o.slide=prevF/f;   /* meend: slide in from the last note */
+  if(voice==='tar'&&len>.55&&Math.random()<.65){ const n=Math.floor(len/.085); for(let i=0;i<n;i++) VOICE.tar(nextT+i*.085,f,.12,{acc:(i?.55:1)*(nt.acc||1)*(1-i/n*.4)}); prevF=f; return; }   /* riz - the tar's tremolo */
+  if(R.orn&&len>.3&&Math.random()<R.orn*.45){ VOICE[voice](nextT,degFreq(R,nt.deg+1),.08,{acc:.7}); VOICE[voice](nextT+.08,f,len*.95,o); }   /* a grace note from above */
+  else VOICE[voice](nextT,f,len*.95,o);
+  if(terrain==='town'&&nt.pos===0&&Math.random()<.6) pluck(nextT,nt.deg>=3&&nt.deg<=5?cents(TONIC,R.scale[Math.min(R.scale.length-1,domOf(k,R))]):TONIC,len*1.5,{damp:.993,bright:.2,gain:.14,lp:900});   /* a bass note on the downbeat */
+  prevF=f; }
+function zitherRun(R,t,to){ for(let i=0;i<5;i++) VOICE.zither(t+i*.045,degFreq(R,to-5+i),.15,{acc:.5+i*.08}); }
+function tick(){ if(!playing)return; const now=ctx.currentTime; if(nextT<now-.1) nextT=now+.05;   /* the tab slept: pick up from now, never burst the backlog */
+  ambTick(now); evTick(now); if(lineEnvs.length>6) lineEnvs=lineEnvs.filter(function(l){ return l.until>now; });
+  const key=(busker?busker.kind:'')+'|'+(bandits?'b':'')+'|'+terrain; if(key!==lastKey){ lastKey=key; piece=null; phrase=[]; restSteps=0; noteLeft=0; alapNow=false; fadeLines(now); }   /* the scene changed: the band stops mid-tune */
+  if(breaks && now>nextSwitch){ resting=!resting; nextSwitch=now+(resting?40+Math.random()*50:150+Math.random()*90); status(); }
+  const tm=terrMod();
+  for(const k in drones){ const tgt=resting?0:(weights[k]||0)*P(k).droneLvl*tm.drone*(night?.8:1); drones[k].gain.setTargetAtTime(tgt,now,1.6); }
+  while(nextT<now+.25){ const tempo=blended('tempo')*(night?.85:1)*(terrain==='mountain'?.9:1), stepDur=60/tempo/2;   /* the grid is eighth-notes */
+    if(!resting){
+      if(barPerc==null||step%barPerc.length===0){ barRegion=(piece&&piece.kind==='tune'&&weights[piece.region])?piece.region:pickRegion(); barPerc=P(barRegion).perc||['.','.','.','.','.','.','.','.']; step=0;   /* the drum follows the tune's region, so the metres agree */
+        if(P(barRegion).bell&&Math.random()<P(barRegion).bell*(terrain==='town'?1.3:1)) bell(nextT,TONIC*(Math.random()<.5?4:3),.06); }
+      const p=barPerc[step%barPerc.length]; if(p!=='.'&&tm.perc>0&&!(alapNow&&barRegion==='india')&&Math.random()<Math.min(1,.95*tm.perc)) drum(nextT+(Math.random()-.5)*.012,p,(night?.6:1)*Math.min(1.2,tm.perc)*(step===0?1.15:1));
+      if(noteLeft<=0){
+        if(restSteps>0){ restSteps--; noteLeft=1; }
+        else if(phrase.length){ const R=P(phraseRegion), nt=phrase.shift(), len=nt.dur*stepDur; if(nt.deg!=null) playNote(R,phraseRegion,phraseVoice,nt,len); noteLeft=nt.dur; if(!phrase.length&&piece&&piece._rest)restSteps=piece._rest; }
+        else {
+          if(piece&&(piece.i>=piece.secs.length||!(weights[piece.region]>0))){ const R=P(piece.region); restSteps=Math.round(barLenOf(R)*(1+Math.round((1-Math.min(1,R.density*tm.dens))*6)+(night?2:0)+Math.random()*2)); piece=null; alapNow=false; noteLeft=1; }   /* a silence between tunes - longer where the land is emptier */
+          else { if(!piece){ piece=makePiece(); prevF=null; }
+            if(!piece){ restSteps=8; noteLeft=1; }
+            else { const sec=piece.secs[piece.i], R=P(piece.region);
+              if(sec.metric&&step%barPerc.length!==0){ noteLeft=1; }   /* a tune comes in on the downbeat */
+              else { piece.i++; phraseRegion=piece.region; phraseVoice=sec.voice; alapNow=!!sec.alap; piece._rest=sec.rest||0;
+                const tot=sec.notes.reduce(function(a,x){return a+x.dur;},0);
+                if(sec.voice==='chant'&&R.chant){ chantPhrase(nextT,sec.notes,stepDur,R,piece.region==='byz'?'byz':null); noteLeft=tot; restSteps=sec.rest||0; }
+                else if(LINE[sec.voice]){ linePhrase(nextT,sec.notes,stepDur*(sec.free?1.15:1),R,sec.voice); noteLeft=Math.round(tot*(sec.free?1.15:1)); restSteps=sec.rest||0; }
+                else { if(sec.voice==='zither'&&piece.i===1&&sec.notes[0].deg!=null) zitherRun(R,nextT-.23,sec.notes[0].deg);
+                  phrase=vary(sec.notes); const nt=phrase.shift(), len=nt.dur*stepDur; if(nt.deg!=null) playNote(R,piece.region,sec.voice,nt,len); noteLeft=nt.dur; if(!phrase.length)restSteps=sec.rest||0; }
+              } } }
+        }
+      }
+      noteLeft--;
+    }
+    step++; nextT+=stepDur; }
+}
+function status(){ document.getElementById('status').textContent=!playing?'Stopped.':resting?'Resting — a minute or so of quiet, as it would in the game. (Untick "Take breaks" to keep it going.)':'Playing.'; }
+
+/* ====================== UI ====================== */
+const stopsEl=document.getElementById('stops'); stopsEl.innerHTML=ROUTE.map((r,i)=>'<span data-i="'+i+'">'+r[0]+'</span>').join('');
+stopsEl.addEventListener('click',e=>{ const i=e.target.dataset.i; if(i==null)return; const v=Math.round(i/(ROUTE.length-1)*1000); document.getElementById('route').value=v; fixedRegion=null; setRoute(v/1000); });
+document.getElementById('route').addEventListener('input',e=>{ fixedRegion=null; setRoute(e.target.value/1000); });
+document.getElementById('jumps').innerHTML=Object.keys(REG).map(k=>'<button data-k="'+k+'">'+REG[k].name+'</button>').join('');
+document.getElementById('jumps').addEventListener('click',e=>{ const k=e.target.dataset.k; if(!k)return; fixedRegion=k; weights={}; weights[k]=1; document.getElementById('now').textContent=REG[k].name; drawBars(); });
+document.getElementById('terr').innerHTML=['town','tavern','road','desert','mountain','sea'].map(t=>'<button data-t="'+t+'"'+(t==='road'?' class="on"':'')+'>'+t[0].toUpperCase()+t.slice(1)+'</button>').join('');
+document.getElementById('terr').addEventListener('click',e=>{ const t=e.target.dataset.t; if(!t)return; terrain=t; [...document.querySelectorAll('#terr button')].forEach(b=>b.classList.toggle('on',b.dataset.t===t)); phrase=[]; barPerc=null; drawBars(); });
+document.getElementById('day').onclick=()=>{ night=false; day.classList.add('on'); nightB.classList.remove('on'); if(ctx)wetBus.gain.setTargetAtTime(.32,ctx.currentTime,.5); };
+const nightB=document.getElementById('night'), day=document.getElementById('day');
+nightB.onclick=()=>{ night=true; nightB.classList.add('on'); day.classList.remove('on'); if(ctx)wetBus.gain.setTargetAtTime(.5,ctx.currentTime,.5); };
+document.getElementById('vol').addEventListener('input',()=>{ if(ctx)master.gain.setTargetAtTime(vol(),ctx.currentTime,.1); });
+document.getElementById('amb').addEventListener('input',()=>{ if(ctx&&ambOut)ambOut.gain.setTargetAtTime(ambVol(),ctx.currentTime,.1); });
+document.getElementById('breaks').addEventListener('change',e=>{ breaks=e.target.checked; resting=false; if(ctx)nextSwitch=ctx.currentTime+150+Math.random()*90; status(); });
+/* Kris 1021: WANDER - the test page travels by itself: along the road at a caravan's pace (end to end in ~15 minutes, then back),
+   stopping now and then in a town and its tavern, crossing desert and mountains in the right stretches, a spell at sea, nights falling. */
+let wander=false, wDir=1, wNextSet=0, wNextDay=0, wStay=0, wLastStop=-1, wPos=null;
+function setTerrain(t){ terrain=t; [...document.querySelectorAll('#terr button')].forEach(b=>b.classList.toggle('on',b.dataset.t===t)); phrase=[]; barPerc=null; drawBars(); }
+function setNight(n){ night=n; nightB.classList.toggle('on',n); day.classList.toggle('on',!n); if(ctx)wetBus.gain.setTargetAtTime(n?.5:.32,ctx.currentTime,.5); }
+function wanderTick(){ if(!wander||!playing||!ctx)return; const now=ctx.currentTime, r=document.getElementById('route');
+  if(now<wStay)return;   /* lingering in a town */
+  if(wPos==null||Math.abs(wPos-(+r.value))>2) wPos=+r.value;   /* our own position (the slider snaps to whole steps); a hand on the slider takes over */
+  let v=wPos+wDir*0.55; if(v>=1000){ v=1000; wDir=-1; } if(v<=0){ v=0; wDir=1; } wPos=v; r.value=Math.round(v); fixedRegion=null; setRoute(v/1000);
+  const si=Math.round(v/1000*(ROUTE.length-1)), near=Math.abs(v/1000*(ROUTE.length-1)-si)<.04;   /* at a stop on the road */
+  if(!near && wLastStop>=0 && Math.abs(v/1000*(ROUTE.length-1)-wLastStop)>.2) wLastStop=-1;
+  if(near && si!==wLastStop && terrain!=='town' && terrain!=='tavern'){ wLastStop=si; if(Math.random()>=.5) return; setTerrain('town'); wStay=now+40+Math.random()*40; wNextSet=wStay; document.getElementById('now').textContent+=' (in town)'; return; }
+  if(terrain==='town' && Math.random()<.5){ setTerrain('tavern'); wStay=now+30+Math.random()*30; wNextSet=wStay; return; }
+  if(now>wNextSet){ const x=v/1000;   /* the country between the stops: mountains past Tabriz and on the Tian Shan, desert in Syria and the Gobi side, a spell at sea off the Levant */
+    const pool= x<.15?['road','road','sea']: x<.35?['road','desert','desert']: x<.6?['road','mountain','desert']: x<.85?['road','mountain','mountain','desert']: ['road','road','desert'];
+    setTerrain(pool[Math.floor(Math.random()*pool.length)]); wNextSet=now+45+Math.random()*75; }
+  if(now>wNextDay){ setNight(!night); wNextDay=now+(night?60+Math.random()*40:150+Math.random()*90); } }
+document.getElementById('wander').addEventListener('change',e=>{ wander=e.target.checked; if(ctx){ wNextSet=ctx.currentTime+20; wNextDay=ctx.currentTime+120; wStay=0; } });
+setInterval(wanderTick,500);
+document.querySelectorAll('[data-sfx]').forEach(b=>b.addEventListener('click',()=>sfx(b.dataset.sfx)));
+document.querySelectorAll('[data-busk]').forEach(b=>b.addEventListener('click',()=>startBusker(b.dataset.busk)));
+document.getElementById('bandits').onclick=()=>startBandits();
+document.getElementById('fightover').onclick=()=>{ if(ctx)endFight(); };
+let timer=null;
+document.getElementById('play').onclick=function(){ if(!ctx)initAudio(); if(ctx.state==='suspended')ctx.resume();
+  playing=!playing; this.textContent=playing?'■ Stop':'▶ Play';
+  if(playing){ nextT=ctx.currentTime+.1; step=0; barPerc=null; phrase=[]; noteLeft=0; resting=false; nextSwitch=ctx.currentTime+150+Math.random()*90; timer=setInterval(tick,40); master.gain.setTargetAtTime(vol(),ctx.currentTime,.3); }
+  else { clearInterval(timer); for(const k in drones)drones[k].gain.setTargetAtTime(0,ctx.currentTime,.3); ['wind','sand','whistle','wave','mur'].forEach(function(k){ if(amb[k])amb[k].gain.setTargetAtTime(0,ctx.currentTime,.3); }); }
+  status(); };
+setRoute(0);
+</script>
+</body></html>

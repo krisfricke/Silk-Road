@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.84'; const BUILD='1021.soundAndMusic'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.88'; const BUILD='1022.mildWinters'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -2589,7 +2589,8 @@ function startReturn(){
   S.itin=rev; S.idx=0; S.legKm=0; S.returning=true; S.dir=1; S.dealDays=0; S.returnRouteChosen=false; S.priceLock={};
   S.stock=makeStock([...MAIN1,...NORTH,...SOUTH,...MAIN2,...STEPPE,...SEA]);
   S.screen='city'; S.journeying=false; clearJourney();
-  log(isWest()? "You turn the caravan west, homeward for Constantinople. Now to carry the silk and spice and jade of the East back to the Romans, who pay in gold." : "You turn the caravan east. The Romans wished you well; the road, as ever, reserves judgement. Now to sell western glass, coral, and wine to the Tang at Tang prices.");
+  if(S.era==='762'||!S.era) log(isWest()? "You turn the caravan west, homeward for Constantinople. Now to carry the silk and spice and jade of the East back to the Romans, who pay in gold." : "You turn the caravan east. The Romans wished you well; the road, as ever, reserves judgement. Now to sell western glass, coral, and wine to the Tang at Tang prices.");
+  else log(isWest()? ("You turn the caravan west, homeward for "+eraName(trueHome())+". Now to carry the silk and spice and porcelain of the East back to the people who will pay most for them.") : ("You turn the caravan east, homeward for "+eraName(trueHome())+". Now to sell the West's glass, coral and wine at eastern prices."));
   render();
 }
 function chooseReturnRoute(r){
@@ -3865,17 +3866,22 @@ function storyGreetEvent(){ var st=S.startStory; var g=bestGood(st.cousin,st.nea
   return {h:'YOUR COUSIN '+String(st.cousinName||'').toUpperCase(), t:"Your cousin "+st.cousinName+" all but pulls you off the road with delight, and has your beasts stabled before you can object. Over supper the talk turns to silver: he is sure — he is always sure — that the real money lies further on. Take "+gn+" from here up to "+eraName(st.near)+", he says, and you will not regret it; and he is coming with you, for a share and for the road. He is a born trader, and no fool with a ledger.", ch:[{l:'Take him on, and turn for '+eraName(st.near),f:function(){ st.stage=1; }}]}; }
 function storyPoleNearEvent(){ var st=S.startStory; var who=_storyCousinAlive()?('Your cousin '+st.cousinName):'Your nephew, wide-eyed at the size of the place,'; return {h:String(eraName(st.near)).toUpperCase()+' AT LAST', t:eraName(st.near)+" is everything the road promised, and louder. "+who+" is already talking of the next thing: they say the far end of the world — "+eraName(st.far)+" — pays best of all for what a man can only carry there from here, and richest of all is the one who carries it first. Why stop now, with the caravan sound and the purse fat?", ch:[{l:'On, then — for '+eraName(st.far),f:function(){ st.stage=2; }},{l:'Rest here a while, then go on',f:function(){ st.stage=2; }}]}; }
 function storyPoleFarEvent(){ var st=S.startStory; var who=_storyCousinAlive()?('Your cousin '+st.cousinName):'Your nephew'; return {h:String(eraName(st.far)).toUpperCase()+' — THE FAR END OF THE ROAD', t:"You have come the whole length of the world to "+eraName(st.far)+", and there is nothing ahead now but the long way back. "+who+" reckons it up one night and says aloud what you are both thinking: you are made — if you can only get home to "+eraName(st.home)+" with it. Home. That word again, after all these miles.", ch:[{l:'Turn for home — '+eraName(st.home),f:function(){ st.stage=3; S.returning=true; }}]}; }
-function storyHomeEvent(){ var st=S.startStory; st.stage=4; S.storyWon=true; try{ if(typeof metaRecord==='function')metaRecord('return'); }catch(e){} return {h:'HOME, AND RICHER — YOU HAVE WON', t:"The gates of "+eraName(st.home)+" open on a caravan nobody quite recognises — leaner, browner, and a great deal richer than the one that crept out on a cousin’s letter and the family’s pooled coppers. You have been to the ends of the earth and come home with your name made. Whatever you do now, you do as a merchant of consequence.", ch:[{l:'Home.',f:function(){}}]}; }
+function storyBothPolesEvent(at){ var st=S.startStory; var who=_storyCousinAlive()?('Your cousin '+st.cousinName):'Your nephew'; var other=(at===st.far)?st.near:st.far;
+  return {h:'BOTH ENDS OF THE WORLD', t:((at===st.near||at===st.far)?("Here in "+eraName(at)+", with "+eraName(other)+" already behind you, "):("Here in "+eraName(at)+", with "+eraName(st.near)+" and "+eraName(st.far)+" both behind you, "))+who.charAt(0).toLowerCase()+who.slice(1)+" lays it out over the lamp: you have stood at both ends of the road now, and there is nowhere further to go that pays better than home. Carry what you have back to "+eraName(st.home)+" and you are made.", ch:[{l:'Turn for home \u2014 '+eraName(st.home),f:function(){ st.stage=3; S.returning=true; }}]}; }
+function storyHomeEvent(){ var st=S.startStory; st.stage=4; S.storyWon=true; st.finaleDone=true; /* the 'return' is recorded by the home screen (render's per-outcome guard), as for a pole start */ return {h:'HOME, AND RICHER — YOU HAVE WON', t:"The gates of "+eraName(st.home)+" open on a caravan nobody quite recognises — leaner, browner, and a great deal richer than the one that crept out on a cousin’s letter and the family’s pooled coppers. You have been to the ends of the earth and come home with your name made. Whatever you do now, you do as a merchant of consequence.", ch:[{l:'Home.',f:function(){ S.onceFlags=S.onceFlags||{}; S.onceFlags.soldHome=false; S.screen='home'; }}]}; }   /* Kris 1022: then the same finish screen as the pole starts */
 function storyHomecomingEvent(){ var st=S.startStory; st.homecomeDone=true; var nm=st.nieceName||'Zaynab'; var joined=false;
   if(!(S.party||[]).some(function(p){return p.niece;})){ var n={id:'niece', name:nm, role:'your niece, as sharp a trader as your cousin and rather bolder', kind:'companion', niece:true, traderHeir:true, recruited:true, freedman:false, skills:{trade:2}, fromCity:st.home, alive:true}; S.party.push(n); if(typeof normalizeMember==='function')normalizeMember(S.party[S.party.length-1]); joined=true; }
   return {h:'HOME — BUT NOT TO STAY', t:eraName(st.home)+" again, and half the street out to meet you — a loud, joyous homecoming, food and kin and questions past midnight. But the caravan is only passing through: the road is not finished, and you both know it."+(joined?" Your niece "+nm+", grown into a trader every bit as sharp as your cousin and a good deal bolder, will not be left behind this time — she has a bag packed before you can say no.":"")+" One more night under your own roof, and then the road again.", ch:[{l:'On, then — the road is not done',f:function(){}}]}; }
 function checkStartStory(){ if(!S||S.dead||S.pendingEvent||S.eventOutcome)return false; var st=S.startStory; if(!st)return false; if(S.screen!=='city'&&S.screen!=='port')return false; var at=(S.seaMode?S.portName:(city()&&city().name)); if(!at)return false;
+  if(typeof _isPole==='function'&&_isPole(at)){ S.polesHit=S.polesHit||{}; S.polesHit[at]=true; }   /* every road in counts, sea passages included */
   if(!st.started){ if(at===st.home){ S.pendingEvent=storyLetterEvent(); return true; } return false; }
   if(st.started && st.stage>=1 && st.stage<3 && at===st.home && !st.homecomeDone){ S.pendingEvent=storyHomecomingEvent(); return true; }
   if(st.stage===0 && at===st.cousin){ S.pendingEvent=storyGreetEvent(); return true; }
+  if((st.stage===1||st.stage===2) && S.polesHit && S.polesHit[st.near] && S.polesHit[st.far]){ S.pendingEvent=storyBothPolesEvent(at); return true; }   /* Kris's rule: both poles in ANY order, then home - a far-pole visit made before the near one now counts */
   if(st.stage===1 && at===st.near){ S.pendingEvent=storyPoleNearEvent(); return true; }
   if(st.stage===2 && at===st.far){ S.pendingEvent=storyPoleFarEvent(); return true; }
   if(st.stage===3 && at===st.home){ S.pendingEvent=storyHomeEvent(); return true; }
+  if(st.stage>=4 && at===st.home && !st.finaleDone){ st.finaleDone=true; S.onceFlags=S.onceFlags||{}; S.onceFlags.soldHome=false; S.screen='home'; return true; }   /* won before 4.3.86 - the finish screen it never had */
   return false;
 }
 function checkBigNewsTown(inTavern){ /* TOWN WILDFIRE - fires on arrival or any calm city render */
@@ -7694,6 +7700,20 @@ const STUB_HINTS={karakorum:{e:'The yam road northwest across the steppe \u2014 
 function stubHint(k){ var el=document.getElementById('mapHint'); if(!el)return; if(!el._def)el._def=el.textContent; if(!k){ el.textContent=el._def; el.style.fontStyle=''; return; } var h=STUB_HINTS[k]; el.textContent=h?(isWest()?h.e:h.w):el._def; el.style.fontStyle='italic'; }
 function homeName(){ return isWest() ? ERA().goalW : ERA().goalE; }
 function _isPole(nm){ var E=ERA(); return !!nm && (nm===E.goalW||nm===E.goalE); }
+/* Kris 1022 (a long-neglected Candia-cousin run: 'I thought I was headed home ... where should I be headed and how can I tell?'):
+   one answer to 'where am I bound', read by the city/port header and the run-log. Story starts follow their stage; pole starts go out to the
+   far pole and back. */
+function journeyGoal(){ if(!S)return null; var st=S.startStory;
+  if(st){ var cn=st.cousinName||'your cousin';
+    if(st.stage>=4) return {to:null, tag:'the venture won \u2014 trade where you will', why:'You came home to '+eraName(st.home)+' rich; the story is complete.'};
+    if(!st.started) return {to:st.home, tag:'at home in '+eraName(st.home), why:'Your cousin\u2019s letter waits for you here.'};
+    if(st.stage===0) return {to:st.cousin, tag:'bound for '+eraName(st.cousin)+', to your cousin', why:cn+' waits in '+eraName(st.cousin)+'.'};
+    if(st.stage===1) return {to:st.near, tag:'bound for '+eraName(st.near), why:'The near end of the road - then on to '+eraName(st.far)+', and home to '+eraName(st.home)+'.'};
+    if(st.stage===2) return {to:st.far, tag:'bound for '+eraName(st.far)+', the far end of the road', why:'Reach '+eraName(st.far)+', then home to '+eraName(st.home)+'.'};
+    return {to:st.home, tag:'homeward to '+eraName(st.home), why:'Home to '+eraName(st.home)+', where you began, to win.'}; }
+  if(S.returning){ var h=trueHome(); return {to:h, tag:'homeward to '+eraName(h), why:'Back to '+eraName(h)+' to finish the round trip.'}; }
+  var g=goalName(); return {to:g, tag:'bound for '+eraName(g), why:'Out to '+eraName(g)+', the far end of the road, and then home.'}; }
+function journeyTag(){ try{ var j=journeyGoal(); if(!j)return ''; var here=(S.seaMode?S.portName:(city()&&city().name)); var tag=(j.to&&here===j.to&&!/won|at home/.test(j.tag))?('arrived \u2014 '+j.tag.replace(/^(bound for|homeward to) /,'')):j.tag; return ' <span class="sub" title="'+String(j.why).replace(/"/g,'&quot;')+'">\u00b7 '+tag+'</span>'; }catch(e){ return S&&S.returning?' <span class="sub">\u00b7 homeward</span>':''; } }
 function trueHome(){ return (S&&S.startCity)||homeName(); }  /* a mid-route start (e.g. Candia) comes home to where it actually began, not to a pole */
 function notePoleAndWin(nm){ if(!S||!nm)return false;
   if(_isPole(nm)){ S.polesHit=S.polesHit||{}; S.polesHit[nm]=true; var E=ERA(); if(S.polesHit[E.goalW]&&S.polesHit[E.goalE]) S.reachedCpl=true; }
@@ -8551,7 +8571,7 @@ const SEA_EDGES=[
  {a:"Asyut",b:"Qus", d:4, terr:'river', flow:'Asyut', wind:true, era:'1271', halt:'Akhmim', haltFrom:'Asyut', haltAt:0.38, halt2:'Qena', halt2From:'Asyut', halt2At:0.85, water:"the upper river \u2014 Akhmim's looms and Qena's water-jars to port and starboard, the desert hills closing in on either hand"},
  {a:"Qus",b:"Aydhab", d:8, terr:'land', halts:true, hajj:true, thirst:2, halt:'Humaythira', haltFrom:'Qus', haltAt:0.55, era:'1271', water:"the desert road by the Wadi Hammamat with the Beja camel-men, well to well to the Red Sea"},
  {a:"Aydhab",b:"Aden", d:7, terr:'coast', era:'1271', water:"down the Red Sea with the pilgrim traffic and out the strait of tears to the crater-harbour"},
- {a:"Aydhab",b:"Jeddah", d:2, terr:'coast', halts:true, hajj:true, era:'1271', water:"the pilgrim crossing \u2014 straight over the Red Sea from the Egyptian shore to the port of the holy city"},
+ {a:"Aydhab",b:"Jeddah", d:2, terr:'coast', halts:true, hajj:true, era:'1271', water:"the pilgrim crossing \u2014 straight over the Red Sea from the Egyptian shore to the port of the holy city", sight:"The pilgrim jalbas cross in flotillas here; every season the reefs take one, and every season they cross again."},   /* Kris 1022: a second Jeddah-Aydhab edge (d:3) listed Jeddah twice at Aydhab - merged here */
  {a:"Jeddah",b:"Mecca", d:2, terr:'land', halts:true, hajj:true, thirst:1.2, era:'both', water:"up from the anchorage to Mecca, the short hard road from the shore"},
  {a:"Aden",b:"Jeddah", d:12, terr:'coast', era:'1271', water:"up the whole length of the Red Sea from the strait of tears to the port of Mecca"},
  {a:"Aden",b:"Dhofar", d:6, terr:'coast', era:'1271', water:"east along Arabia's foot to the incense coast, the mist-hills rising to port"},
@@ -8587,7 +8607,6 @@ const SEA_EDGES=[
  {a:'Soldaia',b:'Trebizond',d:5,terr:'med',era:'1271',water:"across the open Black Sea between the Crimea and the Pontic shore"},
  {a:'Soldaia',b:'Tana',d:4,terr:'med',era:'1271',halt:'Matracha',haltFrom:'Soldaia',haltAt:0.45,water:"through the Kerch strait into the shallow, fresh-smelling Azov",waterB:"out of the Azov by the Kerch strait, Crimea to starboard"},
  {a:'Tana',b:'the Don landing',d:13,terr:'canal',era:'1271',water:"up the slow bends of the Don toward its great eastward elbow",waterB:"down the Don from the landing, toward the Azov sea and Tana"},
- {a:'Jeddah',b:'Aydhab',d:3,terr:'coast',era:'1271',water:"straight over the Red Sea between the two hajj-ports, the reef-water turquoise under the lead line",sight:"The pilgrim jalbas cross in flotillas here; every season the reefs take one, and every season they cross again."},
  {a:'the Don landing',b:'the Perevoloka',d:1,terr:'land',portage:true,era:'1271',water:"over the neck of grass beside the carts \u2014 ox-teams, rollers, and greased keels on the sledge-ways",waterB:"back over the neck of grass to the Don shore, the carts groaning westward",sight:"Midway over the watershed the land is all grass and sky \u2014 no water in any direction, and the whole wealth of two river-roads creaking along on wooden wheels."},
  {a:'the Perevoloka',b:'Sarai',d:4,terr:'canal',era:'1271',flow:'Sarai',water:"down the broad Volga to the Horde's capital",waterB:"up the broad Volga toward the great bend and the portage",sight:"Where the delta channels begin, low grass-grown mounds spread along the shore \u2014 ATIL, the Khazars' golden city, sacked by Svyatoslav three hundred years ago. The Horde's herdsmen graze their horses over the counting-houses of the world."},
  {a:'Sarai',b:'Mangyshlak',d:6,terr:'med',era:'1271',storm:1.2,water:"down the Volga mouths and out across the Caspian",waterB:"across the Caspian for the Volga delta and Sarai",sight:"Low grey cliffs rise from the haze \u2014 Mangyshlak, the landing of the Urgench caravans, where the Horde's writ meets the desert road."},
@@ -10285,7 +10304,7 @@ function renderPort(m){
     return '<button class="seal" onclick="portDepart(\''+e.to.replace(/'/g,"\\'")+'\')">'+verb+(e.lbl||eraName(e.to))+' <span class="sub">(~'+e.d+'d · '+f.total+' s)</span></button> ';
   }).join('');
   const warn = closed.length ? '<p class="sub">The monsoon now favours only some courses. No ship will sail for <b class="gold">'+closed.join(', ')+'</b> until the wind turns; you may go down to the wharf, but the captains will only shake their heads.</p>' : '';
-  m.innerHTML=cityPicHtml(c)+'<h2>'+cityLabel(c)+zhSpan(c)+(S.returning?' <span class="sub">· homeward</span>':'')+(_landOnly?' <span class="sub">· the caravan quarter</span>':' <span class="sub">· in the harbour</span>')+'</h2><p class="sub">'+ (cityDesc(c)||c.desc||'') +'</p>'+(typeof passWarnHtml==='function'?passWarnHtml():'')+
+  m.innerHTML=cityPicHtml(c)+'<h2>'+cityLabel(c)+zhSpan(c)+journeyTag()+(_landOnly?' <span class="sub">· the caravan quarter</span>':' <span class="sub">· in the harbour</span>')+'</h2><p class="sub">'+ (cityDesc(c)||c.desc||'') +'</p>'+(typeof passWarnHtml==='function'?passWarnHtml():'')+
   warn+
   '<table><tr><th>Bazaar</th><th style="text-align:right">price</th><th style="text-align:right">avg&nbsp;paid</th><th style="text-align:right">held</th><th>buy / sell</th></tr>'+rows+'</table>'+
   '<p class="sub" style="margin:-2px 0 10px">Price is <span class="green">green</span> below what you last paid, <span class="blue">blue</span> above.'+(tradeSkill()>0?' Your haggling shaves every price in your favour; longer stays sharpen the edge.':'')+'</p>'+
@@ -10942,7 +10961,7 @@ function renderCity(m){
   const backLeg = S.itin[S.idx] ? S.itin[S.idx].dist : 0;
   const mtn = upcomingMountain() || legHasMountain();
   const passLine = mtn ? '<p class="sub">Ahead, on the road to '+(nextCity()?nextCity().name:'the next town')+', lies '+rangeName()+'. Travellers coming down say the passes are <b class="'+(passDanger()>=.5?'red':'gold')+'">'+passWord()+'</b>'+(passDanger()>=.5?' — wait for the season, or gamble with the snow.':'.')+'</p>' : '';
-  m.innerHTML=cityPicHtml(c)+'<h2>'+cityLabel(c)+zhSpan(c)+(S.returning?' <span class="sub">· homeward</span>':'')+'</h2><p class="sub">'+cityDesc(c)+'</p>'+passWarnHtml()+slaveWarnHtml()+
+  m.innerHTML=cityPicHtml(c)+'<h2>'+cityLabel(c)+zhSpan(c)+journeyTag()+'</h2><p class="sub">'+cityDesc(c)+'</p>'+passWarnHtml()+slaveWarnHtml()+
   passLine+
   '<table><tr><th>Bazaar</th><th style="text-align:right">price</th><th style="text-align:right">avg&nbsp;paid</th><th style="text-align:right">held</th><th>buy / sell</th></tr>'+rows+'</table>'+
   '<p class="sub" style="margin:-2px 0 10px">Price is <span class="green">green</span> below what you last paid (worth buying), <span class="blue">blue</span> above (worth selling). <i>Italic</i> avg-paid means you\'ve sold out — your old cost, for reference.'+(tradeSkill()>0?' Your haggling shaves every price in your favour; longer stays sharpen the edge.':'')+'</p>'+
@@ -12164,6 +12183,7 @@ var M3=(function(){
        st.RB.setSize(innerWidth,innerHeight); el.appendChild(st.RB.domElement);
        var snE=(typeof chartSeason==='function')?chartSeason():'summer';
        if(snE==='winter'&&typeof CITY_LL!=='undefined'&&CITY_LL[here]&&Math.abs(CITY_LL[here][1])<24)snE='summer';   /* the tropics/hot subtropics never freeze - no white roofs, snow or white peaks (Kris: Butuan) */
+       if(snE==='winter'&&typeof TOWN_JAN!=='undefined'&&TOWN_JAN[here]!=null&&TOWN_JAN[here]>=8)snE='autumn';   /* Kris 1022 (Alexandria under snow in winter): a town whose January runs 8C or warmer - Egypt, the Levant coast, Crete, Ragusa, Baghdad - gets a mild winter, not white roofs */
        var skyC=snE==='winter'?0xb9c6d2:0x96b6d8;
        var sc=new THREE.Scene(); sc.background=new THREE.Color(skyC);
        sc.fog=new THREE.Fog(skyC,70,250);                 /* haze eats the edge of the world */
@@ -12962,6 +12982,14 @@ function yearsPhrase(days){
   return Math.round(y)+" years away";
 }
 function renderHome(m){
+  if(S.startStory){ var _h=eraName(S.startStory.home);
+    if(!S.onceFlags.soldHome){ const gv=finalGoodsValue();
+      m.innerHTML='<h2>'+_h+' <span class="sub">\u00b7 home at last</span></h2>'+
+      '<p>The streets you set out from on a cousin\u2019s letter, after '+(S.day-1)+' days \u2014 '+yearsPhrase(S.day-1)+'. You have stood at both ends of the road, at '+eraName(S.startStory.near)+' and at '+eraName(S.startStory.far)+', and come back to where you began with the proof of it in the bales.</p>'+
+      '<p>Your cargo would fetch <span class="gold">'+gv+' silver</span> here, atop <span class="gold">'+Math.round(S.silver)+'</span> in hand.</p>'+
+      '<button class="seal" onclick="sellAllFinal();S.onceFlags.soldHome=true;render()">Sell everything</button>';
+      return; }
+    renderFinal(m, 'home to '+_h+' by both ends of the road', true); return; }
   if(!S.onceFlags.soldHome){
     const gv=finalGoodsValue();
     if(S.era==='1271'){
@@ -12994,6 +13022,12 @@ function renderHome(m){
   renderFinal(m, 'home to '+homeName()+' (round trip)', true);
 }
 function setOutAgain(){
+  if(S.startStory){ var st=S.startStory; S.laps=(S.laps||0)+1;
+    S.returning=false; S.reachedCpl=false; S.dir=1; st.stage=1; st.finaleDone=false; S.polesHit={};
+    S.onceFlags.soldHome=false; S.onceFlags.soldOut=false; S.priceLock={}; S.stock={}; GMIN=null; GMAX=null;
+    S.screen=S.seaMode?'port':'city'; S.journeying=false; clearJourney(); S.hereSince=S.day;
+    log("You cannot sit still. The strongbox has room and the roads are open \u2014 out again to "+eraName(st.near)+" and "+eraName(st.far)+", and home to "+eraName(st.home)+": venture number "+(S.laps+1)+".");
+    render(); return; }
   if(S.era==='1271'){
     S.laps=(S.laps||0)+1;
     S.returning=false; S.reachedCpl=false; S.dir=1;
@@ -13227,7 +13261,7 @@ const TOPICS={
  kanat:{trig:['kanat','khwarazm'],t:"<b>Kanat</b> nods, exact. “Act only as you would have every trader on this road act. Cheat one caravanserai and you have argued that all men may cheat you. The honest road is the only one that does not, in the end, devour itself.”"}
 };
 function findTopic(q){ q=(q||'').toLowerCase(); for(const k in TOPICS){ for(const w of TOPICS[k].trig){ if(q.indexOf(w)>=0) return k; } } return null; }
-function exportLog(){ if(!S)return; var L=[]; L.push('=== The Silk Road, 762 — run-log export (v'+VERSION+') ==='); L.push('Day '+S.day+(S.itin&&S.itin[S.idx]?' · at '+S.itin[S.idx].name:'')+' · dir '+(S.dir||1)+' · silver '+Math.round(S.silver)+' · hp '+Math.round(S.hp)); L.push('Party: '+(['(you) '+(S.name||'')].concat((S.party||[]).map(function(pp){return pp.name+(pp.role?(' — '+pp.role):'')+(pp.alive===false?' [DEAD]':'')+(pp.kind?(' <'+pp.kind+'>'):'')+(pp.deposit?(' dep'+pp.deposit):'');})).join('  |  '))); L.push('Guards now: '+(S.party||[]).filter(function(pp){return pp.alive&&pp.kind==='guard';}).length+' · wageDebt '+(S.wageDebt||0)+' · stiffed '+JSON.stringify(S.stiffed||{})+' · released '+JSON.stringify(Object.keys(S.released||{}))); L.push('Herd '+JSON.stringify(S.herd||{})+' · cargo '+(typeof cargoW==='function'?cargoW():'?')+'/'+(typeof cargoCap==='function'?cargoCap():'?')); L.push('Goods '+JSON.stringify(S.goods||{})); L.push(''); L.push('--- event log (oldest first) ---'); var src=(S.fullLog&&S.fullLog.length)?S.fullLog:(S.log||[]).slice().reverse(); src.forEach(function(e){ L.push('d'+e.d+(e.hp!=null?(' [hp'+e.hp+']'):'')+': '+String(e.t).replace(/<[^>]+>/g,'')); }); var txt=L.join('\n'); try{ var b=new Blob([txt],{type:'text/plain'}); var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='silkroad_runlog - v'+String(VERSION).replace(/\./g,'-')+' d'+S.day+'.txt'; document.body.appendChild(a); a.click(); a.remove(); }catch(e){ S.pendingEvent={h:'RUN-LOG (copy this)', t:'<textarea readonly style="width:100%;height:320px;font-size:11px">'+txt.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</textarea>', ch:[{l:'Close',f:function(){}}]}; render(); } }
+function exportLog(){ if(!S)return; var L=[]; L.push('=== The Silk Road, '+((typeof ERA==='function'&&ERA().label)||S.era||'?')+' — run-log export (v'+VERSION+') ==='); try{ var _jg=journeyGoal(), _st=S.startStory; L.push('Journey: era '+(S.era||'(none - reads as 762)')+' · origin '+(S.origin||'west')+' · start '+(S.startCity||'(pole)')+' · returning '+!!S.returning+' · poles touched '+Object.keys(S.polesHit||{}).join('+')+(_st?(' · story stage '+_st.stage+' (home '+_st.home+', cousin '+_st.cousin+', near '+_st.near+', far '+_st.far+')'):'')+(S.storyWon?' · WON':'')+(_jg?(' · NOW: '+_jg.tag):'')+(S.seaMode?(' · at sea-port '+S.portName):'')); }catch(e){} L.push('Day '+S.day+(S.itin&&S.itin[S.idx]?' · at '+S.itin[S.idx].name:'')+' · dir '+(S.dir||1)+' · silver '+Math.round(S.silver)+' · hp '+Math.round(S.hp)); L.push('Party: '+(['(you) '+(S.name||'')].concat((S.party||[]).map(function(pp){return pp.name+(pp.role?(' — '+pp.role):'')+(pp.alive===false?' [DEAD]':'')+(pp.kind?(' <'+pp.kind+'>'):'')+(pp.deposit?(' dep'+pp.deposit):'');})).join('  |  '))); L.push('Guards now: '+(S.party||[]).filter(function(pp){return pp.alive&&pp.kind==='guard';}).length+' · wageDebt '+(S.wageDebt||0)+' · stiffed '+JSON.stringify(S.stiffed||{})+' · released '+JSON.stringify(Object.keys(S.released||{}))); L.push('Herd '+JSON.stringify(S.herd||{})+' · cargo '+(typeof cargoW==='function'?cargoW():'?')+'/'+(typeof cargoCap==='function'?cargoCap():'?')); L.push('Goods '+JSON.stringify(S.goods||{})); L.push(''); L.push('--- event log (oldest first) ---'); var src=(S.fullLog&&S.fullLog.length)?S.fullLog:(S.log||[]).slice().reverse(); src.forEach(function(e){ L.push('d'+e.d+(e.hp!=null?(' [hp'+e.hp+']'):'')+': '+String(e.t).replace(/<[^>]+>/g,'')); }); var txt=L.join('\n'); try{ var b=new Blob([txt],{type:'text/plain'}); var a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='silkroad_runlog - v'+String(VERSION).replace(/\./g,'-')+' d'+S.day+'.txt'; document.body.appendChild(a); a.click(); a.remove(); }catch(e){ S.pendingEvent={h:'RUN-LOG (copy this)', t:'<textarea readonly style="width:100%;height:320px;font-size:11px">'+txt.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</textarea>', ch:[{l:'Close',f:function(){}}]}; render(); } }
 function tavAsk(){ var el=document.getElementById('asktopic'); var q=el?(el.value||''):''; if(/chronicle|scribe|run-?log|export|debug/.test((q||'').toLowerCase())){ S.debugExport=true; S.tavTraderLine="<b>The scribe</b> in the corner looks up. “Your whole chronicle, copied fair to carry where you will? Aye — it is yours.” <span class='sub'>(An <b>Export run-log</b> button now sits on your city screen.)</span>"; if(el)el.value=''; render(); return; } if(/beware of kal durak/.test((q||'').toLowerCase())){ S._ptArmed=true; S.tavTraderLine="The trader goes very still. \u201cThat is a name from another road,\u201d he says, low. \u201cIf you truly know it, then say what you came to say.\u201d"; if(el)el.value=''; render(); return; } if(S._ptArmed && /playtest/.test((q||'').toLowerCase())){ S.playtest=true; S.debugExport=true; S._ptArmed=false; S.tavTraderLine="<b>Playtest mode unlocked.</b> <span class='sub'>A green debug bar now rides atop the screen \u2014 heal &amp; resupply, add silver, and export the run-log at will.</span>"; if(el)el.value=''; render(); return; } if(S.playtest && !S._marcoArmed && /^\s*marco\s*$/i.test(q||'')){ S._marcoArmed=true; S.tavTraderLine="The trader lifts one eyebrow over his cup. \u201cPolo?\u201d"; if(el)el.value=''; render(); return; } if(S.playtest && S._marcoArmed && /^\s*polo\s*$/i.test(q||'')){ S._marcoArmed=false; marcoJump(); if(el)el.value=''; render(); return; } if(S.playtest && /teleport/.test((q||'').toLowerCase())){ S.screen='teleport'; if(el)el.value=''; render(); return; } var k=findTopic(q);
   if(k){ S.tavTraderLine=(typeof TOPICS[k].t==='function')?TOPICS[k].t():TOPICS[k].t; } else { S.tavTraderLine="<b>Diogenes</b> spreads his hands. “Never heard of it. Ask us of a <b>bukht</b>, or <b>silk</b>, or <b>water</b>, or <b>guards</b> — the things a man lives or dies by out here. The rest is philosophy, and we have a surplus of that at this table.”"; }
   if(el)el.value=''; render(); }
@@ -14866,10 +14900,10 @@ const PREF=loadPref();
    leads: which voices carry the melody; drone: intervals held under it; perc: an 8th-note pattern per bar
    D = low drum, T = high drum, k = soft high, B/R = tabla bass/ring, W/w = woodblock, G = bell, . = rest   */
 const REG={
- latin:  {name:'Latin West',  note:'Church modes (here Dorian), slow and plain as chant; a bowed vielle and a little bell. No drum.',
-          scale:[0,200,300,500,700,900,1000], leads:['vielle','lute'], drone:[0,700], droneLvl:.10, perc:null, bell:.25, tempo:60, durs:[2,2,2,3,4,4], orn:0, density:.8},
- byz:    {name:'Byzantium',   note:'A chant-like mode over a held "ison" drone, as the Greek church sings; a bowed lyra; a bell now and then.',
-          scale:[0,100,300,500,700,800,1000], leads:['vielle'], drone:[0], droneLvl:.16, perc:null, bell:.35, tempo:56, durs:[2,2,3,4,4], orn:.15, density:.75},
+ latin:  {name:'Latin West',  note:'Plainchant in the First Mode (Dorian on D): a men\'s choir, now and then a vielle taking up the same line; reciting on F or A, closing on D. A bell from the campanile. No drum.',
+          scale:[0,200,300,500,700,900,1000], leads:['chant','chant','vielle'], chant:true, drone:[0,700], droneLvl:.05, perc:null, bell:.15, tempo:60, durs:[2,2,2,3,4,4], orn:0, density:.8},
+ byz:    {name:'Byzantium',   note:'Sung chant in the First Mode (Echos Protos) in its soft diatonic - the three-quarter-tone steps of Greek church music - a men\'s choir over the held ison, which shifts to the note the phrase comes to rest on. Melodies are formulaic, as the real chant is: rise to a reciting tone, intone on it, cadence.',
+          scale:[0,167,300,500,700,867,1000], leads:['chant'], chant:true, drone:[0], droneLvl:.11, perc:null, bell:.1, tempo:62, durs:[1,1,2,2,4], orn:.2, density:.95},
  arab:   {name:'Arab lands',  note:'Maqam Hijaz (the augmented step everyone hears as "Middle Eastern"); plucked oud; frame drum in maqsum: dum-tak-.-tak-dum-.-tak-.',
           scale:[0,100,400,500,700,800,1000], leads:['oud','oud','ney'], drone:[0], droneLvl:.06, perc:['D','T','.','T','D','.','T','.'], tempo:92, durs:[1,1,1,2,2,3], orn:.45, density:.95},
  persian:{name:'Persia & Sogdia', note:'Dastgah Shur, with its three-quarter-tone second step; a long-necked tar and a reed ney; a lilting 6/8.',
@@ -14911,6 +14945,7 @@ function P(k){ let R=(terrain==='tavern'&&TAV[k])?Object.assign({},REG[k],TAV[k]
     else if(busker.kind==='drum') R=Object.assign({},R,{leads:[BUSK_LEAD[k]], perc:['D','k','T','k','D','D','T','k'], durs:[2,3,4], density:.35, tempo:Math.max(R.tempo,100), bell:0});
     else if(busker.kind==='singer') R=Object.assign({},R,{leads:[BUSK_SING[k]], perc:null, durs:[3,4,4,6], density:1, orn:Math.max(R.orn,.4), tempo:R.tempo*.7, droneLvl:R.droneLvl*.8, bell:0});
     else if(busker.kind==='story') R=Object.assign({},R,{perc:null, density:0, droneLvl:0, bell:0}); }
+  if(R.chant&&(bandits||busker||(terrain==='tavern'&&TAV[k]))) R=Object.assign({},R,{chant:false});   /* the tavern, the street and the fight are not the church */
   return R; }
 const ROUTE=[['Venice','latin'],['Constantinople','byz'],['Aleppo','arab'],['Baghdad','arab'],['Tabriz','persian'],['Samarkand','persian'],['Almaliq','steppe'],['Karakorum','steppe'],['Khanbaliq','china']];
 const TONIC=146.83;   /* D3 - every region keeps the same home note, so the hand-overs never lurch */
@@ -14944,8 +14979,9 @@ function ksBuffer(freq,dur,damp,bright){ const key=Math.round(freq)+'|'+dur+'|'+
   for(let i=0;i<p;i++) ring[i]=(Math.random()*2-1)*(1-bright*.5)+(i<p*bright?.3:0);
   let ix=0; for(let i=0;i<N;i++){ const nx=(ix+1)%p; d[i]=ring[ix]; ring[ix]=damp*(.5*(ring[ix]+ring[nx])); ix=nx; }
   return (ksCache[key]=b); }
-function pluck(t,f,len,opt){ opt=opt||{}; const src=ctx.createBufferSource(); src.buffer=ksBuffer(f,3,opt.damp||.996,opt.bright||.3);   /* one 3-second buffer per pitch and timbre - cached, so memory stays small */
-  const g=ctx.createGain(); g.gain.setValueAtTime(opt.gain||.35,t); g.gain.setTargetAtTime(0,t+len,0.25);
+function pluck(t,f,len,opt){ opt=opt||{}; const src=ctx.createBufferSource(); src.buffer=ksBuffer(f,3,opt.damp||.996,opt.bright||.3);
+  if(opt.slide&&src.playbackRate){ src.playbackRate.setValueAtTime(opt.slide,t); src.playbackRate.setTargetAtTime(1,t+.02,.05); }   /* slide in from the last note's pitch */   /* one 3-second buffer per pitch and timbre - cached, so memory stays small */
+  const g=ctx.createGain(); g.gain.setValueAtTime((opt.gain||.35)*(opt.acc||1),t); g.gain.setTargetAtTime(0,t+len,0.25);
   let last=g; if(opt.lp){ const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=opt.lp; g.connect(lp); last=lp; }
   if(opt.buzz){ const ws=ctx.createWaveShaper(); const c=new Float32Array(256); for(let i=0;i<256;i++){ const x=i/128-1; c[i]=Math.tanh(x*2.2); } ws.curve=c; last.connect(ws); last=ws; }
   src.connect(g); out(last,opt.send); src.start(t); src.stop(t+len+1.5); }
@@ -14973,22 +15009,25 @@ function drum(t,kind,gain){ gain=gain||1;
   if(kind==='R'){ const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=TONIC*4; g.gain.setValueAtTime(.16*gain,t); g.gain.exponentialRampToValueAtTime(.001,t+.45); o.connect(g); out(g,.3); o.start(t); o.stop(t+.5); }
   if(kind==='W'||kind==='w'){ const o=ctx.createOscillator(), g=ctx.createGain(); o.type='triangle'; o.frequency.value=kind==='W'?820:1050; g.gain.setValueAtTime((kind==='W'?.22:.14)*gain,t); g.gain.exponentialRampToValueAtTime(.001,t+.08); o.connect(g); out(g,.3); o.start(t); o.stop(t+.1); }
   if(kind==='G'){ bell(t,TONIC*4,.07*gain); } }
-const VOICE={
- lute:  (t,f,l)=>pluck(t,f,l,{damp:.995,bright:.35,gain:.32,lp:2600}),
- oud:   (t,f,l)=>pluck(t,f*.5,l,{damp:.994,bright:.25,gain:.42,lp:1800}),
- tar:   (t,f,l)=>pluck(t,f,l,{damp:.995,bright:.6,gain:.3,lp:3400}),
- zither:(t,f,l)=>pluck(t,f*2,l,{damp:.997,bright:.7,gain:.24,lp:5000,send:.7}),
- sitar: (t,f,l)=>pluck(t,f,l,{damp:.997,bright:.6,gain:.22,lp:4200,buzz:true}),
+const VOICE={   /* o: {acc (accent), slide (start pitch ratio)} */
+ lute:  (t,f,l,o)=>pluck(t,f,l,Object.assign({damp:.995,bright:.35,gain:.32,lp:2600},o)),
+ oud:   (t,f,l,o)=>pluck(t,f*.5,l,Object.assign({damp:.994,bright:.25,gain:.42,lp:1800},o)),
+ tar:   (t,f,l,o)=>pluck(t,f,l,Object.assign({damp:.995,bright:.6,gain:.3,lp:3400},o)),
+ zither:(t,f,l,o)=>pluck(t,f*2,l,Object.assign({damp:.997,bright:.7,gain:.24,lp:5000,send:.7},o)),
+ sitar: (t,f,l,o)=>pluck(t,f,l,Object.assign({damp:.997,bright:.6,gain:.22,lp:4200,buzz:true},o)),
  ney:   (t,f,l)=>blown(t,f,l,{breath:.09,gain:.2}),
  dizi:  (t,f,l)=>blown(t,f*2,l,{breath:.05,gain:.14}),
  flute: (t,f,l)=>blown(t,f,l,{breath:.06,gain:.18}),
  vielle:(t,f,l)=>bowed(t,f,l,{lp:1400,gain:.11,vibd:.004}),
  morin: (t,f,l)=>bowed(t,f*.5,l,{lp:1100,gain:.15,vibd:.007,vibr:4.5}),
- fiddle:(t,f,l)=>bowed(t,f,l,{lp:2400,gain:.09,vibd:.003,att:.06})
+ fiddle:(t,f,l)=>bowed(t,f,l,{lp:2400,gain:.09,vibd:.003,att:.06}),
+ chant: (t,f,l)=>bowed(t,f*.5,l,{lp:900,gain:.12,vibd:.004})   /* single notes only; the chant proper is sung a phrase at a time (chantPhrase) */
 };
-function buildDrone(k){ const R=REG[k], g=ctx.createGain(); g.gain.value=0; const lp=ctx.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=k==='india'?1200:520; lp.Q.value=.8;
+const droneOsc={};
+function setIson(k,c,t){ (droneOsc[k]||[]).forEach(function(d){ if(d.i===0) d.o.frequency.setTargetAtTime(cents(TONIC/2,c)*(1+(d.j?.0025:-.0025)),t,.35); }); }   /* the isokratai move to the phrase's resting note */
+function buildDrone(k){ const R=REG[k], g=ctx.createGain(); g.gain.value=0; const lp=ctx.createBiquadFilter(); lp.type=k==='byz'?'bandpass':'lowpass'; lp.frequency.value=k==='india'?1200:k==='byz'?560:520; lp.Q.value=k==='byz'?1.6:.8;   /* byz: an 'o' vowel band - men holding the ison */
   const lfo=ctx.createOscillator(), lg=ctx.createGain(); lfo.frequency.value=.07+Math.random()*.05; lg.gain.value=k==='india'?300:120; lfo.connect(lg); lg.connect(lp.frequency); lfo.start();
-  (R.drone||[]).forEach(function(c,i){ [0,1].forEach(function(j){ const o=ctx.createOscillator(); o.type=(k==='india'||k==='north')?'sawtooth':'triangle'; o.frequency.value=cents(TONIC/2,c)*(1+(j?.0025:-.0025)); const og=ctx.createGain(); og.gain.value=i===0?.5:.32; o.connect(og); og.connect(lp); o.start(); }); });
+  (R.drone||[]).forEach(function(c,i){ [0,1].forEach(function(j){ const o=ctx.createOscillator(); o.type=(k==='india'||k==='north'||k==='byz')?'sawtooth':'triangle'; o.frequency.value=cents(TONIC/2,c)*(1+(j?.0025:-.0025)); const og=ctx.createGain(); og.gain.value=(i===0?.5:.32)*(k==='byz'?1.8:1); o.connect(og); og.connect(lp); o.start(); (droneOsc[k]=droneOsc[k]||[]).push({o:o,i:i,j:j}); }); });
   lp.connect(g); out(g,.6); drones[k]=g; }
 
 /* ====================== AMBIENCE (Kris 1021) ======================
@@ -15049,36 +15088,182 @@ function evStat(){}
 /* ====================== BLENDING ====================== */
 function pickRegion(){ let r=Math.random(), acc=0, last=null; for(const k in weights){ acc+=weights[k]; last=k; if(r<=acc)return k; } return last||'latin'; }
 function blended(field){ let s=0,w=0; for(const k in weights){ s+=P(k)[field]*weights[k]; w+=weights[k]; } return w?s/w:0; }
-/* ====================== SEQUENCER ====================== */
+/* ====================== SEQUENCER ======================
+   Kris 1022: 'make all areas' music more melodiously cohesive'. The old sequencer walked the scale at random, a note at a time, with random
+   lengths and random dropped notes - which is what 'leaning on random keys' sounds like. Now every region plays TUNES:
+   - METRE: each bar's rhythm is a cell that fills the bar of the region's own drum pattern (6/8, 7/8 = 3+2+2, 8 = maqsum/teentaal-ish),
+     and a tune starts on the downbeat, so melody and drum agree; the downbeat note is accented.
+   - SHAPE: phrases are contours between structural tones - out from the final, up to the dominant (a half-close), back down to the final
+     (the full close) - moving mostly by step, the longest note at the end of the phrase.
+   - FORM: a tune is A (ends on the dominant), A' (the same first bar, home to the final), B (higher, around the dominant), A' again - then
+     played through a second time, often on the region's second instrument. Tunes are remembered per region and come back, varied.
+   - BREATH: winds, bows and voices play each phrase as one legato line (gliding, a tongue or bow-change dip per note, vibrato on long notes);
+     plucked instruments keep their notes but gain the region's ornaments - the oud's and sitar's slides into a note, the tar's tremolo
+     (riz) on held notes, the zither's run up into a phrase.
+   - SPACE: density no longer drops random notes out of a tune; it sets how long the silences between tunes are.
+   Byzantium and the Latin West sing CHANT instead (free rhythm, the formula melodies). Hind opens each piece with a free alap on the sitar
+   (no tabla), built on Yaman's pakad, before the metred gat. */
 let nextT=0, step=0, barPerc=null, barRegion=null, phrase=[], phraseRegion='latin', phraseVoice='lute', memory={}, restSteps=0;
+let piece=null, lastKey='', lineEnvs=[], alapNow=false;
 function terrMod(){ return {town:{dens:1.15,perc:1.1,drone:1}, tavern:{dens:1.1,perc:.9,drone:.9}, road:{dens:1,perc:1,drone:1}, desert:{dens:.9,perc:1.2,drone:1.1}, mountain:{dens:.55,perc:.25,drone:1.4}, sea:{dens:.8,perc:0,drone:.8}}[terrain]; }
-function makePhrase(){ const R=P(phraseRegion=pickRegion()); phraseVoice=R.leads[Math.floor(Math.random()*R.leads.length)]; const n=R.scale.length;
-  let notes; const memKey=phraseRegion+(terrain==='tavern'?'|tav':''); const mem=memory[memKey];
-  if(mem&&Math.random()<.45){ const shift=[0,0,1,-1,2][Math.floor(Math.random()*5)]; notes=mem.map(x=>({deg:x.deg+shift,dur:x.dur})); if(Math.random()<.5){ const last=notes[notes.length-1]; last.deg=Math.random()<.6?0:(n>5?4:3); last.dur=Math.max(last.dur,3); } }
-  else { const len=4+Math.floor(Math.random()*6); let d=[0,2,4,n][Math.floor(Math.random()*4)]; notes=[];
-    for(let i=0;i<len;i++){ const dur=R.durs[Math.floor(Math.random()*R.durs.length)]; notes.push({deg:d,dur:dur}); const r=Math.random(); d+= r<.38?1:r<.76?-1:r<.86?2:r<.94?-2:0; d=Math.max(-2,Math.min(n+4,d)); }
-    const end=notes[notes.length-1]; end.deg=Math.random()<.65?0:(Math.random()<.5?n:(n>5?4:3)); end.dur=Math.max(end.dur,3); memory[memKey]=notes.map(x=>({deg:x.deg,dur:x.dur})); }
-  phrase=notes.slice(); restSteps=2+Math.floor(Math.random()*6)+(night?3:0); }
+/* ---- CHANT (Kris 1022: 'Byzantium sounds like someone leaning on random keys') ----
+   The fix is two things the random walk lacked. (1) A VOICE, legato: one sung line per phrase, gliding note to note, the vowel changing with
+   each syllable (two formant bands over detuned saws), vibrato settling in on held notes - so the phrase is a breath, not a row of key-presses.
+   (2) FORMULAS, as real chant is built: rise by step to a reciting tone, intone on it with neighbour-note inflections, a small melisma, then a
+   cadence by step to a resting note (medial on Ga or Ke, final on Pa), longest at the end. Pieces run 3-4 phrases and end on the final. */
+const VOWELS=[[730,1090],[570,840],[530,1840],[730,1090],[570,840],[440,1020]];   /* a, o, e, a, o, u - male formants */
+function chantPhrase(t,notes,stepDur,R,k){ const tot=notes.reduce(function(a,n){return a+n.dur;},0)*stepDur;
+  const mix=ctx.createGain(); mix.gain.value=1; const oscs=[];
+  [[-7,'sawtooth',.5],[6,'sawtooth',.5],[0,'triangle',.7]].forEach(function(q){ const o=ctx.createOscillator(); o.type=q[1]; if(o.detune)o.detune.value=q[0]; const og=ctx.createGain(); og.gain.value=q[2]; o.connect(og); og.connect(mix); oscs.push(o); });
+  const body=filt('lowpass',520,.7), bg=ctx.createGain(); bg.gain.value=.3; mix.connect(body); body.connect(bg);
+  const f1=filt('bandpass',730,4), g1=ctx.createGain(); g1.gain.value=1.5; mix.connect(f1); f1.connect(g1);
+  const f2=filt('bandpass',1090,5), g2=ctx.createGain(); g2.gain.value=.8; mix.connect(f2); f2.connect(g2);
+  const env=ctx.createGain(); bg.connect(env); g1.connect(env); g2.connect(env);
+  const f0=degFreq(R,notes[0].deg)*.5, vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=5; vg.gain.value=0; vib.connect(vg); oscs.forEach(function(o){ vg.connect(o.frequency); });
+  const a=.24; env.gain.setValueAtTime(0,t); env.gain.linearRampToValueAtTime(a,t+.3);
+  let tn=t, vi=Math.floor(Math.random()*VOWELS.length);
+  notes.forEach(function(n,i){ const f=degFreq(R,n.deg)*.5, len=n.dur*stepDur;   /* an octave down: a men's choir, D3 to D4 */
+    if(i===0) oscs.forEach(function(o){ o.frequency.setValueAtTime(f,tn); });
+    else { oscs.forEach(function(o){ o.frequency.setTargetAtTime(f,tn,.035); }); }   /* glide, not jump */
+    if(n.syl!==false){ vi=(vi+1+Math.floor(Math.random()*2))%VOWELS.length; f1.frequency.setTargetAtTime(VOWELS[vi][0],tn,.04); f2.frequency.setTargetAtTime(VOWELS[vi][1],tn,.04);
+      if(i>0){ env.gain.setTargetAtTime(a*.62,tn-.02,.02); env.gain.setTargetAtTime(a,tn+.05,.05); } }   /* a new syllable: the breath dips and the vowel turns */
+    vg.gain.setTargetAtTime(len>.9?f*.009:f*.002,tn+Math.min(.35,len*.4),.25);   /* vibrato blooms only on held notes */
+    tn+=len; });
+  env.gain.setTargetAtTime(0,t+tot-.05,.3);
+  out(env,.75); oscs.concat([vib]).forEach(function(o){ o.start(t); o.stop(t+tot+2); });
+  if(k){ const last=notes[notes.length-1].deg; setIson(k,R.scale[((last%R.scale.length)+R.scale.length)%R.scale.length]*(last===0||last===2?1:0),t+tot*.55); } }   /* ison follows to Ga; otherwise back to Pa */
+let chantLeft=0;
+function chantMelody(R){ const n=R.scale.length, out=[]; if(chantLeft<=0) chantLeft=3+Math.floor(Math.random()*2);
+  const prev=(memory.__chantEnd!=null)?memory.__chantEnd:0, final=(chantLeft===1);
+  const rt=[2,4,4,3,2][Math.floor(Math.random()*5)];   /* the reciting tone: Ga/Ke/Di in Byzantium; F/A/G in Latin Dorian */
+  let d=prev; const push=function(deg,dur,syl){ out.push({deg:deg,dur:dur,syl:syl}); d=deg; };
+  push(d,1);
+  while(d!==rt){ const st=rt>d?1:-1; if(Math.abs(rt-d)>=3&&Math.random()<.5) push(d+2*st,1); else push(d+st,1); }
+  const k=3+Math.floor(Math.random()*4);
+  for(let i=0;i<k;i++){ const r=Math.random();
+    if(r<.18&&rt+1<=n) { push(rt+1,1); push(rt,1,false); }
+    else if(r<.3) { push(rt-1,1); push(rt,1,false); }
+    else push(rt,Math.random()<.25?2:1); }
+  if(Math.random()<.6){ push(rt+1,1); push(rt,1,false); push(rt-1,1,false); }
+  const tgt=final?0:[2,4,0,2][Math.floor(Math.random()*4)];
+  while(d!==tgt){ const st=tgt>d?1:-1; push(d+st,(Math.abs(tgt-d)===1)?2:1); }
+  if(final&&Math.random()<.5){ out.pop(); push(1,2); push(0,1,false); push(1,1,false); }
+  if(out[out.length-1].deg!==tgt) push(tgt,1);
+  out[out.length-1].dur=final?6:4;
+  memory.__chantEnd=tgt; chantLeft--;
+  return {notes:out, rest:final?(8+Math.floor(Math.random()*6)):(2+Math.floor(Math.random()*2)), final:final}; }
+
+/* ---- legato lines: winds and bows breathe a whole phrase ---- */
+const LINE={ ney:{kind:'blown',oct:1,breath:.09,gain:.2,glide:.05,vib:.006,dip:.7}, dizi:{kind:'blown',oct:2,breath:.05,gain:.14,glide:.03,vib:.005,dip:.6},
+  flute:{kind:'blown',oct:1,breath:.06,gain:.18,glide:.035,vib:.005,dip:.65}, vielle:{kind:'bowed',oct:1,lp:1400,gain:.11,glide:.03,vib:.004,dip:.6},
+  morin:{kind:'bowed',oct:.5,lp:1100,gain:.15,glide:.07,vib:.007,vibr:4.5,dip:.65}, fiddle:{kind:'bowed',oct:1,lp:2400,gain:.09,glide:.02,vib:.003,dip:.35} };
+function linePhrase(t,notes,stepDur,R,voice){ const L=LINE[voice]; if(!L)return; const tot=notes.reduce(function(a,n){return a+n.dur;},0)*stepDur;
+  const env=ctx.createGain(); env.gain.setValueAtTime(0,t); const oscs=[], fr=[];   /* fr: [param, multiple] - every pitch-following parameter */
+  const vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=L.vibr||5.2; vg.gain.value=0; vib.connect(vg);
+  if(L.kind==='blown'){ const o=ctx.createOscillator(); o.type='sine'; const o2=ctx.createOscillator(); o2.type='triangle'; const g2=ctx.createGain(); g2.gain.value=.08; o2.connect(g2);
+    const n=ctx.createBufferSource(); n.buffer=noiseBuf(); n.loop=true; const bp=filt('bandpass',600,2), ng=ctx.createGain(); ng.gain.value=L.breath; n.connect(bp); bp.connect(ng);
+    o.connect(env); g2.connect(env); ng.connect(env); vg.connect(o.frequency); oscs.push(o,o2,n); fr.push([o.frequency,1],[o2.frequency,2],[bp.frequency,1.5]); }
+  else { const o=ctx.createOscillator(); o.type='sawtooth'; const o2=ctx.createOscillator(); o2.type='sawtooth'; const lp=filt('lowpass',L.lp,1.2);
+    o.connect(lp); o2.connect(lp); lp.connect(env); vg.connect(o.frequency); vg.connect(o2.frequency); oscs.push(o,o2); fr.push([o.frequency,1],[o2.frequency,1.003]); }
+  let tn=t, prevRest=true; const a0=L.gain;
+  notes.forEach(function(nt,i){ const len=nt.dur*stepDur;
+    if(nt.deg==null){ env.gain.setTargetAtTime(0,tn,.04); prevRest=true; tn+=len; return; }
+    const f=degFreq(R,nt.deg)*L.oct, a=a0*(nt.acc||1);
+    fr.forEach(function(p){ if(prevRest) p[0].setValueAtTime(f*p[1],tn); else p[0].setTargetAtTime(f*p[1],tn,L.glide); });
+    if(prevRest){ env.gain.setTargetAtTime(a,tn,.03); }
+    else { env.gain.setTargetAtTime(a*L.dip,tn-.012,.012); env.gain.setTargetAtTime(a,tn+.03,.03); }   /* tongue / bow change */
+    vg.gain.setTargetAtTime(len>.6?f*L.vib:f*L.vib*.2,tn+Math.min(.3,len*.4),.2);
+    prevRest=false; tn+=len; });
+  env.gain.setTargetAtTime(0,t+tot-.04,.09);
+  out(env,L.kind==='blown'?.6:.55); oscs.concat([vib]).forEach(function(o){ o.start(t); o.stop(t+tot+1.5); });
+  lineEnvs.push({env:env,until:t+tot+1}); }
+function fadeLines(now){ lineEnvs.forEach(function(l){ try{ if(l.env.gain.cancelScheduledValues)l.env.gain.cancelScheduledValues(now); l.env.gain.setTargetAtTime(0,now,.12); }catch(e){} }); lineEnvs=[]; }
+
+/* ---- rhythm cells: each fills one bar of the region's metre ---- */
+const CELLS={6:[[3,3],[2,1,3],[1,1,1,3],[2,1,2,1],[3,1,2],[1,2,1,2],[2,2,2],[3,2,1]],
+  7:[[3,2,2],[2,1,2,2],[1,1,1,2,2],[3,1,1,2],[3,4],[1,2,2,2]],
+  8:[[2,2,2,2],[2,1,1,2,2],[1,1,2,4],[3,1,2,2],[2,2,4],[4,2,2],[3,3,2],[1,1,1,1,2,2],[2,1,1,4],[2,2,1,1,2]]};
+const ENDCELLS={6:[[2,1,3],[3,3],[1,1,1,3],[6],[1,2,3]], 7:[[3,4],[2,1,4],[1,2,4],[7]], 8:[[2,2,4],[1,1,2,4],[4,4],[2,6],[3,1,4],[8]]};
+function barLenOf(R){ const n=R.perc?R.perc.length:8; return CELLS[n]?n:8; }
+const pickA=function(a){ return a[Math.floor(Math.random()*a.length)]; };
+/* the structural tones: final (0), dominant, and how far a tune may climb */
+const DOM={arab:3, persian:3, india:2, china:3, steppe:3, north:4};   /* Hijaz's ghammaz G; Shur's G; Yaman's vadi Ga; the pentatonic fifths; the fiddler's A */
+function domOf(k,R){ return DOM[k]!=null?DOM[k]:(R.scale.length>5?4:3); }
+const PAKAD=[[-1,1,2,1,0],[2,1,-1,1,0],[-1,1,2,3,5,3,2],[5,3,2,1,2,1,0]];   /* Yaman's catch-phrases: Ni Re Ga Re Sa ... Ga Ma Dha */
+/* a contour through waypoints, mostly by step, the last note on the target */
+function contour(R,count,from,to,peak,leap){ const out=[]; if(count<=0)return out; const n=R.scale.length;
+  const way=(peak==null)?[[0,from],[1,to]]:[[0,from],[.55,peak],[1,to]];
+  let d=from; for(let i=0;i<count;i++){ const x=count===1?1:i/(count-1); let w=0; while(w<way.length-2&&x>way[w+1][0])w++;
+      const a=way[w], b=way[w+1], u=(x-a[0])/((b[0]-a[0])||1), ideal=a[1]+(b[1]-a[1])*u;
+      let nd=Math.round(ideal+(Math.random()-.5)*1.1); const mx=leap?2:(Math.random()<.15?2:1); if(i===0)nd=from;   /* mostly steps, now and then a third */
+      nd=Math.max(d-mx,Math.min(d+mx,nd)); if(i>1&&nd===d&&out[i-2]===d)nd=d+(ideal>d?1:-1);   /* no more than two of a note running */
+      nd=Math.max(-2,Math.min(n+3,nd)); out.push(nd); d=nd; }
+  out[out.length-1]=to; if(count>1&&(Math.abs(out[count-1]-out[count-2])>2||(count>2&&out[count-2]===to))) out[count-2]=to+((count>2?out[count-3]:out[count-2])>to?1:-1);   /* arrive by step, from the side you came */
+  return out; }
+function rhythmPhrase(bl,bars){ const r=[]; for(let b=0;b<bars-1;b++) r.push(pickA(CELLS[bl])); r.push(pickA(ENDCELLS[bl])); return r; }
+function toNotes(rh,degs){ const out=[]; let i=0; rh.forEach(function(cell){ let pos=0; cell.forEach(function(d){ out.push({deg:degs[i++],dur:d,acc:pos===0?1.15:(pos%2===0?1:.85),pos:pos}); pos+=d; }); }); return out; }
+function makeTune(k,R){ const bl=barLenOf(R), dom=domOf(k,R), n=R.scale.length, leap=(k==='steppe');
+  const rA=rhythmPhrase(bl,2), cA=rA.reduce(function(a,c){return a+c.length;},0), n1=rA[0].length;
+  let dA=contour(R,cA,Math.random()<.6?0:dom-1,dom,dom+(Math.random()<.5?1:2),leap);
+  if(k==='india'&&Math.random()<.6){ const p=pickA(PAKAD), m=Math.min(p.length,cA-2); if(m>=3){ dA=p.slice(0,m).concat(contour(R,cA-m+1,p[m-1],dom,null,false).slice(1)); } }   /* open on the pakad, then on to Ga */
+  const A=toNotes(rA,dA);
+  const dA2=dA.slice(0,n1).concat(contour(R,cA-n1,dA[n1-1],0,Math.random()<.5?dA[n1-1]+1:null,leap)); const A2=toNotes(rA,dA2);   /* the same opening, home this time */
+  const rB=rhythmPhrase(bl,2), cB=rB.reduce(function(a,c){return a+c.length;},0);
+  const B=toNotes(rB,contour(R,cB,dom,dom,Math.min(n+2,dom+(Math.random()<.5?2:3)),leap));   /* up in the higher register, then hang on the dominant */
+  return {bl:bl, A:A, A2:A2, B:B}; }
+function vary(notes){ return notes.map(function(x){ return {deg:x.deg,dur:x.dur,acc:x.acc,pos:x.pos,slide:x.slide}; }); }
+function makePiece(){ const k=pickRegion(), R=P(k); if(!(R.density>0)) return null;
+  const leads=R.leads||['lute'], v1=pickA(leads), v2=leads.length>1?pickA(leads.filter(function(x){return x!==v1;}).concat([v1])):v1;
+  const secs=[];
+  if(R.chant){ chantLeft=0; for(let i=0;i<5;i++){ const c=chantMelody(R); secs.push({notes:c.notes, voice:(v1==='chant'||Math.random()<.7)?v1:v2, rest:c.rest, free:true}); if(c.final)break; }
+    return {region:k, secs:secs, i:0, kind:'chant'}; }
+  if(k==='india'&&R.perc&&!busker&&!bandits&&terrain!=='tavern'){   /* the alap: free, slow, no tabla */
+    for(let j=0;j<2;j++){ const p=pickA(PAKAD), lead=[]; let d=p[0]; lead.push({deg:j?2:0,dur:4});
+      p.forEach(function(x,i){ lead.push({deg:x,dur:i===p.length-1?6:(Math.random()<.4?3:2),slide:Math.random()<.5}); });
+      secs.push({notes:lead, voice:'sitar', rest:2, free:true, alap:true}); } }
+  const mk=memory[k+(terrain==='tavern'?'|tav':'')+'|'+barLenOf(R)]=memory[k+(terrain==='tavern'?'|tav':'')+'|'+barLenOf(R)]||[];
+  let tune; if(mk.length&&Math.random()<.5) tune=pickA(mk); else { tune=makeTune(k,R); mk.push(tune); if(mk.length>4)mk.shift(); }   /* old tunes come round again */
+  const reps=Math.random()<.3?1:2;   /* through once, or twice - the second time often on the other instrument */
+  [[tune.A,v1],[tune.A2,v1],[tune.B,v2],[tune.A2,v1],[tune.A,v2],[tune.A2,v2],[tune.B,v1],[tune.A2,v1]].slice(0,4*reps).forEach(function(q){ secs.push({notes:vary(q[0]), voice:q[1], rest:0, metric:true, bl:tune.bl}); });
+  return {region:k, secs:secs, i:0, kind:'tune'}; }
 function degFreq(R,deg){ const n=R.scale.length, o=Math.floor(deg/n), i=((deg%n)+n)%n; return cents(TONIC*2,R.scale[i]+1200*o); }
-let noteLeft=0;
+let noteLeft=0, prevF=null;
+function playNote(R,k,voice,nt,len){ const f=degFreq(R,nt.deg), o={acc:nt.acc||1};
+  if((voice==='sitar'||voice==='oud')&&prevF&&(nt.slide||Math.random()<(voice==='sitar'?.3:.15))&&Math.abs(prevF/f-1)<.2) o.slide=prevF/f;   /* meend: slide in from the last note */
+  if(voice==='tar'&&len>.55&&Math.random()<.65){ const n=Math.floor(len/.085); for(let i=0;i<n;i++) VOICE.tar(nextT+i*.085,f,.12,{acc:(i?.55:1)*(nt.acc||1)*(1-i/n*.4)}); prevF=f; return; }   /* riz - the tar's tremolo */
+  if(R.orn&&len>.3&&Math.random()<R.orn*.45){ VOICE[voice](nextT,degFreq(R,nt.deg+1),.08,{acc:.7}); VOICE[voice](nextT+.08,f,len*.95,o); }   /* a grace note from above */
+  else VOICE[voice](nextT,f,len*.95,o);
+  if(terrain==='town'&&nt.pos===0&&Math.random()<.6) pluck(nextT,nt.deg>=3&&nt.deg<=5?cents(TONIC,R.scale[Math.min(R.scale.length-1,domOf(k,R))]):TONIC,len*1.5,{damp:.993,bright:.2,gain:.14,lp:900});   /* a bass note on the downbeat */
+  prevF=f; }
+function zitherRun(R,t,to){ for(let i=0;i<5;i++) VOICE.zither(t+i*.045,degFreq(R,to-5+i),.15,{acc:.5+i*.08}); }
 function tick(){ if(!playing)return; const now=ctx.currentTime; if(nextT<now-.1) nextT=now+.05;   /* the tab slept: pick up from now, never burst the backlog */
-  ambTick(now); evTick(now);
+  ambTick(now); evTick(now); if(lineEnvs.length>6) lineEnvs=lineEnvs.filter(function(l){ return l.until>now; });
+  const key=(busker?busker.kind:'')+'|'+(bandits?'b':'')+'|'+terrain; if(key!==lastKey){ lastKey=key; piece=null; phrase=[]; restSteps=0; noteLeft=0; alapNow=false; fadeLines(now); }   /* the scene changed: the band stops mid-tune */
   if(breaks && now>nextSwitch){ resting=!resting; nextSwitch=now+(resting?40+Math.random()*50:150+Math.random()*90); status(); }
   const tm=terrMod();
   for(const k in drones){ const tgt=resting?0:(weights[k]||0)*P(k).droneLvl*tm.drone*(night?.8:1); drones[k].gain.setTargetAtTime(tgt,now,1.6); }
   while(nextT<now+.25){ const tempo=blended('tempo')*(night?.85:1)*(terrain==='mountain'?.9:1), stepDur=60/tempo/2;   /* the grid is eighth-notes */
     if(!resting){
-      if(barPerc==null||step%barPerc.length===0){ barRegion=pickRegion(); barPerc=P(barRegion).perc||['.','.','.','.','.','.','.','.']; step=0;
+      if(barPerc==null||step%barPerc.length===0){ barRegion=(piece&&piece.kind==='tune'&&weights[piece.region])?piece.region:pickRegion(); barPerc=P(barRegion).perc||['.','.','.','.','.','.','.','.']; step=0;   /* the drum follows the tune's region, so the metres agree */
         if(P(barRegion).bell&&Math.random()<P(barRegion).bell*(terrain==='town'?1.3:1)) bell(nextT,TONIC*(Math.random()<.5?4:3),.06); }
-      const p=barPerc[step%barPerc.length]; if(p!=='.'&&tm.perc>0&&Math.random()<Math.min(1,.92*tm.perc)) drum(nextT+(Math.random()-.5)*.012,p,(night?.6:1)*Math.min(1.2,tm.perc));
+      const p=barPerc[step%barPerc.length]; if(p!=='.'&&tm.perc>0&&!(alapNow&&barRegion==='india')&&Math.random()<Math.min(1,.95*tm.perc)) drum(nextT+(Math.random()-.5)*.012,p,(night?.6:1)*Math.min(1.2,tm.perc)*(step===0?1.15:1));
       if(noteLeft<=0){
-        if(restSteps>0&&!phrase.length){ restSteps--; noteLeft=1; }
-        else { if(!phrase.length)makePhrase(); const R=P(phraseRegion), nt=phrase.shift(); const len=nt.dur*stepDur;
-          if(Math.random()<R.density*tm.dens){ const f=degFreq(R,nt.deg);
-            if(R.orn&&Math.random()<R.orn&&len>.25){ VOICE[phraseVoice](nextT,degFreq(R,nt.deg+1),.09); VOICE[phraseVoice](nextT+.09,f,len*.95); }
-            else VOICE[phraseVoice](nextT,f,len*.95);
-            if(terrain==='town'&&Math.random()<.25) pluck(nextT,TONIC,len,{damp:.993,bright:.2,gain:.18,lp:900}); }
-          noteLeft=nt.dur; }
+        if(restSteps>0){ restSteps--; noteLeft=1; }
+        else if(phrase.length){ const R=P(phraseRegion), nt=phrase.shift(), len=nt.dur*stepDur; if(nt.deg!=null) playNote(R,phraseRegion,phraseVoice,nt,len); noteLeft=nt.dur; if(!phrase.length&&piece&&piece._rest)restSteps=piece._rest; }
+        else {
+          if(piece&&(piece.i>=piece.secs.length||!(weights[piece.region]>0))){ const R=P(piece.region); restSteps=Math.round(barLenOf(R)*(1+Math.round((1-Math.min(1,R.density*tm.dens))*6)+(night?2:0)+Math.random()*2)); piece=null; alapNow=false; noteLeft=1; }   /* a silence between tunes - longer where the land is emptier */
+          else { if(!piece){ piece=makePiece(); prevF=null; }
+            if(!piece){ restSteps=8; noteLeft=1; }
+            else { const sec=piece.secs[piece.i], R=P(piece.region);
+              if(sec.metric&&step%barPerc.length!==0){ noteLeft=1; }   /* a tune comes in on the downbeat */
+              else { piece.i++; phraseRegion=piece.region; phraseVoice=sec.voice; alapNow=!!sec.alap; piece._rest=sec.rest||0;
+                const tot=sec.notes.reduce(function(a,x){return a+x.dur;},0);
+                if(sec.voice==='chant'&&R.chant){ chantPhrase(nextT,sec.notes,stepDur,R,piece.region==='byz'?'byz':null); noteLeft=tot; restSteps=sec.rest||0; }
+                else if(LINE[sec.voice]){ linePhrase(nextT,sec.notes,stepDur*(sec.free?1.15:1),R,sec.voice); noteLeft=Math.round(tot*(sec.free?1.15:1)); restSteps=sec.rest||0; }
+                else { if(sec.voice==='zither'&&piece.i===1&&sec.notes[0].deg!=null) zitherRun(R,nextT-.23,sec.notes[0].deg);
+                  phrase=vary(sec.notes); const nt=phrase.shift(), len=nt.dur*stepDur; if(nt.deg!=null) playNote(R,piece.region,sec.voice,nt,len); noteLeft=nt.dur; if(!phrase.length)restSteps=sec.rest||0; }
+              } } }
+        }
       }
       noteLeft--;
     }
