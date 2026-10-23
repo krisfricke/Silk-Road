@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.91'; const BUILD='1022.notesWestEast'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.93'; const BUILD='1024.evenTeams'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -4856,7 +4856,7 @@ function renderBoardInto(el){
   const estHead='<tr><th>#</th><th>Merchant</th><th style="text-align:right">Estate</th><th style="text-align:right">Days</th><th style="text-align:right">Annual ROI</th><th class="sub">Ver</th><th>Fate</th></tr>';
   const fastHead='<tr><th>#</th><th>Merchant</th><th style="text-align:right">Days</th><th style="text-align:right">Estate</th><th>Route</th></tr>';
   let head=estHead, list, fast=false;
-  if(BOARD_VIEW==='fastest'){ fast=true; head=fastHead; list=fairTop(all.filter(function(e){return e.roundtrip&&e.days;}),3,function(a,b){return a.days-b.days;}); }
+  if(BOARD_VIEW==='fastest'){ fast=true; head=fastHead; list=fairTop(all.filter(function(e){return e.roundtrip&&e.days;}),10,function(a,b){return a.days-b.days;}); }   /* Kris 1024: ten, like the other walls */
   else if(BOARD_VIEW==='recent'){ list=all.slice().sort(function(a,b){return (b.when||0)-(a.when||0);}).slice(0,10); }   /* Kris 1018: the ten most recent, not three */
   else if(BOARD_VIEW==='all'){ list=fairTop(all.filter(boardFinisher),10,function(a,b){ return roiNum(b)-roiNum(a); }); }   /* Kris 1022: all-time = best annual ROI among finishers and the homeward-bound */
   else { list=all.slice(); if(BOARD_VIEW==='caravan')list=list.filter(function(e){return e.mode!=='donkey';}); else if(BOARD_VIEW==='humble')list=list.filter(function(e){return e.mode==='donkey';}); /* Kris: caravan/humble span BOTH eras; only the 1271 tab is era-gated */ else if(BOARD_VIEW==='era1271')list=list.filter(function(e){return /\[1271\]/.test(e.outcome||'');}); list=fairTop(list,10); }
@@ -6649,11 +6649,17 @@ function wagonServiced(){ var w=WG(); if(!S||!S.herd)return {cart:0,wagon:0,frac
   /* PARTIAL TEAMS (Kris 9/2: one donkey on a cart gave no capacity until a second was hitched): a vehicle
      pulls with ANY team - full bed, slower going. Wagons take heavy beasts only (up to 4); carts take heavy
      or donkeys (up to 2). frac = hitched/needed drives the speed penalty in wagonSpdMult. */
-  var heavy=(S.herd.ox||0)+(S.herd.buffalo||0)+(S.herd.mule||0)+(S.herd.horse||0), donk=(S.herd.donkey||0);
-  var wg=0,ct=0,need=0,have=0;
-  for(var i=0;i<(w.wagon||0)&&heavy>0;i++){ var t=Math.min(4,heavy); heavy-=t; wg++; need+=4; have+=t; }
-  for(var j=0;j<(w.cart||0)&&(heavy+donk)>0;j++){ var t2=Math.min(2,heavy+donk), fh=Math.min(t2,heavy); heavy-=fh; donk-=(t2-fh); ct++; need+=2; have+=t2; }
-  return {cart:ct,wagon:wg,frac:need?have/need:1,have:have}; }
+  var _rid=0; try{ _rid=(typeof mountsUsed==='function')?Math.min(S.herd.horse||0,mountsUsed()):0; }catch(e){}   /* a horse under a rider is not in the shafts (Oxus 1024: it was counted in both places) */
+  var heavy=(S.herd.ox||0)+(S.herd.buffalo||0)+(S.herd.mule||0)+Math.max(0,(S.herd.horse||0)-_rid), donk=(S.herd.donkey||0);
+  /* Kris 1024: the column moves at its SLOWEST vehicle, so the drovers share the beasts out evenly - 13 oxen on 4 wagons yoke 4,3,3,3,
+     not 4,4,4,1. As many vehicles roll as a greedy fill would use (ceil(beasts/hitch), so capacity is unchanged); speed now follows
+     the shortest team (was: the average across all teams). */
+  var wg=0,ct=0,have=0,minFrac=1,teams=[];
+  var nW=Math.min(w.wagon||0,Math.ceil(heavy/4));
+  if(nW>0){ var useW=Math.min(heavy,nW*4); for(var i=0;i<nW;i++){ var t=Math.floor(useW/nW)+(i<useW%nW?1:0); teams.push({k:'wagon',n:t}); minFrac=Math.min(minFrac,t/4); have+=t; } heavy-=useW; wg=nW; }
+  var pool=heavy+donk, nC=Math.min(w.cart||0,Math.ceil(pool/2));
+  if(nC>0){ var useC=Math.min(pool,nC*2); for(var j=0;j<nC;j++){ var t2=Math.floor(useC/nC)+(j<useC%nC?1:0); teams.push({k:'cart',n:t2}); minFrac=Math.min(minFrac,t2/2); have+=t2; } ct=nC; }
+  return {cart:ct,wagon:wg,frac:(wg+ct)?minFrac:1,have:have,teams:teams}; }
 function hitchedOf(kind){ /* how many of this kind are in the shafts (they pull, they do not pack) - oxen and buffalo yoke first */
   var sv=wagonServiced(); var need=sv.have||0; if(need<=0)return 0;
   var order=['ox','buffalo','mule','horse','donkey'], left=need;
@@ -6665,7 +6671,7 @@ function wagonSpdMult(terr){ var sv=wagonServiced(); if(sv.cart+sv.wagon<=0)retu
   var t={settled:1.0,steppe:0.85,forest:0.7,rugged:0.55,marsh:0.45,mountain:0.35,harsh:0.4,desert:0.82,sand:0.22};   /* hard-packed desert (reg/hamada/kavir) rides nearly like steppe; only true dune 'sand' punishes the wheels (Kris) */
   var _m=(t[terr]!=null)?t[terr]:0.8;
   if(typeof monsoonIndiaNow==='function'&&monsoonIndiaNow()) _m*=(hitchedOf('buffalo')>0?0.7:0.5);   /* the rains drag the wheels - a short march in the Indian monsoon (Kris) */
-  _m*=0.55+0.45*(sv.frac==null?1:sv.frac);   /* a short team pulls the full bed, slowly: half a team 0.78x, one ox on a wagon 0.66x (Kris) */
+  _m*=0.55+0.45*(sv.frac==null?1:sv.frac);   /* a short team pulls the full bed, slowly: half a team 0.78x, one ox on a wagon 0.66x (Kris); frac = the SHORTEST team's share (Kris 1024) */
   return _m; }
 const SPARES={wheel:{n:'spare wheel',price:12},axle:{n:'spare axle',price:10}};
 function buyWagon(k){ if(!S)return; WG(); var pr=WAGONS[k].base; if(S.silver<pr){ log('The wainwright wants '+pr+' silver for a '+WAGONS[k].n+'.'); render(); return; } S.silver-=pr; S.wagons[k]=(S.wagons[k]||0)+1; log('A '+WAGONS[k].n+' rolls out of the wainwright\u2019s yard for '+pr+' silver. It will need a team in the shafts.'); render(); }
@@ -6684,6 +6690,7 @@ function wagonShopHtml(c){ if(!c||!c.name)return ''; WG();
   for(var k in WAGONS){ var w=WAGONS[k];
     h+='<div style="margin:3px 0">'+w.n+' — '+w.base+' s · bed '+w.cap+' wt · team of '+w.hitch+' <span class="sub">('+w.note+')</span> · owned <b>'+(S.wagons[k]||0)+'</b> '+
       (wheelTown?'<button onclick="buyWagon(\''+k+'\')">Buy</button>':'')+((S.wagons[k]||0)>0?' <button onclick="sellWagon(\''+k+'\')">Sell ('+Math.round(w.base*0.6)+' s)</button>':'')+'</div>'; }
+  if(sv.teams&&sv.teams.length){ var _sp=(typeof wagonSpdMult==='function')?wagonSpdMult('settled'):1; h+='<div class="sub" style="margin-top:4px">Yoked: '+sv.teams.map(function(t){ return t.k+' '+t.n+'/'+(WAGONS[t.k]?WAGONS[t.k].hitch:'?'); }).join(' \u00b7 ')+' \u2014 the column keeps the pace of its shortest team'+(sv.frac<1?' ('+Math.round(_sp*100)+'% on a made road)':'')+'.</div>'; }   /* Kris 1024 */
   h+='<div style="margin-top:6px" class="sub">Spares save the day when something cracks — and they are not weightless (wheel 3, axle 3 wt): ';
   for(var k2 in SPARES){ h+=SPARES[k2].n+' ('+SPARES[k2].price+' s, have '+(S.spares[k2]||0)+') <button class="tiny" onclick="buySpare(\''+k2+'\')">Buy</button> &nbsp;'; }
   h+='</div></div>'; return h; }
