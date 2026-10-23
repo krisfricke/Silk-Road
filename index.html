@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.94'; const BUILD='1024.everyWagonRolls'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.96'; const BUILD='1024.draftByLoad'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -6635,9 +6635,14 @@ const ANIMAL_ORDER=['donkey','mule','horse','bactrian','dromedary','hybrid','ox'
 const YAK_CITY={Badakhshan:1,Tashkurgan:1,Yarkand:1,Kashgar:1,Khotan:1}; /* the high Pamir/Karakoram gateways: yaks come down to these towns, sold nowhere else (Kris) */
 /* ============ WAGONS (Kris + SPEC_wagons_vs_camels; odds from the 1978 OREGON.BAS event table) ============ */
 const WAGONS={
- cart: {n:'cart', pl:'carts', base:35, cap:180, hitch:2, note:'the two-beast cart \u2014 donkeys, mules, oxen or buffalo in the shafts'},
- wagon:{n:'wagon',pl:'wagons',base:120,cap:420, hitch:4, note:'the four-hitch freight wagon \u2014 a road-country machine; its own tare is a ton before the first bale goes on'},
+ cart: {n:'cart', pl:'carts', base:35, cap:180, hitch:2, min:1, tare:60, roll:0.6, note:'the two-wheeled cart \u2014 one beast will draw it, two keep the pace with a full bed; donkeys, mules, oxen or buffalo in the shafts'},
+ wagon:{n:'wagon',pl:'wagons',base:120,cap:420, hitch:6, min:2, tare:210, roll:1.0, note:'the four-wheeled freight wagon \u2014 a road-country machine; it will not budge for fewer than two heavy beasts, and wants six to keep the pace with a full bed: its own tare is half a bed before the first bale goes on'},
 };
+/* DRAFT (Kris 1024c): what a beast can PULL on a made road, in the same weight units as its pack load - a draft ox draws about
+   1.5x what it can carry. A vehicle needs tare+load (x0.6 for two wheels: a cart rolls on 40% less pull) of draft to keep the pace;
+   less draft = proportionally slower. Full wagon 630 = six oxen; half-full 420 = four; empty 210 = two. Full cart 144 = two oxen
+   (one ox draws it at 0.73). */
+const DRAFT={ox:105, buffalo:112, mule:85, horse:90, donkey:50};
 const WAGON_CITY={'Konya':1,'Iconium':1,'Sivas':1,'Kayseri':1,'Erzurum':1,'Ayas':1,'Trebizond':1,'Constantinople':1,
  'Khanbaliq':1,'Kenjanfu':1,'Luoyang':1,'Dezhou':1,'Xuzhou':1,'Yangzhou':1,'Kinsay':1,'Zaiton':1,"Chang'an":1,'Taiyuan':1,'Suju':1,
  'Delhi':1,'Lahore':1,'Multan':1,'Cambay':1,'Varanasi':1,'Patna':1,'Chittagong':1,
@@ -6645,24 +6650,31 @@ const WAGON_CITY={'Konya':1,'Iconium':1,'Sivas':1,'Kayseri':1,'Erzurum':1,'Ayas'
 const BUFFALO_CITY={'Delhi':1,'Lahore':1,'Multan':1,'Cambay':1,'Varanasi':1,'Patna':1};   /* + all of TROPIC_NO_CAMEL, tested in animalAvailable */
 function WG(){ if(S&&!S.wagons)S.wagons={cart:0,wagon:0}; if(S&&!S.spares)S.spares={wheel:0,axle:0}; return (S&&S.wagons)||{cart:0,wagon:0}; }
 function totalWagons(){ var w=WG(); return (w.cart||0)+(w.wagon||0); }
-function wagonServiced(){ var w=WG(); if(!S||!S.herd)return {cart:0,wagon:0,frac:1,have:0};
-  /* PARTIAL TEAMS (Kris 9/2: one donkey on a cart gave no capacity until a second was hitched): a vehicle
-     pulls with ANY team - full bed, slower going. Wagons take heavy beasts only (up to 4); carts take heavy
-     or donkeys (up to 2). frac = hitched/needed drives the speed penalty in wagonSpdMult. */
-  var _rid=0; try{ _rid=(typeof mountsUsed==='function')?Math.min(S.herd.horse||0,mountsUsed()):0; }catch(e){}   /* a horse under a rider is not in the shafts (Oxus 1024: it was counted in both places) */
-  var heavy=(S.herd.ox||0)+(S.herd.buffalo||0)+(S.herd.mule||0)+Math.max(0,(S.herd.horse||0)-_rid), donk=(S.herd.donkey||0);
-  /* Kris 1024: the column moves at its SLOWEST vehicle, so the drovers share the beasts out evenly - 13 oxen on 4 wagons yoke 4,3,3,3,
-     not 4,4,4,1. Speed follows the shortest team (was: the average across all teams). */
-  var nW=Math.min(w.wagon||0,heavy);   /* Kris 1024b: EVERY vehicle that can get a beast rolls - more wagons = more bed, a slower column (was ceil(beasts/4): extra wagons stood idle) */
-  var nC=Math.min(w.cart||0,(heavy-nW)+donk);
-  var veh=[]; for(var i=0;i<nW;i++) veh.push({k:'wagon',n:1,h:4}); heavy-=nW;
-  for(var j=0;j<nC;j++){ if(donk>0){ donk--; } else { heavy--; } veh.push({k:'cart',n:1,h:2}); }   /* carts take a donkey first, saving the heavy beasts for the wagons */
-  function _give(okCart,okWagon){ var b=null; veh.forEach(function(v){ if(v.n>=v.h)return; if(v.k==='cart'&&!okCart)return; if(v.k==='wagon'&&!okWagon)return; if(!b||v.n/v.h<b.n/b.h)b=v; }); if(b)b.n++; return !!b; }
-  while(donk>0&&_give(true,false)) donk--;    /* donkeys only ever go to carts */
-  while(heavy>0&&_give(true,true)) heavy--;   /* then the heavy beasts, each to the shortest team */
-  var wg=nW,ct=nC,have=0,minFrac=1,teams=[];
-  veh.forEach(function(v){ teams.push({k:v.k,n:v.n}); have+=v.n; minFrac=Math.min(minFrac,v.n/v.h); });
-  return {cart:ct,wagon:wg,frac:(wg+ct)?minFrac:1,have:have,teams:teams}; }
+function wagonServiced(){ var w=WG(); if(!S||!S.herd)return {cart:0,wagon:0,frac:1,have:0,teams:[]};
+  /* Kris 1024c: a wagon will not move for fewer than two heavy beasts (a lone ox draws a CART, not a freight wagon); a cart takes one.
+     Every vehicle that can be given its minimum rolls (more beds, a slower column); the rest of the draft beasts are dealt, one at a
+     time, to whichever vehicle is furthest short of the pull its full bed needs, up to six on a wagon and two on a cart. Heavy beasts
+     yoke in the order oxen, buffalo, mules, spare horses (a ridden horse is never in the shafts); donkeys draw carts only. */
+  var _rid=0; try{ _rid=(typeof mountsUsed==='function')?Math.min(S.herd.horse||0,mountsUsed()):0; }catch(e){}
+  var hv=[]; [['ox',S.herd.ox||0],['buffalo',S.herd.buffalo||0],['mule',S.herd.mule||0],['horse',Math.max(0,(S.herd.horse||0)-_rid)]].forEach(function(q){ for(var i=0;i<q[1];i++) hv.push(q[0]); });
+  var donk=S.herd.donkey||0, WW=WAGONS.wagon, CC=WAGONS.cart;
+  var nW=Math.min(w.wagon||0,Math.floor(hv.length/WW.min));
+  var veh=[]; for(var i=0;i<nW;i++){ var v={k:'wagon',n:0,d:0,h:WW.hitch,need:(WW.tare+WW.cap)*WW.roll}; for(var m=0;m<WW.min;m++){ var b=hv.shift(); v.n++; v.d+=DRAFT[b]; } veh.push(v); }
+  var nC=Math.min(w.cart||0,hv.length+donk);
+  for(var j=0;j<nC;j++){ var c={k:'cart',n:1,d:0,h:CC.hitch,need:(CC.tare+CC.cap)*CC.roll}; if(donk>0){ donk--; c.d=DRAFT.donkey; } else { c.d=DRAFT[hv.shift()]; } veh.push(c); }
+  function _short(okWagon){ var b=null; veh.forEach(function(v){ if(v.n>=v.h)return; if(v.k==='wagon'&&!okWagon)return; if(!b||v.d/v.need<b.d/b.need)b=v; }); return b; }
+  while(donk>0){ var vc=_short(false); if(!vc)break; vc.n++; vc.d+=DRAFT.donkey; donk--; }
+  while(hv.length){ var vh=_short(true); if(!vh)break; vh.n++; vh.d+=DRAFT[hv.shift()]; }
+  var have=0,teams=[]; veh.forEach(function(v){ teams.push({k:v.k,n:v.n,d:v.d}); have+=v.n; });
+  return {cart:nC,wagon:nW,have:have,teams:teams,frac:1}; }
+function wagonPace(){ /* 0..1: the slowest vehicle's draft against what its share of the load needs. Packs fill first (a caravan master loads the beasts that walk anyway), the beds take the rest, shared by bed size. */
+  var sv=wagonServiced(); if(!sv.teams.length)return {pace:1,f:0,short:0,cantReach:false};
+  var beds=sv.wagon*WAGONS.wagon.cap+sv.cart*WAGONS.cart.cap;
+  var packs=Math.max(0,cargoCap()-beds), f=beds>0?Math.max(0,Math.min(1,(cargoW()-packs)/beds)):0;
+  var pace=1, short=0, cant=false;
+  sv.teams.forEach(function(t){ var V=WAGONS[t.k], req=(V.tare+V.cap*f)*V.roll, r=t.d/req; if(r<pace)pace=r;
+    if(t.d<req){ var add=Math.ceil((req-t.d)/DRAFT.ox); if(t.n+add>V.hitch){ cant=true; add=Math.max(0,V.hitch-t.n); } short+=add; } });
+  return {pace:Math.max(0.25,Math.min(1,pace)),f:f,short:short,cantReach:cant}; }
 function hitchedOf(kind){ /* how many of this kind are in the shafts (they pull, they do not pack) - oxen and buffalo yoke first */
   var sv=wagonServiced(); var need=sv.have||0; if(need<=0)return 0;
   var order=['ox','buffalo','mule','horse','donkey'], left=need;
@@ -6674,7 +6686,7 @@ function wagonSpdMult(terr){ var sv=wagonServiced(); if(sv.cart+sv.wagon<=0)retu
   var t={settled:1.0,steppe:0.85,forest:0.7,rugged:0.55,marsh:0.45,mountain:0.35,harsh:0.4,desert:0.82,sand:0.22};   /* hard-packed desert (reg/hamada/kavir) rides nearly like steppe; only true dune 'sand' punishes the wheels (Kris) */
   var _m=(t[terr]!=null)?t[terr]:0.8;
   if(typeof monsoonIndiaNow==='function'&&monsoonIndiaNow()) _m*=(hitchedOf('buffalo')>0?0.7:0.5);   /* the rains drag the wheels - a short march in the Indian monsoon (Kris) */
-  _m*=0.55+0.45*(sv.frac==null?1:sv.frac);   /* a short team pulls the full bed, slowly: half a team 0.78x, one ox on a wagon 0.66x (Kris); frac = the SHORTEST team's share (Kris 1024) */
+  _m*=wagonPace().pace;   /* Kris 1024c: the slowest vehicle's draft against tare + load (was: a team-size fraction, floored at 0.55) */
   return _m; }
 const SPARES={wheel:{n:'spare wheel',price:12},axle:{n:'spare axle',price:10}};
 function buyWagon(k){ if(!S)return; WG(); var pr=WAGONS[k].base; if(S.silver<pr){ log('The wainwright wants '+pr+' silver for a '+WAGONS[k].n+'.'); render(); return; } S.silver-=pr; S.wagons[k]=(S.wagons[k]||0)+1; log('A '+WAGONS[k].n+' rolls out of the wainwright\u2019s yard for '+pr+' silver. It will need a team in the shafts.'); render(); }
@@ -6688,12 +6700,12 @@ function wagonShopHtml(c){ if(!c||!c.name)return ''; WG();
   if(!wheelTown && !own) return '';   /* off the wheel-roads the yard shows only if you already have a vehicle or gear to tend (Kris: sell/repair anywhere, buy new only in wheel-country) */
   var sv=wagonServiced(); var idle=totalWagons()-sv.cart-sv.wagon;
   var h='<div class="panel" style="margin:8px 0"><h3 class="gold">'+(wheelTown?'The wainwright’s yard':'A wheelwright’s bench')+'</h3>';
-  if(wheelTown){ h+='<p class="sub">Wheels beat packs where the roads are made — and lose everywhere they are not. A cart wants a team of 2 (donkeys will do), a wagon a team of 4 (no donkeys) \u2014 a short team still pulls the full bed, only slower. Beasts in the shafts pull instead of pack.'+(idle>0?' <b>'+idle+' of yours stand idle for want of a team.</b>':'')+'</p>'; }
+  if(wheelTown){ h+='<p class="sub">Wheels beat packs where the roads are made — and lose everywhere they are not. One beast will draw a cart (donkeys will do); a wagon will not move for fewer than two heavy beasts and wants six to keep the pace with a full bed \u2014 fewer, or a heavier load, and the column slows. Beasts in the shafts pull instead of pack.'+(idle>0?' <b>'+idle+' of yours stand idle for want of a team.</b>':'')+'</p>'; }
   else { h+='<p class="sub">No wainwright builds wagons in this country — but a smith here will shape a spare wheel or axle, and buy a sound vehicle off you if the road ahead has beaten the wheels out of you.'+(idle>0?' <b>'+idle+' of yours stand idle for want of a team.</b>':'')+'</p>'; }
   for(var k in WAGONS){ var w=WAGONS[k];
     h+='<div style="margin:3px 0">'+w.n+' — '+w.base+' s · bed '+w.cap+' wt · team of '+w.hitch+' <span class="sub">('+w.note+')</span> · owned <b>'+(S.wagons[k]||0)+'</b> '+
       (wheelTown?'<button onclick="buyWagon(\''+k+'\')">Buy</button>':'')+((S.wagons[k]||0)>0?' <button onclick="sellWagon(\''+k+'\')">Sell ('+Math.round(w.base*0.6)+' s)</button>':'')+'</div>'; }
-  if(sv.teams&&sv.teams.length){ var _sp=(typeof wagonSpdMult==='function')?wagonSpdMult('settled'):1; var _grp={},_ord=[]; sv.teams.forEach(function(t){ var key=t.k+' '+t.n+'/'+(WAGONS[t.k]?WAGONS[t.k].hitch:'?'); if(!_grp[key]){_grp[key]=0;_ord.push(key);} _grp[key]++; }); h+='<div class="sub" style="margin-top:4px">Yoked: '+_ord.map(function(k){ return k+(_grp[k]>1?' \u00d7'+_grp[k]:''); }).join(' \u00b7 ')+' \u2014 the column keeps the pace of its shortest team'+(sv.frac<1?' ('+Math.round(_sp*100)+'% on a made road)':'')+'.</div>'; }   /* Kris 1024 */
+  if(sv.teams&&sv.teams.length){ var _sp=wagonPace().pace; var _grp={},_ord=[]; sv.teams.forEach(function(t){ var key=t.k+' '+t.n+' beast'+(t.n===1?'':'s'); if(!_grp[key]){_grp[key]=0;_ord.push(key);} _grp[key]++; }); h+='<div class="sub" style="margin-top:4px">Yoked: '+_ord.map(function(k){ return k+(_grp[k]>1?' \u00d7'+_grp[k]:''); }).join(' \u00b7 ')+' \u2014 the column keeps the pace of its hardest-pulled vehicle'+(_sp<1?' ('+Math.round(_sp*100)+'% on a made road, as loaded)':' (full pace, as loaded)')+'.</div>'; }   /* Kris 1024 */
   h+='<div style="margin-top:6px" class="sub">Spares save the day when something cracks — and they are not weightless (wheel 3, axle 3 wt): ';
   for(var k2 in SPARES){ h+=SPARES[k2].n+' ('+SPARES[k2].price+' s, have '+(S.spares[k2]||0)+') <button class="tiny" onclick="buySpare(\''+k2+'\')">Buy</button> &nbsp;'; }
   h+='</div></div>'; return h; }
@@ -6783,11 +6795,22 @@ function animalPrice(id,c){ let p=animalPriceBase(id,c); if(id==='horse' && hasH
 function animalSell(id,c){ var f=(id==='horse'&&hasHorseDealer())?0.90:0.85; let v=Math.round(animalPriceBase(id,c)*f); var _b=animalPrice(id,c); if(v>=_b) v=Math.max(1,_b-1); return v; } /* sell can never meet/exceed buy — no round-trip arbitrage (Kris) */
 
 function totalAnimals(){ if(!S||!S.herd)return 0; let n=0; for(const k in S.herd)n+=S.herd[k]; return n; }
-function fodderMode(){ /* 'all': flagged legs, nothing grows - even camels eat from the packs. 'soft': desert-heavy legs - camels browse the scrub, grass-eaters cannot (Kris). */
-  if(!S||!S.dash||S.dash.kind!=='hajj')return null; if(S.dash.fodder)return 'all';
-  var k=(typeof legPairKey==='function')&&S.dash.from&&S.dash.to?legPairKey(S.dash.from,S.dash.to):null; var p=k&&(typeof LEG_TERRAIN_1271!=='undefined')?LEG_TERRAIN_1271[k]:null;
-  if(p&&p.length){ var d=0,st=0; for(var i=0;i<p.length;i++){ if(p[i]==='desert'||p[i]==='sand'||p[i]==='harsh')d++; if(p[i]==='steppe')st++; } if(d/p.length>=0.5) return 'soft';
-    var _sm=(typeof seasonMonth==='function')?seasonMonth():6; if((_sm===12||_sm<=2)&&st/p.length>=0.5) return 'snow'; /* Kris: snow on the grass - even good steppe cannot be grazed in deep winter; half-rations from the packs */ } return null; }
+/* FODDER BY TERRAIN (Kris 1024): one reader for the road profile, shared by the live march (fodderMode) and the planning board/gate
+   (edgeFodderMode) - the two had drifted: the march never counted mountain as barren, the board did.
+   - barren = desert/sand/harsh, plus MOUNTAIN outside June-September: in summer the high valleys are pasture (Marco Polo on the Pamir:
+     'a lean beast will fatten to your heart's content in ten days') - every beast grazes them; the rest of the year they are snow and rock.
+   - 'soft' (>=half barren): grass-eaters eat from the packs, camels browse. mtn=true when the barren ground is mostly mountain.
+   - 'snow' (Dec-Feb, >=half grazing ground): the grass is buried - half rations.
+   - YAKS graze the mountain in any season and dig their grass out from under the snow: they eat from the packs only in the desert. */
+function fodderProfile(p){ if(!p||!p.length)return {m:null,mtn:false}; var sm=(typeof seasonMonth==='function')?seasonMonth():6, summer=(sm>=6&&sm<=9);
+  var des=0,mtn=0,gr=0; for(var i=0;i<p.length;i++){ var t=p[i]; if(t==='desert'||t==='sand'||t==='harsh')des++; else if(t==='mountain'){ if(summer)gr++; else mtn++; } else if(t==='steppe'||t==='settled'||t==='rugged')gr++; }
+  if((des+mtn)/p.length>=0.5) return {m:'soft',mtn:mtn>=des};
+  if((sm===12||sm<=2)&&gr/p.length>=0.5) return {m:'snow',mtn:false};
+  return {m:null,mtn:false}; }
+function fodderInfo(){ if(!S||!S.dash||S.dash.kind!=='hajj')return {m:null,mtn:false}; if(S.dash.fodder)return {m:'all',mtn:false};
+  var k=(typeof legPairKey==='function')&&S.dash.from&&S.dash.to?legPairKey(S.dash.from,S.dash.to):null; var p=k&&(typeof LEG_TERRAIN_1271!=='undefined')?LEG_TERRAIN_1271[k]:null; return fodderProfile(p); }
+function fodderMode(){ return fodderInfo().m; } /* 'all': flagged legs, nothing grows - even camels eat from the packs. 'soft': barren legs - camels browse, grass-eaters cannot. 'snow': half rations. */
+function eatersFor(m,mtn){ if(!m||!S||!S.herd)return 0; if(m==='all')return totalAnimals(); var g=grassEaters(); if(m==='snow'||(m==='soft'&&mtn)) g-=(S.herd.yak||0); return Math.max(0,g); }
 function partyExpert(kind){ /* returns the NAME of the party's best qualified advisor, or null (Kris's A-D gates) */
   var best=null,bv=0; var L=(typeof livingParty==='function')?livingParty():[];
   for(var i=0;i<L.length;i++){ var p=L[i]; if(!p||p.gary)continue; var v=0;   /* #LJI: Gary is never anyone's adviser */
@@ -6812,11 +6835,11 @@ function fodderOffice(){ /* Kris: per-leg estimates + buy/discard - and a way to
   var fodLink=function(n){ return '<b><span onclick="fodderFill('+n+')" title="Buy fodder up to '+n+' measures" style="text-decoration:underline;text-underline-offset:2px;cursor:pointer;color:#e8c47a">'+n+'</span></b>'; }; /* Kris: click the number to top the loads up to it in one go */
   if(typeof SEA_EDGES!=='undefined'){ for(var i=0;i<SEA_EDGES.length;i++){ var e=SEA_EDGES[i];
     if(e.a!==nm&&e.b!==nm)continue; if(e.terr!=='land'||!(e.halts||e.hajj))continue; if(e.era&&e.era!=='both'&&S.era&&e.era!==S.era)continue; if(!e.era&&S&&S.era==='1271')continue; /* Oxus: untagged=762-only, keep Yamama off the 1271 fodder board */
-    var md=edgeFodderMode(e,e.a,e.b);
+    var _fi=edgeFodderInfo(e,e.a,e.b), md=_fi.m;
     var other=(e.a===nm)?e.b:e.a;
     if(!md){ rows.push('\u2022 toward '+eraName(other)+': grazing the whole way \u2014 no fodder wanted'+((typeof legPairKey==='function'&&typeof LEG_TERRAIN_1271!=='undefined'&&(LEG_TERRAIN_1271[legPairKey(e.a,e.b)]||[]).indexOf('mountain')>=0)?' (the high valleys feed them in season)':'')); continue; } /* Kris at Kashgar: every road gets an answer - the green ones say so instead of saying nothing */
-    var eaters=(md==='all')?totalAnimals():grassEaters();
-    if(eaters<=0){ rows.push('\u2022 toward '+eraName(other)+': your camels would browse it free \u2014 no grass-eaters to feed'); continue; }
+    var eaters=eatersFor(md,_fi.mtn);
+    if(eaters<=0){ rows.push('\u2022 toward '+eraName(other)+': '+((_fi.mtn||md==='snow')&&(S.herd.yak||0)>0?'your yaks graze it free':'your camels would browse it free')+' \u2014 nothing in the herd needs hay'); continue; }
     var _days=legEstDays(nm,other,e.d||20); var _rsp=(typeof legResupply==='function')?legResupply(nm,other,e):null;
     if(_rsp&&_rsp.green){ rows.push('\u2022 toward '+eraName(other)+': grazing to '+_rsp.name+' \u2014 no fodder wanted that far; lay in your hay there for the dead country beyond'); }
     else if(_rsp){ var _dTo=Math.max(1,Math.ceil(_rsp.frac*_days)); var _needR=eaters*_dTo; if(md==='snow')_needR=Math.ceil(_needR/2); rows.push('\u2022 toward '+eraName(other)+': call it '+fodLink(_needR)+' measures to '+_rsp.name+' ('+eaters+' beast'+(eaters===1?'':'s')+', '+_dTo+' days), then buy more there'); }
@@ -6855,8 +6878,9 @@ function legEstDays(a,b,dnom){ var d=Math.max(1,dnom||20);
  }catch(e){}
  return d; }
 function grassEaters(){ if(!S||!S.herd)return 0; return (S.herd.donkey||0)+(S.herd.mule||0)+(S.herd.horse||0)+(S.herd.ox||0)+(S.herd.buffalo||0)+(S.herd.yak||0); }
-function fodderEaters(){ var m=fodderMode(); if(!m)return 0; return m==='all'?totalAnimals():grassEaters(); }
-function edgeFodderMode(lk,from,to){ if(!lk)return null; if(lk.fodder)return 'all'; var k=(typeof legPairKey==='function')?legPairKey(from,to):null; var p=k&&(typeof LEG_TERRAIN_1271!=='undefined')?LEG_TERRAIN_1271[k]:null; if(p&&p.length){ var d=0,st=0; for(var i=0;i<p.length;i++){ if(p[i]==='desert'||p[i]==='sand'||p[i]==='harsh'||p[i]==='mountain')d++; if(p[i]==='steppe'||p[i]==='settled'||p[i]==='rugged')st++; } if(d/p.length>=0.5) return 'soft'; /* Oxus 0927: 'sand' (4.2.x) is desert too - it was counted as neither, so the Kyzylkum road (Urgench-Bukhara, all sand) let the horses graze */ /* Kris: mountain grazes no better than desert - a high pass feeds no horse */ var _sm=(typeof seasonMonth==='function')?seasonMonth():6; if((_sm===12||_sm<=2)&&st/p.length>=0.5) return 'snow'; /* Kris: Jan snow buries ALL grass, not just steppe - steppe+settled+rugged all count */ } return null; }
+function fodderEaters(){ var f=fodderInfo(); return eatersFor(f.m,f.mtn); }
+function edgeFodderInfo(lk,from,to){ if(!lk)return {m:null,mtn:false}; if(lk.fodder)return {m:'all',mtn:false}; var k=(typeof legPairKey==='function')?legPairKey(from,to):null; var p=k&&(typeof LEG_TERRAIN_1271!=='undefined')?LEG_TERRAIN_1271[k]:null; return fodderProfile(p); }
+function edgeFodderMode(lk,from,to){ return edgeFodderInfo(lk,from,to).m; }   /* see fodderProfile (Kris 1024) - was its own copy of the rules */
 function cityFodderRelevant(c){ if(!c||typeof SEA_EDGES==='undefined')return false; var nm=c.name; for(var i=0;i<SEA_EDGES.length;i++){ var e=SEA_EDGES[i]; if(e.a!==nm&&e.b!==nm)continue; if(e.terr!=='land'||!(e.halts||e.hajj))continue; if(e.era&&e.era!=='both'&&S&&S.era&&e.era!==S.era)continue; if(!e.era&&S&&S.era==='1271')continue; if(edgeFodderMode(e,e.a,e.b))return true; } return false; }
 function buyFodder(){ if(!S)return; if(S.silver<10){ log('You have not the silver.'); return; } var room=Math.floor(Math.max(0,(cargoCap()-cargoW()))/(typeof FODDER_WT!=='undefined'?FODDER_WT:0.3)); var q=Math.min(25,room); if(q<=0){ log('No room on the animals for hay - lighten the loads or buy a beast.'); render(); return; } S.silver-=Math.round(q*0.25); S.fodder=(S.fodder||0)+q; if(typeof townCredit==='function')townCredit(city(),Math.round(q*0.25)); log('You lay in '+q+' measures of fodder ('+Math.round(q*0.25)+' s).'); render(); }
 try{ window.buyFodder=buyFodder; }catch(e){}
@@ -6894,7 +6918,7 @@ function terrainHint(){
 }
 function caravanSummary(){
   return '<div class="panel"><p style="margin:0"><b>Your caravan:</b> '+herdCompList()+'.</p>'+
-    '<p class="sub" style="margin:4px 0 0">Cargo capacity '+cargoCap()+' (carrying '+cargoW()+') · water reserve '+waterMax()+'. '+((typeof totalAnimals==='function'&&totalAnimals()===0)?'On foot: your people carry five weight apiece on their own backs, keep a walker\u2019s pace on any ground, need no fodder and water only themselves \u2014 and everything beyond the backs must be shipped, hauled, or left.':terrainHint())+'</p>'+((typeof totalAnimals==='function'&&totalAnimals()===0)?'':herdingNote())+'</div>';
+    '<p class="sub" style="margin:4px 0 0">Cargo capacity '+cargoCap()+' (carrying '+cargoW()+') · water reserve '+waterMax()+'. '+((typeof totalAnimals==='function'&&totalAnimals()===0)?'On foot: your people carry five weight apiece on their own backs, keep a walker\u2019s pace on any ground, need no fodder and water only themselves \u2014 and everything beyond the backs must be shipped, hauled, or left.':terrainHint())+'</p>'+((typeof totalAnimals==='function'&&totalAnimals()===0)?'':herdingNote())+((typeof draftNote==='function')?draftNote():'')+'</div>';
 }
 function showHerd(){
   if(!S||S.pendingEvent||S._inBattle)return;
@@ -7007,7 +7031,7 @@ function renderAnimals(m){
     ((typeof wagonShopHtml==='function')?wagonShopHtml(c):'')+
     '<table><tr><th>Animal</th><th class="num">price</th><th class="num">owned</th><th>buy / sell</th></tr>'+rows+'</table>'+
     ((typeof bxPanelHtml==='function')?bxPanelHtml(c):'')+
-    '<div style="margin-top:10px"><button class="seal" onclick="backToBazaar()">Back to the bazaar</button></div>';
+    '<div style="margin-top:10px"><button class="seal" onclick="leaveLivestock()">Back to the bazaar</button></div>';
 }
 
 /* ============ v0.9.1 — wild horses, animal peril, humble start ============ */
@@ -7376,6 +7400,15 @@ function pron(p){
 }
 
 /* ============ v0.9.7 — NaN self-healing ============ */
+function leaveLivestock(){ /* Kris 1024c: say so before you walk out with wagons that will not roll, or teams too light for the beds */
+  if(!S)return; try{ var sv=wagonServiced(), idle=totalWagons()-sv.cart-sv.wagon, P=wagonPace(), c=city(), wheel=(c&&typeof WAGON_CITY!=='undefined'&&WAGON_CITY[c.name]);
+    var idleW=Math.max(0,(S.wagons.wagon||0)-sv.wagon), slow=sv.teams.length&&P.pace<0.6;
+    if(idle>0||slow){ var t='';
+      if(idleW>0) t+=idleW+' of your wagons '+(idleW===1?'has':'have')+' fewer than two heavy beasts to draw '+(idleW===1?'it':'them')+' and will stand where '+(idleW===1?'it stands':'they stand')+'. ';
+      if(slow) t+='Your teams can move the load only at '+Math.round(P.pace*100)+'% of a made-road pace'+(P.short>0?' \u2014 about '+P.short+' more ox'+(P.short===1?'':'en')+' would bring them up to speed':'')+'. ';
+      t+=wheel?'A lone beast draws a cart where it cannot draw a wagon: sell the extra wagons here and buy carts, or buy more draft animals.':'No wainwright works in this town, but a wagon will still sell \u2014 or buy more draft animals before you go.';
+      S.pendingEvent={h:'THE TEAMS ARE SHORT',t:t,ch:[{l:'Back to the market',f:function(){ S.screen='animals'; }},{l:'Leave anyway',f:function(){ backToBazaar(); }}]}; render(); return; } }catch(e){}
+  backToBazaar(); }
 function backToBazaar(){ if(!S)return; S.screen=(S.seaMode&&S.portName)?'port':'city'; render(); }
 function overloadBlock(){ if(!S) return false;
   if(typeof cargoW!=='function') return false;
@@ -7614,6 +7647,10 @@ const ANIMAL_TEND={donkey:0.8, mule:1.0, horse:1.3, bactrian:0.8, dromedary:0.8,
 function herdCapacity(){ const bodies=1+livingComps(); return bodies*4 + skillSum('handle')*3; }
 function herdDemand(){ let d=0; if(S&&S.herd) for(const k in S.herd) d+=S.herd[k]*(ANIMAL_TEND[k]||1); return d; }
 function herdOverload(){ const cap=herdCapacity(); return cap>0 ? herdDemand()/cap : 99; }
+function draftNote(){ try{ var sv=wagonServiced(); var idle=totalWagons()-sv.cart-sv.wagon; var out='';
+  if(idle>0) out+='<p class="red" style="margin:4px 0 0;font-size:.78rem">'+idle+' of your vehicles stand idle \u2014 a wagon will not move for fewer than two heavy beasts (a cart needs only one).</p>';
+  if(!sv.teams.length) return out; var P=wagonPace(); if(P.pace>=0.999) return out;
+  return out+'<p class="gold" style="margin:4px 0 0;font-size:.78rem">Draft: your teams can move this load, but at '+Math.round(P.pace*100)+'% of the pace on a made road'+(P.short>0?' \u2014 about '+P.short+' more ox'+(P.short===1?'':'en')+' in the traces would bring them up to speed':'')+(P.cantReach?'; even full teams strain under this much \u2014 lighten the beds or add vehicles':'')+'.</p>'; }catch(e){ return ''; } }   /* Kris 1024c */
 function herdingNote(){
   const over=herdOverload();
   const cls = over>1 ? 'red' : (over>0.85 ? 'gold' : 'sub');
@@ -9226,8 +9263,8 @@ function landGo(from,to,lk){ if(lk&&lk.portage){ beginVoyage(from,to); return; }
   if(typeof overloadBlock==='function' && overloadBlock()) return; var _k=legPairKey(from,to), _prof=(typeof LEG_TERRAIN_1271!=='undefined')?LEG_TERRAIN_1271[_k]:null; var terr=(_prof&&_prof.length)?_prof[0]:'rugged'; var fromObj=cityClone(from,terr,0,0.6), toObj=cityClone(to,terr,1,0.6); S.seaMode=false; S.portName=null; var D=Math.max(1,Math.round(70*(SPEED_MOD[terr]||1))); toObj.dist=Math.round(lk.d*D); S.dash={kind:'land',from:from,to:to,terr:terr,water:lk.water||null,sight:lk.sight||null,lostChance:0,lostRolled:true,lostKm:0}; S.itin=[fromObj,toObj]; S.idx=0; S.dir=1; S.legKm=0; S.pace='s'; S.screen='travel'; log("You set out "+(lk.water?("along "+lk.water):("on the road toward "+eraName(to)))+" \u2014 "+fmtDist(toObj.dist)+"."); startJourney(); }
 function hajjGo(from,to,lk){ var terr=hajjTerr(lk);
   /* FODDER GATE (Kris): flagged legs starve every beast; desert-heavy legs starve the grass-eaters while camels browse. */
-  if(!S._fodOK && typeof totalAnimals==='function' && totalAnimals()>0 && typeof edgeFodderMode==='function'){ var _fmode=edgeFodderMode(lk,from,to);
-    if(_fmode){ var _fe=(_fmode==='all')?totalAnimals():grassEaters();
+  if(!S._fodOK && typeof totalAnimals==='function' && totalAnimals()>0 && typeof edgeFodderMode==='function'){ var _finfo=edgeFodderInfo(lk,from,to), _fmode=_finfo.m;
+    if(_fmode){ var _fe=eatersFor(_fmode,_finfo.mtn);
       if(_fe>0){ var _legDays=legEstDays(from,to,lk.d||20); var _fhave=Math.round(S.fodder||0);
         /* RESUPPLY-AWARE FODDER (Kris 8/09, revised): estimate fodder to the FIRST resupply halt on the leg - you buy more there - not the whole dead ground. Every wayside halt victuals (evDesertHalt sells hay + food) except route-forks and defiles. Leh on the Yarkand road is the near one; Srinagar the far. */
         var _rsp=(typeof legResupply==='function')?legResupply(from,to,lk):null;
