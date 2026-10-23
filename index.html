@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.93'; const BUILD='1024.evenTeams'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.94'; const BUILD='1024.everyWagonRolls'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -6652,13 +6652,16 @@ function wagonServiced(){ var w=WG(); if(!S||!S.herd)return {cart:0,wagon:0,frac
   var _rid=0; try{ _rid=(typeof mountsUsed==='function')?Math.min(S.herd.horse||0,mountsUsed()):0; }catch(e){}   /* a horse under a rider is not in the shafts (Oxus 1024: it was counted in both places) */
   var heavy=(S.herd.ox||0)+(S.herd.buffalo||0)+(S.herd.mule||0)+Math.max(0,(S.herd.horse||0)-_rid), donk=(S.herd.donkey||0);
   /* Kris 1024: the column moves at its SLOWEST vehicle, so the drovers share the beasts out evenly - 13 oxen on 4 wagons yoke 4,3,3,3,
-     not 4,4,4,1. As many vehicles roll as a greedy fill would use (ceil(beasts/hitch), so capacity is unchanged); speed now follows
-     the shortest team (was: the average across all teams). */
-  var wg=0,ct=0,have=0,minFrac=1,teams=[];
-  var nW=Math.min(w.wagon||0,Math.ceil(heavy/4));
-  if(nW>0){ var useW=Math.min(heavy,nW*4); for(var i=0;i<nW;i++){ var t=Math.floor(useW/nW)+(i<useW%nW?1:0); teams.push({k:'wagon',n:t}); minFrac=Math.min(minFrac,t/4); have+=t; } heavy-=useW; wg=nW; }
-  var pool=heavy+donk, nC=Math.min(w.cart||0,Math.ceil(pool/2));
-  if(nC>0){ var useC=Math.min(pool,nC*2); for(var j=0;j<nC;j++){ var t2=Math.floor(useC/nC)+(j<useC%nC?1:0); teams.push({k:'cart',n:t2}); minFrac=Math.min(minFrac,t2/2); have+=t2; } ct=nC; }
+     not 4,4,4,1. Speed follows the shortest team (was: the average across all teams). */
+  var nW=Math.min(w.wagon||0,heavy);   /* Kris 1024b: EVERY vehicle that can get a beast rolls - more wagons = more bed, a slower column (was ceil(beasts/4): extra wagons stood idle) */
+  var nC=Math.min(w.cart||0,(heavy-nW)+donk);
+  var veh=[]; for(var i=0;i<nW;i++) veh.push({k:'wagon',n:1,h:4}); heavy-=nW;
+  for(var j=0;j<nC;j++){ if(donk>0){ donk--; } else { heavy--; } veh.push({k:'cart',n:1,h:2}); }   /* carts take a donkey first, saving the heavy beasts for the wagons */
+  function _give(okCart,okWagon){ var b=null; veh.forEach(function(v){ if(v.n>=v.h)return; if(v.k==='cart'&&!okCart)return; if(v.k==='wagon'&&!okWagon)return; if(!b||v.n/v.h<b.n/b.h)b=v; }); if(b)b.n++; return !!b; }
+  while(donk>0&&_give(true,false)) donk--;    /* donkeys only ever go to carts */
+  while(heavy>0&&_give(true,true)) heavy--;   /* then the heavy beasts, each to the shortest team */
+  var wg=nW,ct=nC,have=0,minFrac=1,teams=[];
+  veh.forEach(function(v){ teams.push({k:v.k,n:v.n}); have+=v.n; minFrac=Math.min(minFrac,v.n/v.h); });
   return {cart:ct,wagon:wg,frac:(wg+ct)?minFrac:1,have:have,teams:teams}; }
 function hitchedOf(kind){ /* how many of this kind are in the shafts (they pull, they do not pack) - oxen and buffalo yoke first */
   var sv=wagonServiced(); var need=sv.have||0; if(need<=0)return 0;
@@ -6690,7 +6693,7 @@ function wagonShopHtml(c){ if(!c||!c.name)return ''; WG();
   for(var k in WAGONS){ var w=WAGONS[k];
     h+='<div style="margin:3px 0">'+w.n+' — '+w.base+' s · bed '+w.cap+' wt · team of '+w.hitch+' <span class="sub">('+w.note+')</span> · owned <b>'+(S.wagons[k]||0)+'</b> '+
       (wheelTown?'<button onclick="buyWagon(\''+k+'\')">Buy</button>':'')+((S.wagons[k]||0)>0?' <button onclick="sellWagon(\''+k+'\')">Sell ('+Math.round(w.base*0.6)+' s)</button>':'')+'</div>'; }
-  if(sv.teams&&sv.teams.length){ var _sp=(typeof wagonSpdMult==='function')?wagonSpdMult('settled'):1; h+='<div class="sub" style="margin-top:4px">Yoked: '+sv.teams.map(function(t){ return t.k+' '+t.n+'/'+(WAGONS[t.k]?WAGONS[t.k].hitch:'?'); }).join(' \u00b7 ')+' \u2014 the column keeps the pace of its shortest team'+(sv.frac<1?' ('+Math.round(_sp*100)+'% on a made road)':'')+'.</div>'; }   /* Kris 1024 */
+  if(sv.teams&&sv.teams.length){ var _sp=(typeof wagonSpdMult==='function')?wagonSpdMult('settled'):1; var _grp={},_ord=[]; sv.teams.forEach(function(t){ var key=t.k+' '+t.n+'/'+(WAGONS[t.k]?WAGONS[t.k].hitch:'?'); if(!_grp[key]){_grp[key]=0;_ord.push(key);} _grp[key]++; }); h+='<div class="sub" style="margin-top:4px">Yoked: '+_ord.map(function(k){ return k+(_grp[k]>1?' \u00d7'+_grp[k]:''); }).join(' \u00b7 ')+' \u2014 the column keeps the pace of its shortest team'+(sv.frac<1?' ('+Math.round(_sp*100)+'% on a made road)':'')+'.</div>'; }   /* Kris 1024 */
   h+='<div style="margin-top:6px" class="sub">Spares save the day when something cracks — and they are not weightless (wheel 3, axle 3 wt): ';
   for(var k2 in SPARES){ h+=SPARES[k2].n+' ('+SPARES[k2].price+' s, have '+(S.spares[k2]||0)+') <button class="tiny" onclick="buySpare(\''+k2+'\')">Buy</button> &nbsp;'; }
   h+='</div></div>'; return h; }
