@@ -286,6 +286,8 @@ function evStat(){ document.getElementById('evstat').textContent=bandits?'Bandit
 /* ====================== BLENDING ====================== */
 function pickRegion(){ let r=Math.random(), acc=0, last=null; for(const k in weights){ acc+=weights[k]; last=k; if(r<=acc)return k; } return last||'latin'; }
 function blended(field){ let s=0,w=0; for(const k in weights){ s+=P(k)[field]*weights[k]; w+=weights[k]; } return w?s/w:0; }
+function blendLine(){ var el=document.getElementById('blendInfo'); if(!el){ var now=document.getElementById('now'); if(!now)return; el=document.createElement('div'); el.id='blendInfo'; el.style.cssText='font-size:.82em;opacity:.8;margin-top:2px'; now.parentNode.insertBefore(el,now.nextSibling); } el.textContent=blendInfo?('Now playing: '+blendInfo):''; }
+setInterval(blendLine,1000);
 function setRoute(v){ const n=ROUTE.length-1, x=v*n, i=Math.min(n-1,Math.floor(x)), f=x-i, sm=f*f*(3-2*f); const a=ROUTE[i][1], b=ROUTE[i+1][1];
   weights={}; weights[a]=(weights[a]||0)+(1-sm); weights[b]=(weights[b]||0)+sm;
   document.getElementById('now').textContent=(f<.15?ROUTE[i][0]:f>.85?ROUTE[i+1][0]:('on the road from '+ROUTE[i][0]+' to '+ROUTE[i+1][0])); drawBars(); }
@@ -419,12 +421,42 @@ function makeTune(k,R){ const bl=barLenOf(R), dom=domOf(k,R), n=R.scale.length, 
   const B=toNotes(rB,contour(R,cB,dom,dom,Math.min(n+2,dom+(Math.random()<.5?2:3)),leap));   /* up in the higher register, then hang on the dominant */
   return {bl:bl, A:A, A2:A2, B:B}; }
 function vary(notes){ return notes.map(function(x){ return {deg:x.deg,dur:x.dur,acc:x.acc,pos:x.pos,slide:x.slide}; }); }
-function makePiece(){ const k=pickRegion(), R=P(k); if(!(R.density>0)) return null;
-  const leads=R.leads||['lute'], v1=pickA(leads), v2=leads.length>1?pickA(leads.filter(function(x){return x!==v1;}).concat([v1])):v1;
+/* ---- BETWEEN REGIONS (Kris 1024d: 'it changes the music all at once - between regions it should pull from both, in proportion to where you are').
+   Before, each tune was wholly one region's, picked at random by the weights, so the road flipped between two musics. Now a tune between
+   two places is ONE tune that carries both, the nearer place leading:
+   - NOTES: it keeps the leading region's scale but BORROWS some of its notes from the other's (each borrowed degree takes the other scale's
+     nearest note) - more borrowed the closer you get, the tonic never; the way real music slides from one mode into a neighbour's.
+   - DRUMS: one groove for the tune, in the leader's metre, each beat taken from the other region's pattern with the other's share.
+   - INSTRUMENTS: the leader plays the tune; the bridge (and, more often as you near the far place, the second time through) goes to the
+     other region's instrument - a call and answer between the two.
+   - ornament, density, the gong cycle and (already) the drones and tempo are mixed by the same share.
+   Past halfway the other place leads, carrying a share of the first. A remembered tune of the leading region comes back with its new notes. */
+function topTwo(){ var ks=Object.keys(weights).filter(function(k){return weights[k]>0;}).sort(function(x,y){return weights[y]-weights[x];});
+  var a=ks[0]||'latin', b=ks[1]||null, t=b?weights[b]/(weights[a]+weights[b]):0; return {a:a,b:b,t:t}; }
+function nearestPitch(c,scale){ var best=null,bd=1e9; scale.forEach(function(x){ [x-1200,x,x+1200].forEach(function(y){ var d=Math.abs(y-c); if(d<bd){bd=d;best=y;} }); }); return best; }
+function mixScale(A,B,t){ var out=A.slice(), n=A.length, cand=[];
+  for(var i=1;i<n;i++){ var nb=nearestPitch(A[i],B); if(Math.abs(nb-A[i])>=25) cand.push({i:i,c:nb}); }   /* only notes that actually differ */
+  for(var j=cand.length-1;j>0;j--){ var r=Math.floor(Math.random()*(j+1)), tmp=cand[j]; cand[j]=cand[r]; cand[r]=tmp; }
+  var take=Math.min(cand.length,Math.round(t*2*cand.length)), got=0;   /* t is the other region's share (<= 0.5): at halfway every differing note is borrowed */
+  for(var k=0;k<cand.length&&got<take;k++){ var q=cand[k]; var lo=q.i>0?out[q.i-1]:-1e9, hi=q.i<n-1?out[q.i+1]:1e9; if(q.c>lo+80&&q.c<hi-80){ out[q.i]=q.c; got++; } }   /* stay in order, and keep a clear step (80+ cents) from the neighbours - no sour clusters */
+  out._borrowed=got; return out; }
+function mixPerc(PA,PB,t){ if(!PA&&!PB) return null; var LA=PA?PA.length:(PB?PB.length:8), LB=PB?PB.length:1, out=[];
+  for(var j=0;j<LA;j++){ var a=PA?PA[j]:'.', b=PB?PB[Math.round(j*LB/LA)%LB]:'.'; out.push(Math.random()<t?b:a); }
+  return out; }
+function blendR(a,b,t){ var RA=P(a), RB=P(b); var R=Object.assign({},RA);
+  R.scale=mixScale(RA.scale,RB.scale,t); R.orn=(RA.orn||0)*(1-t)+(RB.orn||0)*t; R.density=(RA.density||0)*(1-t)+(RB.density||0)*t;
+  R.perc=mixPerc(RA.perc,RB.perc,t); R.gongP=(RA.gong?1-t:0)+(RB.gong?t:0); R.gong=R.gongP>0; R._blend={a:a,b:b,t:t,borrowed:R.scale._borrowed||0};
+  var ol=(RB.leads||[]).filter(function(v){ return v!=='chant'||RA.chant; }); R._otherLeads=ol.length?ol:null; return R; }
+let blendInfo='';
+function makePiece(){ const tt=topTwo(); const blend=(tt.b&&tt.t>=0.06); const k=blend?tt.a:pickRegion(), R=blend?blendR(tt.a,tt.b,tt.t):P(k); if(!(R.density>0)) return null;
+  const leads=R.leads||['lute'], v1=pickA(leads); let v2=leads.length>1?pickA(leads.filter(function(x){return x!==v1;}).concat([v1])):v1;
+  if(blend&&R._otherLeads&&tt.t>0.12&&Math.random()<0.35+tt.t) v2=pickA(R._otherLeads);   /* the answer on the other region's instrument */
+  blendInfo=blend?(REG[tt.a].name+' leading, '+Math.round(tt.t*100)+'% '+REG[tt.b].name+' - '+R._blend.borrowed+' of '+R.scale.length+' notes borrowed, drums mixed'+(v2!==v1&&R._otherLeads&&R._otherLeads.indexOf(v2)>=0?', the answer on the '+v2:'')):(REG[k].name);
+  try{ var bi=document.getElementById('blendInfo'); if(bi) bi.textContent='Now playing: '+blendInfo; }catch(e){}
   const secs=[];
   if(R.chant){ chantLeft=0; for(let i=0;i<5;i++){ const c=chantMelody(R); secs.push({notes:c.notes, voice:(v1==='chant'||Math.random()<.7)?v1:v2, rest:c.rest, free:true}); if(c.final)break; }
-    return {region:k, secs:secs, i:0, kind:'chant'}; }
-  if(k==='india'&&R.perc&&!busker&&!bandits&&terrain!=='tavern'){   /* the alap: free, slow, no tabla */
+    return {region:k, R:R, secs:secs, i:0, kind:'chant'}; }
+  if(k==='india'&&R.perc&&!busker&&!bandits&&terrain!=='tavern'&&!(blend&&tt.t>0.25)){   /* the alap: free, slow, no tabla */
     for(let j=0;j<2;j++){ const p=pickA(PAKAD), lead=[]; let d=p[0]; lead.push({deg:j?2:0,dur:4});
       p.forEach(function(x,i){ lead.push({deg:x,dur:i===p.length-1?6:(Math.random()<.4?3:2),slide:Math.random()<.5}); });
       secs.push({notes:lead, voice:'sitar', rest:2, free:true, alap:true}); } }
@@ -432,7 +464,7 @@ function makePiece(){ const k=pickRegion(), R=P(k); if(!(R.density>0)) return nu
   let tune; if(mk.length&&Math.random()<.5) tune=pickA(mk); else { tune=makeTune(k,R); mk.push(tune); if(mk.length>4)mk.shift(); }   /* old tunes come round again */
   const reps=Math.random()<.3?1:2;   /* through once, or twice - the second time often on the other instrument */
   [[tune.A,v1],[tune.A2,v1],[tune.B,v2],[tune.A2,v1],[tune.A,v2],[tune.A2,v2],[tune.B,v1],[tune.A2,v1]].slice(0,4*reps).forEach(function(q){ secs.push({notes:vary(q[0]), voice:q[1], rest:0, metric:true, bl:tune.bl}); });
-  return {region:k, secs:secs, i:0, kind:'tune'}; }
+  return {region:k, R:R, secs:secs, i:0, kind:'tune'}; }
 function degFreq(R,deg){ const n=R.scale.length, o=Math.floor(deg/n), i=((deg%n)+n)%n; return cents(TONIC*2,R.scale[i]+1200*o); }
 let noteLeft=0, prevF=null;
 function playNote(R,k,voice,nt,len){ const f=degFreq(R,nt.deg), o={acc:nt.acc||1};
@@ -452,20 +484,20 @@ function tick(){ if(!playing)return; const now=ctx.currentTime; if(nextT<now-.1)
   for(const k in drones){ const tgt=resting?0:(weights[k]||0)*P(k).droneLvl*tm.drone*(night?.8:1); drones[k].gain.setTargetAtTime(tgt,now,1.6); }
   while(nextT<now+.25){ const tempo=blended('tempo')*(night?.85:1)*(terrain==='mountain'?.9:1), stepDur=60/tempo/2;   /* the grid is eighth-notes */
     if(!resting){
-      if(barPerc==null||step%barPerc.length===0){ barRegion=(piece&&piece.kind==='tune'&&weights[piece.region])?piece.region:pickRegion(); barPerc=P(barRegion).perc||['.','.','.','.','.','.','.','.']; step=0;   /* the drum follows the tune's region, so the metres agree */
+      if(barPerc==null||step%barPerc.length===0){ barRegion=(piece&&piece.kind==='tune'&&weights[piece.region])?piece.region:pickRegion(); barPerc=((piece&&piece.kind==='tune'&&piece.R&&piece.region===barRegion)?piece.R.perc:P(barRegion).perc)||['.','.','.','.','.','.','.','.']; step=0;   /* the drum follows the tune's region, so the metres agree */
         if(P(barRegion).bell&&Math.random()<P(barRegion).bell*(terrain==='town'?1.3:1)) bell(nextT,TONIC*(Math.random()<.5?4:3),.06);
-        if(P(barRegion).gong&&piece&&piece.kind==='tune'&&piece.region===barRegion){ gongCyc++; const _bl=barPerc.length*stepDur, _R=P(barRegion);   /* the colotomic cycle: the great gong every second bar, the middle gongs between */
+        if(piece&&piece.kind==='tune'&&piece.region===barRegion&&(piece.R?(piece.R.gongP>0&&Math.random()<piece.R.gongP):P(barRegion).gong)){ gongCyc++; const _bl=barPerc.length*stepDur, _R=piece.R||P(barRegion);   /* the colotomic cycle: the great gong every second bar, the middle gongs between */
           if(gongCyc%2===1) gongHit(nextT,TONIC/2,.3,7); else gongHit(nextT,cents(TONIC,_R.scale[Math.min(_R.scale.length-1,3)]),.11,3.5);
           gongHit(nextT+_bl/2,cents(TONIC,_R.scale[Math.min(_R.scale.length-1,2)]),.07,2.5); } }
       const p=barPerc[step%barPerc.length]; if(p!=='.'&&tm.perc>0&&!(alapNow&&barRegion==='india')&&Math.random()<Math.min(1,.95*tm.perc)) drum(nextT+(Math.random()-.5)*.012,p,(night?.6:1)*Math.min(1.2,tm.perc)*(step===0?1.15:1));
       if(noteLeft<=0){
         if(restSteps>0){ restSteps--; noteLeft=1; }
-        else if(phrase.length){ const R=P(phraseRegion), nt=phrase.shift(), len=nt.dur*stepDur; if(nt.deg!=null) playNote(R,phraseRegion,phraseVoice,nt,len); noteLeft=nt.dur; if(!phrase.length&&piece&&piece._rest)restSteps=piece._rest; }
+        else if(phrase.length){ const R=(piece&&piece.R&&piece.region===phraseRegion)?piece.R:P(phraseRegion), nt=phrase.shift(), len=nt.dur*stepDur; if(nt.deg!=null) playNote(R,phraseRegion,phraseVoice,nt,len); noteLeft=nt.dur; if(!phrase.length&&piece&&piece._rest)restSteps=piece._rest; }
         else {
-          if(piece&&(piece.i>=piece.secs.length||!(weights[piece.region]>0))){ const R=P(piece.region); restSteps=Math.round(barLenOf(R)*(1+Math.round((1-Math.min(1,R.density*tm.dens))*6)+(night?2:0)+Math.random()*2)); piece=null; alapNow=false; noteLeft=1; }   /* a silence between tunes - longer where the land is emptier */
+          if(piece&&(piece.i>=piece.secs.length||!(weights[piece.region]>0))){ const R=piece.R||P(piece.region); restSteps=Math.round(barLenOf(R)*(1+Math.round((1-Math.min(1,R.density*tm.dens))*6)+(night?2:0)+Math.random()*2)); piece=null; alapNow=false; noteLeft=1; }   /* a silence between tunes - longer where the land is emptier */
           else { if(!piece){ piece=makePiece(); prevF=null; }
             if(!piece){ restSteps=8; noteLeft=1; }
-            else { const sec=piece.secs[piece.i], R=P(piece.region);
+            else { const sec=piece.secs[piece.i], R=piece.R||P(piece.region);
               if(sec.metric&&step%barPerc.length!==0){ noteLeft=1; }   /* a tune comes in on the downbeat */
               else { piece.i++; phraseRegion=piece.region; phraseVoice=sec.voice; alapNow=!!sec.alap; piece._rest=sec.rest||0;
                 const tot=sec.notes.reduce(function(a,x){return a+x.dur;},0);

@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.104'; const BUILD='1024.comorin'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.4.18'; const BUILD='1024.belowDecks'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -767,6 +767,14 @@ const REGION_FOLK={
         {id:'h_gertrud',name:'Gertrud',role:'a cloth-merchant\u2019s daughter from Lubeck who reads, writes and reckons',skills:{trade:2},fs:5,hs:3,g:'f'},
         {id:'h_bertolt',name:'Bertolt',role:'a crossbowman off the cog-decks, paid by the voyage',skills:{fight:2},fs:7,hs:3},
         {id:'h_wolder',name:'Wolder',role:'a cook from the Visby guildhall kitchens',skills:{cook:2},fs:5,hs:4}],
+ /* Kris 1024d: a Butuan start came with Farrukh, Girgis, Chuluun, the Kish cartographer and a cousin Nasr - the South Seas get their own people */
+ seasia:[{id:'sa_awang',name:'Awang',role:'a Malay steersman of the Strait who reads the sea by its colour and its birds',skills:{handle:1},fs:6,hs:4,salty:true},
+        {id:'sa_dayang',name:'Dayang',role:'a gold-washer\u2019s daughter of the Agusan who weighs dust by eye and is seldom wrong',skills:{trade:2},fs:5,hs:3,g:'f'},
+        {id:'sa_kiling',name:'Kiling',role:'a balangay oarsman of the gold rivers, quick with a long blade',skills:{fight:2},fs:8,hs:4,salty:true},
+        {id:'sa_seri',name:'Seri',role:'a market-boat cook of the Strait who can make a feast of rice, fish and fire',skills:{cook:2},fs:5,hs:3,g:'f'},
+        {id:'sa_klaong',name:'Po Klaong',role:'a Cham temple-musician turned trader, who knows every brick tower from Panduranga to Vijaya',skills:{trade:1},fs:5,hs:4},
+        {id:'sa_linfu',name:'Lin Afu',role:'a Hokkien junk-factor out of Zaiton who has wintered in every port of the southern sea',skills:{trade:1,handle:1},fs:5,hs:3,salty:true},
+        {id:'sa_ilango',name:'Ilango',role:'a Tamil ship\u2019s-carpenter off the Coromandel guild-ships',skills:{handle:1},fs:6,hs:3,salty:true}],
  rus:[{id:'r_ivanko',name:'Ivanko',role:'a Novgorod boatman who has dragged a hull over every portage to the Volga',skills:{handle:1},fs:7,hs:4,salty:true},
       {id:'r_vasilisa',name:'Vasilisa',role:'a merchant\u2019s widow of the Novgorod fur trade',skills:{trade:2},fs:5,hs:4,g:'f'},
       {id:'r_mstislav',name:'Mstislav',role:'a druzhina man between princes',skills:{fight:2},fs:7,hs:3},
@@ -781,20 +789,22 @@ const REGION_START={
  india:   {local:false, pools:['india','sogdian','yuan']},
  norse:   {local:true,  pools:['norse','norse','hansa']},
  hansa:   {local:true,  pools:['hansa','norse','hansa']},
- rus:     {local:true,  pools:['rus','rus','hansa']}
+ rus:     {local:true,  pools:['rus','rus','hansa']},
+ seasia:  {local:true,  pools:['seasia','seasia','seasia']}
 };
 const _REG_FRANK=new Set(['Constantinople','Chalcedon','Nicaea','Iconium','Sivas','Erzurum','Trebizond','Ephesus','Candia','Gortyn','Ayas','Antioch','Acre','Venice','Ragusa','Famagusta','Tana','Soldaia','Caffa']);
 const _REG_MAMLUK=new Set(['Konya','Damascus','Aleppo','Jerusalem','Baghdad','Basra','Mecca','Medina','Sanaa','Aden','Aylah','Jeddah','Aydhab','Shibam','Dhofar','Yamama','Fustat','Alexandria','Asyut','Qus','Qulzum','Socotra','Zanzibar','Muscat']);
-const _REG_YUAN=new Set(['Khanbaliq','Xanadu','Tenduc','Karakorum',"Chang'an","Chang’an",'Luoyang','Taiyuan','Ningxia','Lanzhou','Wuwei','Zhangye','Jiuquan','Dunhuang','Hami','Turfan','Beshbalik','Kinsay','Zaiton','Yangzhou','Guangzhou','Kauthara','Palembang','Tumasik']);
+const _REG_YUAN=new Set(['Khanbaliq','Xanadu','Tenduc','Karakorum',"Chang'an","Chang’an",'Luoyang','Taiyuan','Ningxia','Lanzhou','Wuwei','Zhangye','Jiuquan','Dunhuang','Hami','Turfan','Beshbalik','Kinsay','Zaiton','Yangzhou','Guangzhou']);
+const _REG_SEASIA=new Set(['Butuan','Tumasik','Kedah','Palembang','Kauthara']);   /* Kris 1024d: the South Seas - Malay, Visayan, Cham */
 const _REG_INDIA=new Set(['Delhi','Lahore','Cambay','Chittagong','Kollam','Mantai','Puttalam']);
 const _REG_NORSE=new Set(['Vadet','Tingvalla','Orebro','Uppsala','Old Uppsala','Stockholm','Birka','Lodose','Kalmar','Visby','Turku','Havn','Roskilde','Hedeby','Paviken']);
 const _REG_HANSA=new Set(['Lubeck','Gdansk','Riga','Reval','Truso','Grobina']);
 const _REG_RUS=new Set(['Novgorod','Tver','Smolensk','Polotsk','Vitebsk','Kiev','Rostov','Yaroslavl','Nizhny Novgorod','Velikiye Luki','Toropets','Rzhev','Orsha','Usvyaty','Aldeigjuborg','the Neva landing']);
-function startRegion(nm){ if(_REG_NORSE.has(nm))return'norse'; if(_REG_HANSA.has(nm))return'hansa'; if(_REG_RUS.has(nm))return'rus'; if(_REG_INDIA.has(nm))return'india'; if(_REG_FRANK.has(nm))return'frankish'; if(_REG_MAMLUK.has(nm))return'mamluk'; if(_REG_YUAN.has(nm))return'yuan'; return 'sogdian'; /* Persia + Central Asia + Golden Horde default */ }
+function startRegion(nm){ if(_REG_SEASIA.has(nm))return'seasia'; if(_REG_NORSE.has(nm))return'norse'; if(_REG_HANSA.has(nm))return'hansa'; if(_REG_RUS.has(nm))return'rus'; if(_REG_INDIA.has(nm))return'india'; if(_REG_FRANK.has(nm))return'frankish'; if(_REG_MAMLUK.has(nm))return'mamluk'; if(_REG_YUAN.has(nm))return'yuan'; return 'sogdian'; /* Persia + Central Asia + Golden Horde default */ }
 function _folkCompanion(f,city){ return {id:'local_'+String(city||'').toLowerCase().replace(/[^a-z]/g,''), name:f.name, role:f.role, skills:Object.assign({},f.skills||{}), fs:f.fs||6, hs:f.hs||3}; }
 function buildStartParty(city){
  var reg=startRegion(city), spec=REGION_START[reg]||REGION_START.sogdian, out=[], used={};
- if(spec.local){ var f=(typeof CITYFOLK!=='undefined')&&CITYFOLK[city]; if(f&&f.name){ out.push(_folkCompanion(f,city)); used[f.name]=1; } }
+ if(spec.local){ var f=((typeof CITYFOLK!=='undefined')&&CITYFOLK[city])||((typeof SETUP!=='undefined'&&SETUP.era==='1271'&&typeof CITYFOLK_1271X!=='undefined')&&CITYFOLK_1271X[city]);   /* 1271 locals too (Butuan's Lakan) */ if(f&&f.name){ out.push(_folkCompanion(f,city)); used[f.name]=1; } }
  spec.pools.forEach(function(pk){ var pool=(REGION_FOLK[pk]||[]).filter(function(c){return c&&c.name&&!used[c.name];}); if(pool.length){ var c=pool[ri(pool.length)]; used[c.name]=1; out.push(Object.assign({},c,{skills:Object.assign({},c.skills||{})})); } });
  var order=spec.pools.concat(['sogdian','mamluk','frankish','yuan','india']), gi=0;
  while(out.length<3 && gi<40){ var pk=order[gi%order.length]; gi++; var pool=(REGION_FOLK[pk]||[]).filter(function(c){return c&&c.name&&!used[c.name];}); if(pool.length){ var c=pool[ri(pool.length)]; used[c.name]=1; out.push(Object.assign({},c,{skills:Object.assign({},c.skills||{})})); } }
@@ -809,12 +819,16 @@ const COUSIN_NAMES={
  india:{m:['Devraj','Narayan','Jagat','Kesava','Madhav'], f:['Padma','Lakshmi','Ratna','Meena','Sita']},
  norse:{m:['Sigurd','Gudmund','Folke','Ulf','Karl','Torsten','Birger'], f:['Kristin','Cecilia','Ingrid','Helena','Margareta','Sigrid']},
  hansa:{m:['Johann','Hinrik','Gerhard','Tidemann','Hermen','Albrecht'], f:['Gertrud','Margarete','Mechthild','Elisabeth','Wobbeke']},
- rus:{m:['Ivan','Mikhail','Yaroslav','Gleb','Fyodor','Daniil'], f:['Anna','Evpraksia','Olga','Maria','Fevronia']}
+ rus:{m:['Ivan','Mikhail','Yaroslav','Gleb','Fyodor','Daniil'], f:['Anna','Evpraksia','Olga','Maria','Fevronia']},
+ seasia:{m:['Tunggal','Kiling','Jaya','Lisyamaw','Awang','Bata'], f:['Dayang','Seri','Intan','Mayang','Kalinaw']}   /* Malay and Visayan (Lisyamaw: a Butuan envoy to the Song court, 1001) */
 };
 function regionCousinName(city){ var p=COUSIN_NAMES[startRegion(city)]||COUSIN_NAMES.mamluk; return p.m[ri(p.m.length)]; }
 function regionNieceName(city){ var p=COUSIN_NAMES[startRegion(city)]||COUSIN_NAMES.mamluk; return p.f[ri(p.f.length)]; }
 const GUARD_NAMES=['Bhima','Tarkan','Yusuf','Sabir','Khorel','Ganzorig','Demir','Roshan','Esen','Toghrul','Aspar','Wei'];
 const GUARD_REGIONS={
+ /* Kris 1024d: Hakata and Kaesong hired 'Wei' and 'Bao' with scimitars. Kamakura bushi went by birth-order names; Goryeo men by surname and given name. */
+ japan:['Tar\u014d','Jir\u014d','Shir\u014d','Gor\u014d','Rokur\u014d','Hachir\u014d','Yoichi','Kojir\u014d','Matatar\u014d','Heiji','Gonr\u014d','Toshir\u014d'],
+ korea:['Kim Jun','Yi Seok','Pak Ui','Choe Ho','Jeong Gyun','Han Su','Kang Jo','No Yeong','Yun Gwan','Seo Ryeon','Bae Hun','Jo Il'],
  china:['Wei','Liang','Pang Shi','Tuhe','Bao','Qutu','Anlu','Shi Xian','Zhao','Han','Guo','Feng','Cao','Meng Tian','Lu','Xu','Cui','Hou','Yao','Shen','Deng','Jiang','Luo','Fang','Jin'],
  steppe:['Tarkan','Khorel','Ganzorig','Esen','Toghrul','Bayan','Aspar','Inal','Arslan','Bori','Sanjar','Tegin','Qutlugh','Bughra','Alp','Sube','Ilchi','Toqto','Buqa','Qara','Chaghan','Naran','Batur','Ariq','Mongke','Temur','Qadan','Sartaq','Nogai','Yesun','Ozar'],
  india:['Bhima','Devan','Kannan','Raghu','Maran','Chera','Vel','Arjun','Devraj','Hari','Nanda','Bhoja','Prithvi','Vikram','Uday','Jaya','Kesava','Ravi','Gopala','Madhav','Anant','Bhairava','Someshvara','Narsimha','Ilango'],
@@ -823,7 +837,9 @@ const GUARD_REGIONS={
  africa:['Juma','Bakari','Kitwana','Simba','Faraji','Hamisi','Tendaji','Rashidi','Jengo','Baraka','Kondo','Mwinyi','Salum','Zuberi','Jabari','Kito','Nuru','Sefu','Tumaini','Chatha','Mosi','Useni','Kigongo'],
  egypt:['Besa','Pamin','Girgis','Mina','Yanni','Bishoy','Qustantin','Surur','Butros','Wasef','Habib','Tadros','Bakhoum','Shenouda','Malak','Abanoub','Kyrillos','Fam','Isaac','Zaki','Boutros','Sidhom','Wahba']
 };
-const GUARD_CITY_REGION={Yangzhou:'china',Guangzhou:'china',Luoyang:'china',"Chang'an":'china',Lanzhou:'china',Wuwei:'china',Dunhuang:'china',Zhangye:'china',Jiuquan:'china',Ningxia:'china',Tenduc:'china',Taiyuan:'china',Kinsay:'china',Zaiton:'china',Khanbaliq:'china',Karakorum:'steppe',Xanadu:'steppe',Hami:'steppe',Turfan:'steppe',Kucha:'steppe',Aksu:'steppe',Kashgar:'steppe',Miran:'steppe',Khotan:'steppe',Yarkand:'steppe',Akhsikath:'steppe',Samarkand:'steppe',Bukhara:'steppe',Merv:'steppe',Nishapur:'arab',Rey:'arab',Kauthara:'seasia',Palembang:'seasia',Mantai:'india',Kollam:'india',Basra:'arab',Dhofar:'arab',Aden:'arab',Socotra:'arab',Qulzum:'arab',Baghdad:'arab',Aleppo:'arab',Zanzibar:'africa',Fustat:'egypt',Alexandria:'egypt',Medina:'arab',Mecca:'arab',Jeddah:'arab',Sanaa:'arab',Yamama:'arab',Shibam:'arab'};
+const GUARD_CITY_REGION={Hakata:'japan',Kaesong:'korea',Butuan:'seasia',Tumasik:'seasia',Kedah:'seasia',Yangzhou:'china',Guangzhou:'china',Luoyang:'china',"Chang'an":'china',Lanzhou:'china',Wuwei:'china',Dunhuang:'china',Zhangye:'china',Jiuquan:'china',Ningxia:'china',Tenduc:'china',Taiyuan:'china',Kinsay:'china',Zaiton:'china',Khanbaliq:'china',Karakorum:'steppe',Xanadu:'steppe',Hami:'steppe',Turfan:'steppe',Kucha:'steppe',Aksu:'steppe',Kashgar:'steppe',Miran:'steppe',Khotan:'steppe',Yarkand:'steppe',Akhsikath:'steppe',Samarkand:'steppe',Bukhara:'steppe',Merv:'steppe',Nishapur:'arab',Rey:'arab',Kauthara:'seasia',Palembang:'seasia',Mantai:'india',Kollam:'india',Basra:'arab',Dhofar:'arab',Aden:'arab',Socotra:'arab',Qulzum:'arab',Baghdad:'arab',Aleppo:'arab',Zanzibar:'africa',Fustat:'egypt',Alexandria:'egypt',Medina:'arab',Mecca:'arab',Jeddah:'arab',Sanaa:'arab',Yamama:'arab',Shibam:'arab'};
+function guardRegionByName(nm){ try{ var base=String(nm||'').split(/,| of | the /)[0].trim(); for(var r in GUARD_REGIONS){ if(GUARD_REGIONS[r].indexOf(base)>=0) return r; }
+  var FB={china:['Wei','Bao','Shan','Fei','Tieh','Jun'],steppe:['Tarkan','Esen','Toghrul','Aybek','Qutuz','Bumin'],arab:['Roshan','Bahram','Sohrab','Dariush','Kaveh','Farrokh']}; for(var r2 in FB){ if(FB[r2].indexOf(base)>=0) return r2; } }catch(e){} return ''; }   /* a guard's homeland read off his name (saves from before guards remembered it) */
 function guardNamePool(cn){ const r=GUARD_CITY_REGION[cn]; return (r&&GUARD_REGIONS[r])||GUARD_NAMES; }
 const GUARD_SKILLS=[{trade:0,cook:0,handle:0},{trade:0,cook:0,handle:1},{trade:0,cook:1,handle:0}];
 const LOCAL_RUMORS={
@@ -1165,7 +1181,7 @@ function hmStart(terr,inTown){ if(!S||S.dead)return; S.pendingEvent=null; S.hm={
 function hmYou(){ var g=youGear(); var maxhp=youCombHP()+gArmorHP(g); return {you:true,ref:null,name:(S.name||'You'),hs:youCombHS()+gBowHS(g),fs:youCombFS(),die:(gWeaponDie(g)||6),maxhp:maxhp,hp:Math.max(1,Math.round(maxhp*clamp(S.hp,0,100)/100)),bow:gHasBow(g),heal:0,horse:false}; }
 function hmTerrMult(p){ var t=(S.hm&&S.hm.terr); if(!t)return 1; if(p.khabir && (t==='desert'||t==='harsh')) return 2; if(p.desertwise && (t==='desert'||t==='harsh')) return 1.5; if(p.mountainwise && (t==='mountain'||t==='rugged')) return 1.5; if(p.forestwise && (t==='forest')) return 1.5; if(p.steppewise && (t==='steppe')) return 1.5; return 1; }
 function hmHunter(p){ var g=p.gear; var maxhp=combHP(p)+gArmorHP(g); return {you:false,ref:p,name:p.name,hs:Math.round(combHS(p)*hmTerrMult(p))+gBowHS(g),fs:combFS(p),die:(gWeaponDie(g)||6),maxhp:maxhp,hp:Math.max(1,Math.round(maxhp*clamp(memHp(p),0,100)/100)),bow:gHasBow(g),heal:(p.heal||0),horse:false}; }
-function hmExit(){ var H=S.hm, road=!!(H&&!H.inTown), done=!!(H&&H.phase==='done'); var _rs=H&&H._road; S.hm=null; S.pendingEvent=null; S.eventOutcome=null; if(done){ passDays(1); if(S.dead){ render(); return; } } if(road&&_rs) roadRestore(_rs,'the hunt'); if(S.voy && !S.dead){ S.screen='voyage'; S.voyaging=true; if(typeof voyTimer!=='undefined'&&voyTimer)clearInterval(voyTimer); voyTimer=setInterval(stepVoy,DAY_MS); render(); return; } if(S.deathQueue && S.deathQueue.length && typeof deathDialog==='function'){ S.screen=road?'travel':(S.seaMode?'port':'city'); S.pendingEvent=deathDialog(); render(); return; } if(S.pendingEvent){ S.screen=road?'travel':(S.seaMode?'port':'city'); render(); return; } if(road && typeof resumeAfterEvent==='function'){ S.screen='travel'; resumeAfterEvent(); return; } S.screen=(S.seaMode?'port':'city'); render(); }
+function hmExit(){ var H=S.hm, road=!!(H&&!H.inTown), done=!!(H&&H.phase==='done'); var _rs=H&&H._road; S.hm=null; S.pendingEvent=null; S.eventOutcome=null; if(done){ passDays(1); if(S.dead){ render(); return; } } if(road&&_rs) roadRestore(_rs,'the hunt'); if(S.voy && !S.dead){ S.screen='voyage'; S.voyaging=true; if(typeof voyTimer!=='undefined'&&voyTimer)clearInterval(voyTimer); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); render(); return; } if(S.deathQueue && S.deathQueue.length && typeof deathDialog==='function'){ S.screen=road?'travel':(S.seaMode?'port':'city'); S.pendingEvent=deathDialog(); render(); return; } if(S.pendingEvent){ S.screen=road?'travel':(S.seaMode?'port':'city'); render(); return; } if(road && typeof resumeAfterEvent==='function'){ S.screen='travel'; resumeAfterEvent(); return; } S.screen=(S.seaMode?'port':'city'); render(); }
 /* FREEZE-UP / BREAK-UP (Kris, spec 9): the river closes; decide about the hulls. Kits rebuild in spring. */
 function freezeUpEvent(){ var n=S.boats.length, big=S.boats.some(function(b){return !/faering/i.test(String(b.t||''));});
   return {h:'THE RIVER CLOSES', t:'Overnight the river goes quiet, and by the third dawn it is a white road \u2014 the ice sings underfoot and will bear a loaded sledge. '+(n>1?'Your hulls stand':'Your '+BOATS[S.boats[0].t].n+' stands')+' frozen at the bank. The rivermen shrug: sledge '+(n>1?'them':'her')+' on runners and grudge the weight, break '+(n>1?'them':'her')+' down to sound timber and sledge THAT \u2014 or leave the water its own. The ice road is faster than the river ever was, if you choose right.', ch:[
@@ -1632,6 +1648,7 @@ function trafficEff(){ try{
   _TRAF.eff=eff; _TRAF.effEra=era; return eff;
 }catch(e){ return {}; } }
 function trafficProdHere(gid,c){ try{
+  if(c&&c.name==='Hakata'&&gid==='musk') return false;   /* Kris 1024d: Hakata buys its musk off the China junks - traffic must raise it, not lower it (the median rule counted it a 'producer': musk's median is 109, Hakata 81) */
   var era=(S&&S.era)||'762';
   if(!_TRAF.prod||_TRAF.prodEra!==era){ var cities=[];
     if(era==='1271'){ try{ cities=ERA1271_NET.cities.map(function(x){return {name:x.name,frac:(x.frac!=null?x.frac:0.5)};}); }catch(e){} }
@@ -1919,16 +1936,21 @@ let journeyTimer=null;
    ~1 day out. Whatever the killer, a live voyage with no heartbeat and no event gets restarted. */
 setInterval(function(){ try{
   if(S && S.voy && S.screen==='voyage' && !S.pendingEvent && !S.eventOutcome && (Date.now()-(S._vhb||0)>6000) && !(S.voy.terr==='land'&&S.voy._camped)){
-    S.voyaging=true; if(typeof voyTimer!=='undefined'&&voyTimer)clearInterval(voyTimer); voyTimer=setInterval(stepVoy,DAY_MS);
-    if(!S._shookDay || S.day-S._shookDay>=4){ S._shookDay=S.day; var _shsea=(S.voy&&['sea','coast','med','river','canal'].indexOf(S.voy.terr)>=0); log(_shsea?'The ship gathers way again and stands on.':'The caravan shakes itself and takes the road again.'); } }
+    S.voyaging=true; if(typeof voyTimer!=='undefined'&&voyTimer)clearInterval(voyTimer); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS));
+    if(!S._shookDay || S.day-S._shookDay>=4){ S._shookDay=S.day; var _shsea=(S.voy&&['sea','coast','med','deep','river','canal'].indexOf(S.voy.terr)>=0);   /* Kris 1024d: 'deep' was missing - the Bay of Bengal crossing said the caravan shook itself */ log(_shsea?'The ship gathers way again and stands on.':'The caravan shakes itself and takes the road again.'); } }
 }catch(e){} },4000);
 const DAY_MS=2000; // one fixed, brisk day cadence
+/* Kris 1024d ('Kinsay to Zaiton, 4 days, went by like a rocket'): several paths start a day-timer without clearing one already running
+   (voyResume, beginVoyage, the resume-after-battle path...), and two timers march two days per tick. 4.4.10: every start now clears
+   the old timer first (one clock per kind), and the gate below is only the backstop. */
+var _dayGate={};
+function dayGateOK(k){ var now=Date.now(), last=_dayGate[k]||0; if(now-last<DAY_MS*0.9) return false;   /* 1.8 s: the one clock fires every 2 s give or take a few ms of timer jitter; anything sooner is a stray */ _dayGate[k]=now; return true; }
 function clearJourney(){ if(journeyTimer){clearInterval(journeyTimer);journeyTimer=null;} }
 function startJourney(){ if(S.pendingEvent)return; S._tmLanded=false;
   clearJourney();
   S._forceCamp=false;
   if(cargoW()>cargoCap())log("The caravan is overloaded — the camels make their feelings known. Pace suffers.");
-  S.journeying=true; journeyTimer=setInterval(stepDay, DAY_MS); render();
+  S.journeying=true; journeyTimer=(clearInterval(journeyTimer),setInterval(stepDay,DAY_MS)); render();
 }
 /* ===== 1271 LEVANT WAR: an army on the road (Kris) - Baybars's host marching north against the
    Mongols and back south on Acre, and Edward's raiders in the Sharon plain. Fires once per leg,
@@ -2302,6 +2324,7 @@ function ensureLandFrame(quiet){ try{ /* ONE LAND MODEL net: if any code path st
 }catch(e){} }
 function stepDay(){
   if(!S || S.screen!=='travel'){clearJourney();return;}
+  if(!dayGateOK('land')) return;
   if(typeof ensureLandFrame==='function')ensureLandFrame();
   if(typeof checkBigNewsRoad==='function'&&checkBigNewsRoad())return;
   try{ var _sd=(S.dash&&((S.dir||1)>0?S.dash.to:S.dash.from)); if(_sd&&typeof siegeAt==='function'&&siegeAt(_sd)&&!S._siegeWarned){ var _p=(S.legKm||0)/(legDist()||1); if(_p>=0.55){ S._siegeWarned=true; S.journeying=false; clearJourney(); S.pendingEvent={h:'SMOKE ON THE HORIZON', t:'Refugees on the road tell it before you can see it: '+_sd+' is UNDER SIEGE \u2014 lines dug, fleets in the roads, the gates shut on both sides of the war. There is nothing for a caravan there but confiscation.', ch:[{l:'Turn back',f:function(){ S._siegeWarned=false; if(typeof turnBack==='function')turnBack(true); }}]}; render(); return; } } }catch(e){}
@@ -2740,7 +2763,7 @@ function succeedToHeir(heir){
   S.pendingEvent=null; S.screen='succession';
 }
 function confirmHeir(){ S.heirSwap=null;
-  if(S._succAtSea && S.voy){ S._succAtSea=false; S.seaMode=true; S.screen='voyage'; S.voyaging=true; if(S.deathQueue&&S.deathQueue.length){ S.pendingEvent=deathDialog(); } else if((S.spoils||[]).length){ var _sp0=spoilEvent(); if(_sp0)S.pendingEvent=_sp0; } if(!S.pendingEvent){ try{ voyTimer=setInterval(stepVoy, DAY_MS); }catch(e){} } render(); return; } /* heir keeps the voyage; a pending death pauses it and resumeAfterEvent sails on */
+  if(S._succAtSea && S.voy){ S._succAtSea=false; S.seaMode=true; S.screen='voyage'; S.voyaging=true; if(S.deathQueue&&S.deathQueue.length){ S.pendingEvent=deathDialog(); } else if((S.spoils||[]).length){ var _sp0=spoilEvent(); if(_sp0)S.pendingEvent=_sp0; } if(!S.pendingEvent){ try{ voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); }catch(e){} } render(); return; } /* heir keeps the voyage; a pending death pauses it and resumeAfterEvent sails on */
   S.screen=S.castaway?'castaway':(S.seaMode?'port':'city'); if(!S.seaMode && city()) log("The shaken caravan falls back to "+city().name+" to regroup under its new master."); if(S.deathQueue&&S.deathQueue.length){ S.pendingEvent=deathDialog(); } else if((S.spoils||[]).length){ var _sp=spoilEvent(); if(_sp)S.pendingEvent=_sp; } render(); }
 
 /* ============ EVENTS ============ */
@@ -2757,11 +2780,11 @@ function resumeAfterEvent(){
     else if(S.idx!==S._rt.idx || S.dir!==S._rt.dir){ S.idx=S._rt.idx; S.dir=S._rt.dir; log('You take your bearings after the commotion and continue the way you were going.'); } }
   if(S._departNow){ S._departNow=false; S._forced=true; if(typeof chartForCity==='function' && chartForCity((city()||{}).name)){ openChart(); return; } if(typeof anatMapCity==='function' && anatMapCity((city()||{}).name)){ openMap(); return; } if(typeof nextCity==='function' && nextCity()){ forcedDepart(1); return; } }
   if(S.screen==='build' && S.build){ render(); startBuildTimer(); return; }
-  if(S.screen==='sailing' && S.sail){ S.sailing=true; render(); sailTimer=setInterval(stepSail, DAY_MS); return; }
-  if(S.screen==='voyage' && S.voy){ S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS); return; }
+  if(S.screen==='sailing' && S.sail){ S.sailing=true; render(); sailTimer=(clearInterval(sailTimer),setInterval(stepSail,DAY_MS)); return; }
+  if(S.screen==='voyage' && S.voy){ S.voyaging=true; render(); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); return; }
   if(S.screen!=='travel'){render();return;} // arrived / ended during the event
   // still mid-leg: resume the march
-  S.journeying=true; journeyTimer=setInterval(stepDay, DAY_MS); render();
+  S.journeying=true; journeyTimer=(clearInterval(journeyTimer),setInterval(stepDay,DAY_MS)); render();
 }
 function loseRandomGoods(frac){
   const held=GOODS.filter(g=>S.goods[g.id]>0);
@@ -3884,14 +3907,14 @@ function storyCousinCity(startNm, poleNm, override){ if(override && _cityObj(ove
 function genStartStory(startNm){ var ov=(STORY_OVERRIDE[startNm]||{}); var poles=storyPoles(startNm); var cc=storyCousinCity(startNm, poles.near, ov.cousin); return { stage:0, home:startNm, cousin:cc, near:poles.near, far:poles.far, cousinName:(ov.cousinName||(typeof regionCousinName==='function'?regionCousinName(startNm):'Yusuf')), nieceName:(ov.nieceName||(typeof regionNieceName==='function'?regionNieceName(startNm):'Zaynab')), started:false }; }
 function beginStartStory(startNm){ if(!startNm||!S)return; var era=(S.era||'762'); if(ERAS[era] && (startNm===ERAS[era].goalW||startNm===ERAS[era].goalE))return; /* a start at a pole needs no cousin-run */ try{ S.startStory=genStartStory(startNm); }catch(e){} }
 function _storyCousinAlive(){ return (S.party||[]).some(function(p){return p.cousin&&p.alive;}); }
-function storyLetterEvent(){ var st=S.startStory; var g=bestGood(st.home,st.cousin); var gn=g?g.name.toLowerCase():'trade goods'; return {h:'A LETTER FROM YOUR COUSIN', t:"A courier brings a letter under your cousin "+st.cousinName+"’s hand, come "+((typeof startRegion==='function'&&/norse|hansa|rus/.test(startRegion(st.home)))?'by lake and sea':'up the road')+" from "+eraName(st.cousin)+". He writes that trade runs hot there just now — a load of "+gn+" carried up from "+eraName(st.home)+" would turn a handsome profit, and would you not come, and bring what you can? Your kin have pooled their purses and stood you a caravan on the strength of it. "+((typeof startRegion==='function'&&/norse|hansa|rus/.test(startRegion(st.home)))?('The way to '+eraName(st.cousin)+' runs out of '+eraName(st.home)+' by lake, river and sea.'):('The road out of '+eraName(st.home)+' runs toward '+eraName(st.cousin)+'.'))+"", ch:[{l:'Load the caravan and set out',f:function(){ st.started=true; }}]}; }
+function storyLetterEvent(){ var st=S.startStory; var g=bestGood(st.home,st.cousin); var gn=g?g.name.toLowerCase():'trade goods'; return {h:'A LETTER FROM YOUR COUSIN', t:"A courier brings a letter under your cousin "+st.cousinName+"’s hand, come "+((typeof startRegion==='function'&&/norse|hansa|rus/.test(startRegion(st.home)))?'by lake and sea':(typeof hasLandExit==='function'&&!hasLandExit(st.home))?'by sea':'up the road')+" from "+eraName(st.cousin)+". He writes that trade runs hot there just now — a load of "+gn+" carried up from "+eraName(st.home)+" would turn a handsome profit, and would you not come, and bring what you can? Your kin have pooled their purses and stood you a caravan on the strength of it. "+((typeof startRegion==='function'&&/norse|hansa|rus/.test(startRegion(st.home)))?('The way to '+eraName(st.cousin)+' runs out of '+eraName(st.home)+' by lake, river and sea.'):(typeof hasLandExit==='function'&&!hasLandExit(st.home))?('No road leaves '+eraName(st.home)+' but the sea; the ships for '+eraName(st.cousin)+' are in the roads.'):('The road out of '+eraName(st.home)+' runs toward '+eraName(st.cousin)+'.'))+"", ch:[{l:'Load the caravan and set out',f:function(){ st.started=true; }}]}; }
 function storyGreetEvent(){ var st=S.startStory; var g=bestGood(st.cousin,st.near); var gn=g?g.name.toLowerCase():'trade goods';
   if(!_storyCousinAlive()){ var c={id:'cousin', name:st.cousinName, role:'your cousin, a sharp and restless trader', kind:'companion', cousin:true, traderHeir:true, recruited:true, freedman:false, skills:{trade:3}, fromCity:st.cousin, alive:true}; S.party.push(c); if(typeof normalizeMember==='function')normalizeMember(S.party[S.party.length-1]); }
   return {h:'YOUR COUSIN '+String(st.cousinName||'').toUpperCase(), t:"Your cousin "+st.cousinName+" all but pulls you off the road with delight, and has your beasts stabled before you can object. Over supper the talk turns to silver: he is sure — he is always sure — that the real money lies further on. Take "+gn+" from here up to "+eraName(st.near)+", he says, and you will not regret it; and he is coming with you, for a share and for the road. He is a born trader, and no fool with a ledger.", ch:[{l:'Take him on, and turn for '+eraName(st.near),f:function(){ st.stage=1; }}]}; }
 function storyPoleNearEvent(){ var st=S.startStory; var who=_storyCousinAlive()?('Your cousin '+st.cousinName):'Your nephew, wide-eyed at the size of the place,'; return {h:String(eraName(st.near)).toUpperCase()+' AT LAST', t:eraName(st.near)+" is everything the road promised, and louder. "+who+" is already talking of the next thing: they say the far end of the world — "+eraName(st.far)+" — pays best of all for what a man can only carry there from here, and richest of all is the one who carries it first. Why stop now, with the caravan sound and the purse fat?", ch:[{l:'On, then — for '+eraName(st.far),f:function(){ st.stage=2; }},{l:'Rest here a while, then go on',f:function(){ st.stage=2; }}]}; }
 function storyPoleFarEvent(){ var st=S.startStory; var who=_storyCousinAlive()?('Your cousin '+st.cousinName):'Your nephew'; return {h:String(eraName(st.far)).toUpperCase()+' — THE FAR END OF THE ROAD', t:"You have come the whole length of the world to "+eraName(st.far)+", and there is nothing ahead now but the long way back. "+who+" reckons it up one night and says aloud what you are both thinking: you are made — if you can only get home to "+eraName(st.home)+" with it. Home. That word again, after all these miles.", ch:[{l:'Turn for home — '+eraName(st.home),f:function(){ st.stage=3; S.returning=true; }}]}; }
 function storyBothPolesEvent(at){ var st=S.startStory; var who=_storyCousinAlive()?('Your cousin '+st.cousinName):'Your nephew'; var other=(at===st.far)?st.near:st.far;
-  return {h:'BOTH ENDS OF THE WORLD', t:((at===st.near||at===st.far)?("Here in "+eraName(at)+", with "+eraName(other)+" already behind you, "):("Here in "+eraName(at)+", with "+eraName(st.near)+" and "+eraName(st.far)+" both behind you, "))+who.charAt(0).toLowerCase()+who.slice(1)+" lays it out over the lamp: you have stood at both ends of the road now, and there is nowhere further to go that pays better than home. Carry what you have back to "+eraName(st.home)+" and you are made.", ch:[{l:'Turn for home \u2014 '+eraName(st.home),f:function(){ st.stage=3; S.returning=true; }}]}; }
+  return {h:'BOTH ENDS OF THE WORLD', t:((at===st.near||at===st.far)?("Here in "+eraName(at)+", with "+eraName(other)+" already behind you, "):("Here in "+eraName(at)+", with "+eraName(st.near)+" and "+eraName(st.far)+" both behind you, "))+who.charAt(0).toLowerCase()+who.slice(1)+" lays it out over the lamp: you have stood at both ends of the road now, and seen more of the world than anyone you grew up with will ever believe. And then, more quietly: what is all this silver for, if it only ever rides in the baggage? Not for the next town, nor the one after. For a roof that is yours, and a doorstep where your mother can sit in the evening; for old friends at the table and the children of the street underfoot; for long dinners where every story is told twice and nobody minds. A fortune you never stop carrying is only weight. Take it home to "+eraName(st.home)+" - and this time, stay long enough to spend some of it on the people who waited for you.", ch:[{l:'Turn for home \u2014 '+eraName(st.home),f:function(){ st.stage=3; S.returning=true; }}]}; }
 function storyHomeEvent(){ var st=S.startStory; st.stage=4; S.storyWon=true; st.finaleDone=true; /* the 'return' is recorded by the home screen (render's per-outcome guard), as for a pole start */ return {h:'HOME, AND RICHER — YOU HAVE WON', t:"The gates of "+eraName(st.home)+" open on a caravan nobody quite recognises — leaner, browner, and a great deal richer than the one that crept out on a cousin’s letter and the family’s pooled coppers. You have been to the ends of the earth and come home with your name made. Whatever you do now, you do as a merchant of consequence.", ch:[{l:'Home.',f:function(){ S.onceFlags=S.onceFlags||{}; S.onceFlags.soldHome=false; S.screen='home'; }}]}; }   /* Kris 1022: then the same finish screen as the pole starts */
 function storyHomecomingEvent(){ var st=S.startStory; st.homecomeDone=true; var nm=st.nieceName||'Zaynab'; var joined=false;
   if(!(S.party||[]).some(function(p){return p.niece;})){ var n={id:'niece', name:nm, role:'your niece, as sharp a trader as your cousin and rather bolder', kind:'companion', niece:true, traderHeir:true, recruited:true, freedman:false, skills:{trade:2}, fromCity:st.home, alive:true}; S.party.push(n); if(typeof normalizeMember==='function')normalizeMember(S.party[S.party.length-1]); joined=true; }
@@ -3928,6 +3951,18 @@ function checkBigNewsTown(inTavern){ /* TOWN WILDFIRE - fires on arrival or any 
   /* EPHEMERAL nothingburger (the Cyprus scare): if a newer story is also waiting, drop the stale little
      scare silently rather than relate it long after anyone cares - and forget its follow-up (Kris) */
   while(_cands.length>1 && _cands[0].ev.ephemeral){ var _dr=_cands.shift(); S.onceFlags['bignews_'+_dr.ev.id]=true; if(S.nf)delete S.nf[_dr.ev.id]; }
+  /* Kris 1024d: landing in Egypt from the east, a backlog of old news came one dialog at a time. Two or more stories more than a week old
+     now come together - one introduction, one paragraph each (the telling this town gives it), denouements folded in. */
+  var _old=_cands.filter(function(x){ return (S.day-x.a)>7 && !(x.ev.srcT && at===x.ev.src && S.day<=x.a+(x.ev.srcWin||6)); });
+  if(_old.length>=2){ var _mamB=(typeof NEWS_MAMLUK!=='undefined'&&NEWS_MAMLUK.has(at)&&at!=='Acre'), _paras=[];
+    _old.forEach(function(x){ var ev=x.ev, tier=newsTier(ev,at); S.onceFlags['bignews_'+ev.id]=true; if(S.nf)delete S.nf[ev.id];
+      var full=(_mamB&&ev.mFull)?ev.mFull:ev.full, head=(_mamB&&ev.mHeadline)?ev.mHeadline:ev.headline, rum=(_mamB&&ev.mRumor)?ev.mRumor:ev.rumor;
+      var body=(tier===0)?full:((tier===2&&rum)?rum:head);
+      if(ev.resolve){ if(ev.rumorOld) body=(_mamB&&ev.mRumorOld)?ev.mRumorOld:ev.rumorOld; body+=' '+((_mamB&&ev.resolve.mt)?ev.resolve.mt:ev.resolve.t); }   /* heard late: the whole tale at once */
+      _paras.push('<p>'+body+'</p>'); });   /* each telling opens with its own capitalised lede - no separate heading */
+    var _intro=inTavern?"Over the evening the table catches you up on everything that has happened in these parts while you were away - each man with his piece of it:":"You have been a long time out of these parts, and the bazaar catches you up on all that has happened while you were gone:";
+    S.pendingEvent={h:'NEWS YOU MISSED', t:'<p>'+_intro+'</p>'+_paras.join(''), ch:[{l:'Take it all in',f:function(){}}]};
+    if(inTavern)S._toTavern=true; render(); return true; }
   var _pk=_cands.length?_cands[0]:null;
   if(_pk){ var ev=_pk.ev, ad=_pk.a; var _age0=S.day-ad; var _mam=(typeof NEWS_MAMLUK!=='undefined'&&NEWS_MAMLUK.has(at)&&at!=='Acre');
     S.onceFlags['bignews_'+ev.id]=true;
@@ -4360,7 +4395,7 @@ function accrueGuardWages(){ if(!S)return; if((S.wageDebt||0)>0 && !S.party.some
   const owe=guardWageTotal(); if(owe>0){ var _apaid=Math.min(S.silver,owe); if(S.silver>=owe){S.silver-=owe;} else { S.wageDebt=(S.wageDebt||0)+(owe-S.silver); S.silver=0; } if(_awcc&&_apaid>0&&typeof townCredit==='function')townCredit(_awcc,_apaid); }
   const fowe=freedWageTotal(); if(fowe>0){ var _afpaid=Math.min(S.silver,fowe); if(S.silver>=fowe){S.silver-=fowe;} else { S.freedDebt=(S.freedDebt||0)+(fowe-S.silver); S.silver=0; } if(_awcc&&_afpaid>0&&typeof townCredit==='function')townCredit(_awcc,_afpaid); } }
 function guardCost(){ return Math.round(40*Math.pow(1.1, guardCount())*(S.hirePenalty||1)); } // +10% per guard already kept; more if you've stiffed guards
-function guardName(){ const f=city()?city().frac:0.5; const _cn0=(city()&&city().name)||''; const _rg=(typeof startRegion==='function')?startRegion(_cn0):''; const bank = (_rg==='norse')?['Ketil','Grim','Orm','Toke','Ulf','Asbjorn','Gunnar','Hakon'] : (_rg==='hansa')?['Bertolt','Konrad','Hennek','Lambert','Marquard','Godeke'] : (_rg==='rus')?['Dobrynya','Ratibor','Stavr','Yakun','Putyata','Vyshata'] : f<0.45?['Wei','Bao','Shan','Fei','Tieh','Jun'] : f<0.66?['Tarkan','Esen','Toghrul','Aybek','Qutuz','Bumin'] : f<0.85?['Roshan','Bahram','Sohrab','Dariush','Kaveh','Farrokh'] : ['Aspar','Tervas','Komes','Doukas','Bardanes','Petzeas']; const cn=(city()&&city().name)||''; const used=new Set(S.party.map(p=>p.name)); const fresh=bank.find(n=>!used.has(n)); if(fresh)return fresh; return (typeof uniqName==='function')?uniqName(pick(bank),cn,'m'):(pick(bank)+' the Younger'); }  /* Kris: the exhausted-bank fallback used to append 'the Younger' with no dedup -> two 'Komes the Younger'; now uniqName gives a unique of-place/epithet name */
+function guardName(){ const f=city()?city().frac:0.5; const _cn0=(S&&S.seaMode&&S.portName)||(city()&&city().name)||''; const _rg=(typeof startRegion==='function')?startRegion(_cn0):''; const _gr=GUARD_CITY_REGION[_cn0]; const bank = (_gr==='japan'||_gr==='korea'||_gr==='seasia')?GUARD_REGIONS[_gr] : (_rg==='norse')?['Ketil','Grim','Orm','Toke','Ulf','Asbjorn','Gunnar','Hakon'] : (_rg==='hansa')?['Bertolt','Konrad','Hennek','Lambert','Marquard','Godeke'] : (_rg==='rus')?['Dobrynya','Ratibor','Stavr','Yakun','Putyata','Vyshata'] : f<0.45?['Wei','Bao','Shan','Fei','Tieh','Jun'] : f<0.66?['Tarkan','Esen','Toghrul','Aybek','Qutuz','Bumin'] : f<0.85?['Roshan','Bahram','Sohrab','Dariush','Kaveh','Farrokh'] : ['Aspar','Tervas','Komes','Doukas','Bardanes','Petzeas']; const cn=(city()&&city().name)||''; const used=new Set(S.party.map(p=>p.name)); const fresh=bank.find(n=>!used.has(n)); if(fresh)return fresh; return (typeof uniqName==='function')?uniqName(pick(bank),cn,'m'):(pick(bank)+' the Younger'); }  /* Kris: the exhausted-bank fallback used to append 'the Younger' with no dedup -> two 'Komes the Younger'; now uniqName gives a unique of-place/epithet name */
 const KHABIR_TOWNS=new Set(['Kashgar','Yarkand','Khotan','Dunhuang','Hami','Basra','Yamama','Medina','Mecca']);
 function khabirAboard(){ return livingParty().some(function(p){ return p.khabir; }); }
 function khabirName(){ var f=city()?city().frac:0.5; var bank = f<0.45?['Bughra','Sungqur','Toghan','Qadir','Yollugh','Ozmish'] : f<0.62?['Bijan','Zal','Giv','Piran','Gudarz','Farhad'] : ['Mubarak','Salim','Daud','Nasr','Kalb','Harith']; var used=new Set(S.party.map(function(p){return (p.name||'').split(' ')[0];})); return bank.find(function(n){return !used.has(n);})||pick(bank); }
@@ -4372,11 +4407,12 @@ function hireKhabir(){ var cn=city().name; var cost=100; if(S.silver<cost){ log(
   log(nm+' the khabir signs on for '+cost+' silver and '+_kw+' a day \u2014 a man who steers by stars, dune-lie and the smell of water, as his fathers did.');
   render(); }
 function hireGuard(){ const cn=city().name; S.released=S.released||{}; const pool=S.released[cn]||[]; const cost0=guardCost();
-  if(pool.length){ const r=pool[0]; const diff=Math.max(0, cost0-(r.deposit||0)); if(S.silver>=diff){ S.silver-=diff; pool.shift(); S.party.push({name:r.name,role:'a hired guard',kind:'guard',wage:wageRate(),alive:true,hp:r.hp||100,deposit:cost0,region:(GUARD_CITY_REGION[cn]||''),skills:r.skills||{...pick(GUARD_SKILLS)}}); normalizeMember(S.party[S.party.length-1]); log("You take "+r.name+" back on — he has had your deposit already, so "+diff+" silver squares it."); } else log(r.name+" will sign on again for "+diff+" silver; you can't meet it just now."); render(); return; }
+  if(pool.length){ const r=pool[0]; const diff=Math.max(0, cost0-(r.deposit||0)); if(S.silver>=diff){ S.silver-=diff; pool.shift(); var _away=(r.relDay!=null)?Math.max(0,S.day-r.relDay):60, _hp0=r.hp||100, _hp1=Math.min(100,_hp0+3*_away);   /* an old-save release (no day recorded) is taken as long healed */   /* Kris 1024d: a paid-off guard mends on his own time, about 3 points a day */
+      S.party.push({name:r.name,role:'a hired guard',kind:'guard',wage:wageRate(),alive:true,hp:_hp1,deposit:cost0,region:(r.region?r.region:(guardRegionByName(r.name)||GUARD_CITY_REGION[cn]||'')),skills:r.skills||{...pick(GUARD_SKILLS)}}); normalizeMember(S.party[S.party.length-1]); log("You take "+r.name+" back on — he has had your deposit already, so "+diff+" silver squares it."+(_hp1>_hp0?(_hp1>=100?" He has mended while you waited, and is fit again.":" He has mended some while you waited."):"")); } else log(r.name+" will sign on again for "+diff+" silver; you can't meet it just now."); render(); return; }
   const cost=cost0; if(S.silver>=cost){ S.silver-=cost; var _gn=guardName(); for(var _gt=0;_gt<8 && S.fallen && S.fallen.indexOf(_gn)>=0;_gt++)_gn=guardName(); S.party.push({name:_gn,role:'a hired guard',kind:'guard',wage:wageRate(),alive:true,hp:100,deposit:cost,region:(GUARD_CITY_REGION[cn]||''),skills:{...pick(GUARD_SKILLS)}}); normalizeMember(S.party[S.party.length-1]); log("You take on "+_gn+" for "+cost+" silver up front — a guard with reassuring scars."); } else log("That guard wants "+cost+" silver up front; you can't meet it."); render(); }
 function releaseFreedman(idx){ const fm=S.party.filter(p=>p.alive&&p.freedman); const f=fm[idx]; if(!f)return; S.party=S.party.filter(p=>p!==f); log('You settle '+f.name.split(',')[0]+"'s wages and part as friends \u2014 a freed hand with a purse is a beginning, and you both know whose."); render(); }
 function backFromHireToWait(){ S._wyResume=false; S.screen=(S.seaMode?'port':'city'); if(typeof waitYearFlow==='function')waitYearFlow(); }
-function releaseGuard(idx){ const guards=S.party.filter(p=>p.alive&&p.kind==='guard'); const g=guards[idx]; if(!g)return; S.party=S.party.filter(p=>p!==g); if(typeof recoverGear==='function')recoverGear(g,true); const cn=city().name; /* FIX (Kris): released guards return the kit you gave them (hauberks are not severance) */ S.released=S.released||{}; (S.released[cn]=S.released[cn]||[]).push({name:g.name,deposit:g.deposit||0,hp:g.hp||100,skills:g.skills}); log("You pay off "+g.name+" and release him in "+cn+"; he'd sign on again cheaply if you pass back through."); render(); }
+function releaseGuard(idx){ const guards=S.party.filter(p=>p.alive&&p.kind==='guard'); const g=guards[idx]; if(!g)return; S.party=S.party.filter(p=>p!==g); if(typeof recoverGear==='function')recoverGear(g,true); const cn=city().name; /* FIX (Kris): released guards return the kit you gave them (hauberks are not severance) */ S.released=S.released||{}; (S.released[cn]=S.released[cn]||[]).push({name:g.name,deposit:g.deposit||0,hp:g.hp||100,skills:g.skills,region:g.region||'',relDay:S.day});   /* Kris 1024d: remember where he is from and when he was paid off */ log("You pay off "+g.name+" and release him in "+cn+"; he'd sign on again cheaply if you pass back through."); render(); }
 function openHire(){ if(!S||(S.screen!=='city'&&S.screen!=='port'))return; S.screen='hire'; render(); }
 function renderHire(m){
   const c=city(); const guards=S.party.filter(p=>p.alive&&p.kind==='guard'); const wr=wageRate();
@@ -4535,23 +4571,41 @@ function waitDays(n){ // pass days in a city; stop early if provisions run out s
     if(S.food < foodNeed()){ log("Provisions ran out after "+i+" day"+(i===1?'':'s')+" — the wait is cut short. See to food before you starve."); break; }
     if(typeof courierOfferCheck==='function' && courierOfferCheck()){ break; } /* Kris 8/13: a courier offer can interrupt any city stay - rest, wait-a-month, or job work alike, since all three route through here */
     consumeDay(false);
+    restHealDay();
   }
   return i;
 }
+/* REST RATES (Kris 1024d: a month's stay healed slower per day than a 3-day rest - make them the same). Per day of a town stay, on the 0-100
+   condition scale: the party 11.4; you 8.2 for the first three days (you are seeing to a hundred things) and 11.4 after; a skilled cook or
+   physician in the company adds 8% per point (skill 3: +24%). In your home town everyone, you included, mends 15 a day. consumeDay(false) already gave the idle-day 2.2 / 2.4 - this tops it up.
+   Working a town job is not rest. At sea a passenger gets ~10 a day (stepVoy, same cook bonus). */
+function restCookMult(){ var c=0; try{ c=skillMax('cook')||0; }catch(e){} return 1+0.08*Math.min(3,c); }
+function restHealDay(){ if(!S||S.dead||S.job)return; var nm=(S.seaMode?S.portName:(city()&&city().name))||'';
+  if(S._restAt===nm && S._restDay===S.day-1) S._restN=(S._restN||0)+1; else S._restN=1; S._restAt=nm; S._restDay=S.day;
+  var m=restCookMult(), home=(typeof atHome==='function'&&atHome()), you=(home?15:((S._restN<=3)?8.2:11.4))*m-2.2, pty=(home?15:11.4)*m-2.4;   /* at home everyone mends ~15 a day - your own beds, family cooking (Kris 1024d) */
+  S.hp=clamp(S.hp+Math.max(0,you),0,100); if(S.hp>99.2)S.hp=100;
+  livingParty().forEach(function(p){ var h=(p.hp==null?100:p.hp); if(h<100) p.hp=Math.min(100,h+Math.max(0,pty)); }); }
+function atHome(){ try{ if(!S)return false; var nm=(S.seaMode?S.portName:(city()&&city().name)); if(!nm)return false; var h=(S.startStory&&S.startStory.home)||S.startCity||(typeof homeName==='function'?homeName():null); return nm===h; }catch(e){ return false; } }   /* Kris 1024d: the home town - family and old friends, not a stranger's lodging */
+function homeLeaving(){ return atHome() && (S.day||1)<=4; }   /* the very start: you have not yet left */
 function restCity(){
   const d=waitDays(3);
-  if(!S.dead && d>0){S.hp=clamp(S.hp+6*d,0,100);S.water=waterMax();healMembers(9*d);healSouls(8*d);restock(city().name,d);S.cityDay[city().name]=S.day;log("Rest, repairs, and proper cooking."+(skillMax('trade')>0?" Your trader works the bazaar for better prices.":""));}
+  if(!S.dead && d>0){S.water=waterMax();healSouls(8*d);restock(city().name,d);S.cityDay[city().name]=S.day;   /* the healing itself is per day in waitDays/restHealDay now */
+    if(atHome()) log(pick(homeLeaving()?["Three more days under your own roof: the loads checked twice, the farewells said once too often, and your mother\u2019s cooking eaten while it lasts.","You put off the leaving three days more - a cousin\u2019s wedding, a debt to collect, and the plain fact that the road will still be there."]:["Three days at home among family and old friends - a long meal on the first night, the gossip of the whole street by the third.","Three days at home: the caravan rests in its own yard, and everyone you grew up with comes by to hear the stories and doubt them."])+(skillMax('trade')>0?" Your trader works the home market, where they know your family\u2019s credit.":""));
+    else log("Rest, repairs, and proper cooking."+(skillMax('trade')>0?" Your trader works the bazaar for better prices.":""));}
   if(!S.dead && d>=3 && rnd()<.5) maybeCityEvent();
   render();
 }
 function waitMonth(){
-  var _wh=city()&&city().name;
+  var _wh=(S.seaMode?S.portName:(city()&&city().name));
+  if(atHome()){ S.pendingEvent={h:homeLeaving()?'NOT JUST YET':'A MONTH AT HOME', t:homeLeaving()
+      ?'You decide the road can wait a little longer. A month more in '+eraName(_wh)+' - the household fed, the beasts kept fat in their own stalls, old debts settled and new ones promised, and every evening someone at the table asking whether you have truly made up your mind to go.'
+      :'A month at home in '+eraName(_wh)+' - your own bed, the family table, old friends at the door with the street\u2019s news, and the caravan standing down in a yard that knows it.', ch:[{l:'Let the month pass',f:function(){ waitRunMonth(); }}]}; render(); return; }
   S.pendingEvent={h:'A MONTH IN '+String(eraName(_wh)).toUpperCase(), t:'You take a room in '+eraName(_wh)+' and let the caravan stand down — a month of small repairs, fattening the beasts, mending harness, and the unhurried business of a town you become, for a little while, a part of.', ch:[{l:'Let the month pass',f:function(){ waitRunMonth(); }}]};
   render();
 }
 function waitRunMonth(){
   const d=waitDays(30);
-  if(!S.dead && d>0){S.hp=clamp(S.hp+Math.min(22,d),0,100);S.water=waterMax();healMembers(Math.min(45,2*d));healSouls(Math.min(40,2.6*d));restock(city().name,d);S.cityDay[city().name]=S.day; if(d>=30)S.priceLock={};}
+  if(!S.dead && d>0){S.water=waterMax();healSouls(Math.min(40,2.6*d));   /* per-day healing in waitDays/restHealDay - the same rate as a short rest (Kris 1024d) */restock(city().name,d);S.cityDay[city().name]=S.day; if(d>=30)S.priceLock={};}
   if(S.dead){render();return;}
   _armHappeningThen(waitOutcome(d, city()&&city().name), d>=6);
 }
@@ -4577,7 +4631,7 @@ function cityEvent(){
   if((S._stayDays||0)>=14 && cooled('bath',80)) add(2,evBaths);
   if(cooled('busk',90)) add(2,evBusker);
   if((S._stayDays||0)>=14 && cooled('goss',65)) add(3,evLocalGossip);
-  if((S._stayDays||0)>=14 && cooled('tongue',120)) add(3,evTongue);
+  if((S._stayDays||0)>=14 && cooled('tongue',120) && !atHome()) add(3,evTongue);   /* you know your own town's speech */
   if((S._stayDays||0)>=14 && cooled('phys',110)) add(3,evPhysician);
   if((S._stayDays||0)>=14 && cooled('wed',85)) add(3,evWeddingNextDoor);
   if((S._stayDays||0)>=14 && cooled('foul',75)) add(3,evFoulMonth);
@@ -5253,7 +5307,7 @@ const CITYFOLK_1271X={
 function rollRecruit(name){
   let pool = name==='Constantinople' ? CPL_ROSTER.filter(function(c){return !c.era||c.era===(S&&S.era);}) : name==="Chang'an" ? (CITYFOLK["Chang'an"]?[CITYFOLK["Chang'an"]]:[]).concat(CHANGAN_ROSTER) : name==='Samarkand' ? (CITYFOLK['Samarkand']?[CITYFOLK['Samarkand']]:[]).concat(SAMARKAND_ROSTER.filter(function(c){return !c.era||c.era===(S&&S.era);})) : ((CITYFOLK[name] && (!CITYFOLK[name].era || CITYFOLK[name].era===(S&&S.era)))?[CITYFOLK[name]]:[]);
   if(S&&S.era==='1271'&&CITYFOLK_1271X[name]){ var _cx=CITYFOLK_1271X[name]; pool=(S.party&&S.party.some(function(q){return q.alive&&q.name===_cx.name;}))?pool:[_cx]; } /* no second Rukn al-Din if a quickstart already carries him */
-  if(S.lucky && name===homeName() && !S.party.some(p=>p.nephew&&p.alive)) pool=pool.concat([NEPHEW_RECRUIT]);
+  if(S.lucky && (name===homeName()||name===S.startCity) && !S.party.some(p=>p.nephew&&p.alive)) pool=pool.concat([NEPHEW_RECRUIT]);   /* a humble start from any town: the boy is at home, wherever home is */
   if(S.dispersed && S.dispersed[name] && S.dispersed[name].length){ S.dispersed[name].forEach(function(m){ m._dispersed=true; }); pool = pool.concat(S.dispersed[name]); }
   pool = pool.filter(c=>c && c.name && !S.party.some(p=>p.name===c.name && p.alive));
   if(!pool.length) return null;
@@ -5540,7 +5594,7 @@ function _tavernEventCore(){
   if(c.name==='Samarkand' && !S.lji && typeof _krisGreetDone==='function' && !_krisGreetDone() && typeof kristoferGreet==='function'){ return kristoferGreet(scene); }  /* Kris: once per person, the meta greeting in the Qlodserai */
   let recruit;
   if(S.job){ recruit=rollRecruit(c.name); if(recruit&&((S.fallen&&S.fallen.indexOf(recruit.name)>=0)||S.party.some(function(p){return p.name===recruit.name;}))) recruit=null; }
-  else if(S.lucky && c.name===homeName() && !S.onceFlags.nephewMet && !S.party.some(p=>p.nephew&&p.alive)){
+  else if(S.lucky && (c.name===homeName()||c.name===S.startCity) && !S.onceFlags.nephewMet && !S.party.some(p=>p.nephew&&p.alive)){
     recruit=NEPHEW_RECRUIT; S.onceFlags.nephewMet=true;
   } else if(c.name==='Constantinople' && !S.onceFlags.halfdanMet && !S.party.some(p=>p.name==='Halfdan'&&p.alive)){
     S.onceFlags.halfdanMet=true; return halfdanTavern(scene);
@@ -6172,7 +6226,7 @@ function buildBoat(t,buyTimber){ if(BOATS[t]&&BOATS[t].buyOnly){ log('No yard of
   S.screen='build'; render(); startBuildTimer(); return; }
 const BUILD_STAGES=[[0.02,'The keel is laid on the blocks, straight and true.'],[0.18,'Stem and stern-post are raised and scarfed to the keel.'],[0.36,'The strakes rise, plank on lapped plank, clench-nailed.'],[0.55,'The ribs go in, shaped to the hull the planking found.'],[0.72,'Caulking: tarred wool driven into every seam.'],[0.86,'Thwarts, oar-ports and the mast-step \u2014 she is nearly a boat.']];
 let buildTimer=null;
-function startBuildTimer(){ if(buildTimer)clearInterval(buildTimer); buildTimer=setInterval(stepBuild,DAY_MS); }
+function startBuildTimer(){ if(buildTimer)clearInterval(buildTimer); buildTimer=(clearInterval(buildTimer),setInterval(stepBuild,DAY_MS)); }
 function stopBuildTimer(){ if(buildTimer){clearInterval(buildTimer);buildTimer=null;} }
 function buildFoodCrisis(){
   var c=city()||{}; var fam=(typeof foodShort==='function')?foodShort():null; var famP=(typeof foodShortPrice==='function')?foodShortPrice():null;
@@ -6283,7 +6337,8 @@ function seasonNote(){
 }
 function monthPassLog(d){
   if(d<30) return "You break off the wait after "+d+" day"+(d===1?'':'s')+".";
-  const here=city().name;
+  const here=(S.seaMode?S.portName:city().name);
+  if(atHome()) return pick(homeLeaving()?["A month at home, the leaving put off - and now the loads are packed again, the farewells said once more, and the household has stopped believing you will ever go.","The month at home passes in a blur of kin and old friends; the caravan is rested, and so, nearly, is your resolve."]:["A month at home in "+eraName(here)+": family suppers, old friends, the market where everyone knows your father\u2019s name.","A month in "+eraName(here)+", home - debts called in among people who will actually pay them, and stories told to people who knew you before the road.","A slow month at home; the children of the street follow the caravan-hands about, and the old men ask after places they will never see."]);
   const flav=pick([
     "A month in "+here+". You walk the bazaars until the traders know your face and your terms.",
     "A month in "+here+", spent mending harness, fattening the camels, and listening to everyone.",
@@ -6326,6 +6381,7 @@ function normalizeMember(p){
   if(p.__wpnFix2!==true){ if(p.gear&&p.gear.weapon==='spear'){ var _ow2=originWeapon(p); if(_ow2!=='spear') p.gear.weapon=_ow2; } p.__wpnFix2=true; }
   if(p.__euWpn!==true){ if(p.gear&&p.gear.weapon==='saif' && /frank|lombard|saxon|crusader|templar|hospitaller|knight|latin|venetian|genoese|pisan|ragusan|italian|norman/i.test(((p.role||'')+' '+(p.name||'')))) p.gear.weapon='sword'; p.__euWpn=true; } /* one-time: undo the saif that the old fall-through handed European fighters */
   if(p.gear && p.gear.weapon && typeof WEAPONS!=='undefined' && !WEAPONS[p.gear.weapon]) p.gear.weapon=originWeapon(p);
+  if(p.__gRegFix!==true){ if(p.kind==='guard' && !p.region){ var _gr0=guardRegionByName(p.name); if(_gr0){ p.region=_gr0; if(p.gear&&p.gear.weapon==='saif'&&_gr0!=='arab') p.gear.weapon=originWeapon(p); } } p.__gRegFix=true; }   /* Kris 1024d: guards rehired away from home lost their homeland - and drew scimitars */
   if(p.__jpFix!==true){ if(p.gear && /samurai|bushi|eastern isles/i.test(p.role||'') && (p.gear.weapon==='saif'||p.gear.weapon==='sword')) p.gear.weapon='chokuto'; if(p.gear && p.name==='Saburo' && p.fromCity==='Hakata'){ if(p.gear.armor==='leather')p.gear.armor='lamellar'; if(!p.gear.bow)p.gear.bow='yumi'; p.role='a masterless samurai with one eye always on the western sea'; } if(p.gear && p.gear.bow==='bow' && /eastern isles|bushi/i.test(p.role||'')) p.gear.bow='yumi'; p.__jpFix=true; }   /* Kris 1024b: Japanese arms - the tachi, the yumi, Saburo's lamellar (\u014d-yoroi is lamellar) */
   return p;
 }
@@ -6563,9 +6619,9 @@ function signAboard(){
  var d=Math.max(2, Math.round((pk.d||6)*(0.85+rnd()*0.30)));
  if(!S.seaMode){ S.seaMode=true; if(typeof addSeaMarkets==='function')addSeaMarkets(); }
  S.portName=to; S.seaCrew=5;
- S.voy={from:from,to:to,daysLeft:d,total:d,terr:pk.terr,crewJob:true,strait:!!(lk&&lk.strait),straitTip:(lk&&lk.straitTip)||null,storm:(lk&&lk.storm)||1,water:(lk&&lk.water)||pk.water||null,sight:(lk&&lk.sight)||pk.sight||null,sightDone:false,east:false,coast:!!(lk&&lk.coast),dNom:pk.d||d};
+ S.voy={from:from,to:to,q:0,nomDays:d,daysLeft:d,total:d,terr:pk.terr,crewJob:true,strait:!!(lk&&lk.strait),straitTip:(lk&&lk.straitTip)||null,storm:(lk&&lk.storm)||1,water:(lk&&lk.water)||pk.water||null,sight:(lk&&lk.sight)||pk.sight||null,sightDone:false,east:false,coast:!!(lk&&lk.coast),dNom:pk.d||d};
  log('You sign the ship’s book for '+eraName(to)+' — a common hand’s berth. The captain feeds you and pays you a penny a day, and asks no questions.');
- S.screen='voyage'; S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS);
+ S.screen='voyage'; S.voyaging=true; render(); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS));
 }
 
 function renderFate(m){
@@ -6611,8 +6667,8 @@ async function resumeGame(){
   S.pendingEvent=null; S.eventOutcome=null; S.journeying=false; clearJourney();
   if(S.screen==='travel' || !S.screen) S.screen='city';
   log('You take up the journey again where you laid it down. (The saved game is spent — there is only one road forward from here.)');
-  if(S.screen==='sailing' && S.sail){ S.sailing=true; render(); sailTimer=setInterval(stepSail, DAY_MS); return; }
-  if(S.screen==='voyage' && S.voy){ S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS); return; }
+  if(S.screen==='sailing' && S.sail){ S.sailing=true; render(); sailTimer=(clearInterval(sailTimer),setInterval(stepSail,DAY_MS)); return; }
+  if(S.screen==='voyage' && S.voy){ S.voyaging=true; render(); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); return; }
   render();
 }
 function resumeEmbedded(){ try{ var json=decodeURIComponent(escape(atob(RESUME_B64))); var o=JSON.parse(json); S=migrate(o.S); S.pendingEvent=null; S.eventOutcome=null; S.journeying=false; clearJourney(); if(S.screen==='travel'||!S.screen)S.screen='city'; if(S.seaMode&&S.portName&&S.screen==='city')S.screen='port'; /* coherence: port-standers get the port screen */ if(S.dash||S.voy||S.sail||S.castaway){ var _fx=(S.voy&&S.voy.from)||(S.dash&&S.dash.from)||(S.sail&&S.sail.from)||S.portName||(city()&&city().name); S.dash=null;S.voy=null;S.sail=null;S.castaway=null;S.voyaging=false;S.sailing=false; if(_fx){ var _ti=S.itin?S.itin.findIndex(function(x){return x.name===_fx;}):-1; if(_ti>=0){ S.idx=_ti; S.seaMode=false; S.portName=null; } else { S.seaMode=true; S.portName=_fx; S.screen='port'; } S.legKm=0; S.dir=1; log('The road blurs in the remembering; you take your bearings at '+_fx+' and begin the leg afresh.'); } } /* fossil mid-journey states in saves predate the fixes: dissolve them */ log("Conan the Barbarian takes up the road east from Suyab."); render(); }catch(e){ alert('Could not load the saved run: '+e.message); } }
@@ -7583,7 +7639,8 @@ function renderNotes(m){
   }
   /* Kris 1022: the columns ran [town ahead, here, town behind, sea neighbours] on land and split the sea neighbours around 'here' in port -
      so 'here' jumped sides with your direction of travel. Now they read like the road strip above: west on the left, east on the right. */
-  try{ const _lon=function(col){ var nm=col.here?c.name:(col.city&&col.city.name); var ll=(typeof CITY_LL!=='undefined'&&CITY_LL[nm])||(col.here?c.ll:(col.city&&col.city.ll)); return ll?ll[0]:null; };
+  const _ORDER_LON={Asyut:31.5};   /* Kris 1024d: Asyut lies a hair WEST of Cairo, but up the Nile is onward (east-going) from Cairo - order by the road, not the compass */
+  try{ const _lon=function(col){ var nm=col.here?c.name:(col.city&&col.city.name); if(_ORDER_LON[nm]!=null) return _ORDER_LON[nm]; var ll=(typeof CITY_LL!=='undefined'&&CITY_LL[nm])||(col.here?c.ll:(col.city&&col.city.ll)); return ll?ll[0]:null; };
     const _hl=_lon({here:true}); if(_hl!=null){ cols=cols.map(function(col,i){ var L=_lon(col); return {col:col,i:i,L:(L==null?_hl+0.0001*(i+1):L)}; }).sort(function(x,y){ return (x.L-y.L)||(x.i-y.i); }).map(function(x){ return x.col; }); } }catch(e){}
   const head='<tr><th>Good</th>'+cols.map(col=>col.here?'<th class="num">here</th>':'<th class="num">'+cityLabel(col.city)+' <span style="cursor:pointer;opacity:.5" title="hide this destination" onclick="notesHideCity(\''+String(col.city.name).replace(/'/g,"\\'")+'\')">\u00d7</span></th>').join('')+'<th>buy / sell</th></tr>';
   const _hidN=S.notesHide?Object.keys(S.notesHide).length:0;
@@ -7831,7 +7888,8 @@ function growNephew(){
 }
 
 /* ============ v0.9.19 — two-step setup flow ============ */
-let SETUP={name:'', origin:'west', style:'caravan', era:'1271', scenario:'', companyMode:'pick', nephewName:'', custom:[{t:'Mr',n:''},{t:'Mr',n:''},{t:'Mr',n:''}]};
+let SETUP={name:'', origin:'west', style:'caravan', era:'1271', scenario:'', companyMode:'custom',   /* Kris 1024c: naming your own three is the default; the roster is one click away (#LJI still opens on its sign-up sheet) */
+   nephewName:'', custom:[{t:'Mr',n:''},{t:'Mr',n:''},{t:'Mr',n:''}]};
 function ljiSetup(){ /* ?start=LJI - the hidden door: no title screen, straight to the company page (Kris) */
   SETUP.scenario='lji'; SETUP.era='1271'; SETUP.origin='west'; SETUP.style='caravan'; SETUP.companyMode='pick'; SETUP.nephewName=''; LJI_DRAW=null; LJI_PRECHECK=null;
   SETUP_PAGE=2; S=null; render(); return true; }
@@ -7926,7 +7984,7 @@ function renderSetupPage(m){
      '<span id="nameWarn" class="sub">'+(SETUP.name.trim()?'':'A name is required.')+'</span></div>'):'')+
    '<div class="panel"><p class="sub" style="margin:0 0 6px">Your sister’s boy comes whether you like it or not. His name: <input type="text" id="nname" value="'+escAttr(SETUP.nephewName||(SETUP.origin==='west'?'Bart':'Little Tang'))+'" placeholder="'+(SETUP.origin==='west'?'Bart':'Little Tang')+'" maxlength="18" style="width:120px" oninput="saveCustom()"></p>'+
    '<div style="margin-bottom:8px;opacity:.85"><b>'+(west?'Bart':'Little Tang')+'</b> <span class="sub">— '+(west?'your nephew Bartholomew, more enthusiasm than sense':NEPHEW.role)+' · '+skillBlurb(NEPHEW.skills,NEPHEW)+' <span class="gold">(always with you)</span></span></div>'+
-   '<div class="speedrow" style="margin-bottom:8px">'+modeBtn('pick','Choose from the roster')+modeBtn('custom','Name your own three')+'</div>'+
+   '<div class="speedrow" style="margin-bottom:8px">'+modeBtn('custom','Name your own three')+modeBtn('pick','Choose from the roster')+'</div>'+
    body+'</div>'+
    '<button class="seal" id="btnVenture" onclick="startVenture()" disabled>Set out with a caravan</button> '+
    (SETUP.scenario==='lji'?'':'<button onclick="setupBack()">← Back</button>');
@@ -7938,8 +7996,9 @@ function renderSetupPage(m){
 /* ============ v0.9.19 — animated sea voyage ============ */
 let sailTimer=null;
 function clearSail(){ if(sailTimer){clearInterval(sailTimer);sailTimer=null;} }
-function startSailTimer(){ clearSail(); S.sailing=true; render(); sailTimer=setInterval(stepSail, DAY_MS); }
+function startSailTimer(){ clearSail(); S.sailing=true; render(); sailTimer=(clearInterval(sailTimer),setInterval(stepSail,DAY_MS)); }
 function stepSail(){
+  if(S && S.sailing && !S.pendingEvent && !S.eventOutcome && S.screen==='sailing' && S.sail && !dayGateOK('sail')) return;
   if(!S || !S.sailing || S.pendingEvent || S.eventOutcome || S.screen!=='sailing' || !S.sail){ clearSail(); return; }
   if(S.voy&&S.voy.crewJob&&S.food<foodNeed()){ S.food=foodNeed(); } if(S.food < foodNeed()){ if(S._voyHungryUntil&&S.day<=S._voyHungryUntil){ if(typeof applyDeprivation==='function')applyDeprivation('hunger',6); } else { S.sailing=false; clearSail(); S.pendingEvent=evSeaFood(); render(); return; } }
   S.day++; if(typeof trainSS==='function')trainSS(); S.food=Math.max(0,S.food-foodNeed()); S.hp=clamp(S.hp+0.3,0,100); accrueGuardWages();
@@ -8010,7 +8069,9 @@ function evSeaWinds(){
     ? "The wind backs round and dies, then comes hard from the wrong quarter. There is no shore to run to out here \u2014 the captain curses in "+tongue+" as the ship is driven back on her course, ground she will have to make up again."
     : "The wind backs round and dies, then comes hard from the wrong quarter. The captain swears in "+tongue+" and puts in to a sheltered cove to wait it out.";
   return {h:'UNFAVOURABLE WINDS', t:t,
-   ch:[{l:(deep?'Beat back against it (about 3 days)':'Wait for a fair wind (about 3 days)'),f(){ const d=2+ri(3); passDays(d); if(S.dead)return; if(deep&&S.voy)voyDelay(Math.max(1,Math.round(d*0.6))); log(deep?("Days lost beating back against a foul wind on the open sea, before it turns fair."):("Three idle days at anchor, watching the rain run down the rigging. When the wind comes fair, you sail on.")); }}]};
+   ch:[{l:(deep?'Beat back against it (about 3 days)':'Wait for a fair wind (about 3 days)'),f(){ const d=2+ri(3);
+      if(S.voy){ voyDelay(deep?Math.max(1,Math.round(d*0.6)):d); if(!deep) S.voy.calm=true; }   /* Kris 1024d: the wait is SAILED - its days pass one a tick (2 s each, so ~6 s), the ship lies where she is, the sails hang slack and swing */
+      else { passDays(d); } if(S.dead)return; log(deep?("Days lost beating back against a foul wind on the open sea, before it turns fair."):("Three idle days at anchor, watching the rain run down the rigging. When the wind comes fair, you sail on.")); }}]};
 }
 function animalMeat(id){ var A=ANIMALS[id]; return A?Math.round(A.cap*1.3):40; }
 function meatDesc(id){ return ({donkey:'tough and stringy',mule:'tough, but there is plenty of it',horse:'dark and strong-flavoured',bactrian:'rich, and a great deal of it',dromedary:'rich, and a great deal of it',hybrid:'rich and plentiful'})[id]||'lean and hard-won'; }
@@ -8132,9 +8193,9 @@ setInterval(function(){ try{
   if(!active || S.day!==_wdDay){ _wdDay=S.day; _wdT=Date.now(); return; }
   if(Date.now()-_wdT < 3.3*DAY_MS) return;
   _wdT=Date.now();
-  if(S.voy&&S.screen==='voyage'){ S.voyaging=true; try{clearInterval(voyTimer);}catch(_){} voyTimer=setInterval(stepVoy,DAY_MS); }
-  else if(S.sail&&S.screen==='sailing'){ S.sailing=true; try{clearInterval(sailTimer);}catch(_){} sailTimer=setInterval(stepSail,DAY_MS); }
-  else if(S.journeying&&S.screen==='travel'){ try{clearInterval(journeyTimer);}catch(_){} journeyTimer=setInterval(stepDay,DAY_MS); }
+  if(S.voy&&S.screen==='voyage'){ S.voyaging=true; try{clearInterval(voyTimer);}catch(_){} voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); }
+  else if(S.sail&&S.screen==='sailing'){ S.sailing=true; try{clearInterval(sailTimer);}catch(_){} sailTimer=(clearInterval(sailTimer),setInterval(stepSail,DAY_MS)); }
+  else if(S.journeying&&S.screen==='travel'){ try{clearInterval(journeyTimer);}catch(_){} journeyTimer=(clearInterval(journeyTimer),setInterval(stepDay,DAY_MS)); }
 }catch(e){} }, 1600);
 
 if(typeof RADIAL1271!=='undefined'&&RADIAL1271['Acre'])RADIAL1271['Famagusta']=Object.assign({}, RADIAL1271['Acre']);  /* Famagusta is Acre's heir as the Latin emporium (Kris) */
@@ -8814,6 +8875,11 @@ function tughrilClosed(){ try{ var t=gameDate().t; return t>=Date.UTC(1279,6,1)&
 function gulfSeaLL(ll){ if(!ll)return false; var lon=ll[0],lat=ll[1]; return (lat>=24&&lon>=47&&lon<=56.7); } /* the sheltered Gulf interior (Hormuz-Kish-Basra): shamal winds, not the Mediterranean's mare-clausum winter closure - coastal dhow traffic ran the Gulf year-round (Kris 8/07) */
 function redSeaLL(ll){ if(!ll)return false; var lon=ll[0],lat=ll[1]; return (lat>=10&&lat<31&&lon>=32&&lon<44); } /* the Red Sea proper (Qulzum to Jeddah/Aydhab): reef-choked and day-sailed, but not the Indian Ocean monsoon system - the SW-monsoon 'junks' peril belongs south and east of Bab-el-Mandeb (Kris caught it firing on an August Jeddah-area sailing) */
 function eastAsiaSeaLL(ll){ if(!ll)return false; var lon=ll[0],lat=ll[1]; return (lat<36&&lat>=28&&lon>=105&&lon<=135); } /* the China-coast typhoon belt (Zaiton, Kinsay, Guangzhou, Hakata) - the only waters where 'junks' is the right word; everywhere else in the monsoon basin the ships are dhows (Kris caught 'junks' firing on a Socotra-Dhofar sailing) */
+function _typhoonLine(){ var t=0; try{ var g=gameDate(); t=g.y*12+g.m; }catch(e){ t=1271*12+1; }   /* Kris 1024d: the line named the Khan's drowned fleet in 1271 - the Bun'ei fleet was wrecked in Nov 1274, the Koan fleet by the August typhoon of 1281 */
+  if(t<1274*12+11) return 'the typhoons that come out of the south-east and can swallow a whole fleet in a night';
+  if(t<1281*12+8) return 'the typhoons that swallow fleets whole; and even out of season this sea is no friend \u2014 it was a November gale off Hakata that broke the Khan\u2019s fleet against Japan';
+  return 'the divine wind, the Japanese call it now, that drowned the Khan\u2019s second fleet off Japan in a single August night';
+}
 function monsoonSeaLL(ll){ if(!ll)return false; var lon=ll[0],lat=ll[1]; if(lat<36&&lat>=28&&lon>=105&&lon<=135)return true; /* East Asia typhoon belt (Kinsay-Hakata: the kamikaze waters) */ if(lat>=28||lon<32||lon>135)return false; if(gulfSeaLL(ll))return false; if(redSeaLL(ll))return false; return true; }
 /* ============ THE TRADER'S TABLE: sea-lore that actually matches the mechanics above (Kris 8/07) ============ */
 function curSeaName(){ if(!S)return null; return S.seaMode?S.portName:((typeof city==='function'&&city())?city().name:null); }
@@ -8827,7 +8893,7 @@ function seaTalkText(){
     return "\u201cNo monsoon troubles this sea \u2014 what closes it is plain winter. December into February the gales come and the reefs get harder to see under a low sky, and a wise captain lays up till spring. Sail it the rest of the year and you'll find fair company on every lane. It's only past Aden, out in the open ocean, that the real monsoon starts deciding things.\u201d";
   }
   if(ll && typeof eastAsiaSeaLL==='function' && eastAsiaSeaLL(ll)){
-    return "\u201cThese eastern seas keep their own <b>monsoon</b>. The summer wind \u2014 June to September \u2014 comes up warm and wet from the south and sets you north, toward the coast of Cathay, Korea and the isles of Japan; but it is the season of the great storms \u2014 the divine wind that drowned a Khan\u2019s whole fleet off Japan \u2014 and no careful master courts it. The winter wind \u2014 November to March \u2014 turns cold and dry off the northern steppe and bears you south again, down toward Champa and the spice-isles. A junk that sails against either sails nowhere; wait for the wind you want.\u201d";
+    return "\u201cThese eastern seas keep their own <b>monsoon</b>. The summer wind \u2014 June to September \u2014 comes up warm and wet from the south and sets you north, toward the coast of Cathay, Korea and the isles of Japan; but it is the season of the great storms \u2014 "+_typhoonLine()+" \u2014 and no careful master courts it. The winter wind \u2014 November to March \u2014 turns cold and dry off the northern steppe and bears you south again, down toward Champa and the spice-isles. A junk that sails against either sails nowhere; wait for the wind you want.\u201d";
   }
   if(ll && typeof monsoonSeaLL==='function' && monsoonSeaLL(ll)){
     return "\u201cThe deep crossings answer to the <b>monsoon</b>, and the two winds are not an even trade. The summer wind \u2014 June to September \u2014 drives you toward the sunrise: India, the Indies, and the coast of Cathay all lie down that road \u2014 but it is the wilder wind by far, gales out of a clear morning, and it is the one that drowns ships that push their luck. The winter wind \u2014 November to March \u2014 reverses it and carries you home again, back toward Arabia and the Red Sea, gentler the whole way. A ship that sails against either sails nowhere, but the eastbound crossing is the one that costs you. Sail through the summer wind if you must; a wise man waits for it to turn.\u201d";
@@ -8929,9 +8995,9 @@ function iceRoadCheck(fromName,toName,lk){ try{
   var drag=1; (S.boats||[]).forEach(function(b){ var t=String((b&&b.t)||b||''); if(/faering/i.test(t)){} else if(/karv/i.test(t)){ drag=Math.min(drag,0.85); } else { drag=Math.min(drag,0.62); } });
   var d=Math.max(1,Math.round(li/(115*drag))); /* sledge pace ~115 li/day both directions - the current is asleep under the ice */
   S.seaCrew=0;
-  S.voy={from:fromName, to:toName, daysLeft:d, total:d, terr:'land', iceRoad:true, storm:1, water:'down the white road \u2014 the frozen river flat as a threshing-floor, runners singing, ski-scouts ranging ahead', east:false, li:li, coast:false, rapids:false, up:false, dNom:d, need:0};
+  S.voy={from:fromName, to:toName, q:0, nomDays:d, daysLeft:d, total:d, terr:'land', iceRoad:true, storm:1, water:'down the white road \u2014 the frozen river flat as a threshing-floor, runners singing, ski-scouts ranging ahead', east:false, li:li, coast:false, rapids:false, up:false, dNom:d, need:0};
   log('You take the caravan out onto the ice \u2014 the river that fought every oar all summer now carries you '+(S.boats&&S.boats.length?'and your hulls ':'')+'without a murmur. '+fmtDist(Math.round(li))+' of white road.');
-  S.screen='voyage'; S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS);
+  S.screen='voyage'; S.voyaging=true; render(); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS));
   return true;
  }catch(e){ return false; } }
 function voyFare(from,to){ const lk=findLink(from,to); if(!lk)return {per:0,cargo:0,total:0,days:0}; if(isAmberWaterLeg(lk)&&fleet().length)return {per:0,cargo:0,total:0,days:0}; /* your own hulls, your own sweat */
@@ -8987,7 +9053,39 @@ function voyBeatDays(fromName,toName,lk,d){ try{
   var frac=beat/N, extra=Math.round(d*frac*0.5);               /* beating makes good about two-thirds of the way: half again on the windward stretches */
   if(extra>0){ S.voy.beat=extra; S.voy.beatFrac=frac; }
   return extra; }catch(e){ return 0; } }
-function voyDelay(n){ try{ if(!S||!S.voy)return; n=+n||0; if(n<=0)return; S.voy.daysLeft+=n; S.voy.total=(S.voy.total||0)+n; S.voy.delayed=(S.voy.delayed||0)+n; }catch(e){} }   /* Kris 1024: a delay lengthens the voyage, it does not move the ship backwards - the fraction sailed stands while she waits */
+/* ==================== POSITION-DRIVEN VOYAGES (Kris, v4.4.1) ====================
+   Where the ship IS - her fraction q along the lane from v.from toward v.to - is the truth of a voyage. Each day she
+   makes good what the wind at her position allows; she arrives when she reaches the far end; the days-left figure is
+   an estimate for the ledger, never the clock that moves her. Delays are days on which she makes no way. */
+function voyQ(v){ v=v||(S&&S.voy); if(!v)return 0;
+  if(v.q==null){ v.q=(v.total&&v.daysLeft!=null)?Math.max(0,Math.min(1,voyQ(v))):0; }   /* a saved voyage from before: pick up where the old reckoning had her */
+  return Math.max(0,Math.min(1,v.q)); }
+function voyRig(v){ try{ var f=(v.from||'')+(v.to||''); if(S&&S.era==='762'&&/Birka|Uppsala|Roskilde|Havn|Hedeby|Truso|Grobina|Aldeigjuborg|Vadet|Tingvalla|Lodose|Reval|Turku|Neva/i.test(f))return 'square'; var k=(typeof voySeaVessel==='function')?voySeaVessel():''; return (k==='junk')?'lug':'lateen'; }catch(e){ return 'lateen'; } }
+/* what the wind at her position lets her make good today, as a multiple of the lane's nominal daily run:
+   beating to windward ~0.67 (she sails half again the distance), close-hauled 0.85, reaching 1.0, broad 1.1, running 1.0.
+   Only sea legs feel it; rivers, canals, land legs and lanes with their own wind rule (the monsoon-hard beats) run at 1. */
+function voyWindFactor(v){ try{
+  if(!v||['land','canal','river'].indexOf(v.terr)>=0) return 1;
+  try{ var lk=(typeof findLink==='function')?findLink(v.from,v.to):null; if(lk&&lk.windEasy) return 1; }catch(e){}
+  if(typeof windFromAt!=='function'||typeof specForMp!=='function'||typeof voyMapEntry!=='function') return 1;
+  var mp=voyMapEntry(); if(!mp||!mp.pts) return 1; var sp=specForMp(mp); if(!sp||!sp.geo) return 1;
+  var C=voyMapPts(mp), q=voyQ(v), rev=(mp.from!==v.from), qa=rev?1-q:q, qb=Math.max(0,Math.min(1,qa+(rev?-0.02:0.02)));
+  var a=voyPosAt(C,qa), b=voyPosAt(C,qb), g=sp.geo;
+  var lon=g[0]+(a[0]/sp.vbw)*(g[1]-g[0]), lat=g[3]-(a[1]/sp.vbh)*(g[3]-g[2]);
+  var dx=b[0]-a[0], dy=-(b[1]-a[1]); if(Math.abs(dx)+Math.abs(dy)<1e-6) return 1;
+  var brg=Math.atan2(dx,dy)*180/Math.PI, mo=6; try{ mo=gameDate().m; }catch(e){}
+  var rel=Math.abs(((windFromAt(lon,lat,mo)-brg)%360+540)%360-180);      /* 0 = dead ahead, 180 = dead astern */
+  var amin=((typeof RIG_MIN!=='undefined'&&RIG_MIN[voyRig(v)])||1.05)*180/Math.PI;
+  if(rel<amin) return 0.67; if(rel<amin+20) return 0.85; if(rel<110) return 1.0; if(rel<155) return 1.1; return 1.0; }catch(e){ return 1; } }
+function voyRateToday(v){ var nom=Math.max(0.5,v.nomDays||v.total||v.dNom||1); var r=1;   /* the BOOKED days: hard poling upstream (78 li/day), the Nile's north wind up (175), swift down (210), the Red Sea beat x3, the monsoon shoulder x1.4 - not the raw lk.d, which is the same both ways (Kris 1024) */
+  if(v.phases){ var q=voyQ(v); for(var i=0;i<v.phases.length;i++){ if(q<=v.phases[i].until){ r=v.phases[i].rate; break; } } }
+  return (1/nom)*r*voyWindFactor(v); }
+function voyDayStep(){ var v=S&&S.voy; if(!v)return; voyQ(v);
+  if(v.hold>0){ v.hold=Math.max(0,v.hold-1); if(v.hold<=0) v.calm=false; }                                  /* a day with no way made: foul wind, a portage, lying lost */
+  else { v.q=Math.min(1,v.q+voyRateToday(v)); }
+  v.daysLeft=(v.q>=1)?0:Math.max(1,Math.ceil((1-v.q)/Math.max(1e-6,voyRateToday(v)))+(v.hold||0));   /* the ledger's estimate from here */
+}
+function voyDelay(n){ try{ if(!S||!S.voy)return; n=+n||0; if(n<=0)return; S.voy.hold=(S.voy.hold||0)+n; S.voy.delayed=(S.voy.delayed||0)+n; S.voy.daysLeft=(S.voy.daysLeft||0)+Math.ceil(n); }catch(e){} }   /* days on which she makes no way */
 function beginVoyage(fromName, toName){ S._fodOK=S._provOK=S._pwOK=S._h2oOK=false; /* fresh leg: re-evaluate provisioning gates. setOut resets these at 2372; the chart/voyage set-out path must too, or a stale "Set out as you are" _fodOK silently skips the fodder gate - Kris’s Nishapur horses. (Safe on boat/hire re-entry: those gates run before hajjGo, so nothing has set these yet.) */
   const lk=findLink(fromName,toName); if(!lk){ log("There is no passage that way."); render(); return; }
   if(!S._wsailOK && lk.terr!=='land' && lk.terr!=='canal' && lk.terr!=='river' && (typeof seasonMonth==='function')){
@@ -9102,9 +9200,9 @@ const FERRY_LANES={'Aydhab|Jeddah':1}; /* Oxus 8/04 (Kris): legs where the WHOLE
   S.portName=toName; // city() resolves to the destination during the leg
   const _rev=(lk.b===fromName); const _water=(_rev&&lk.waterB)?lk.waterB:lk.water;
   S.voy={from:fromName, to:toName, daysLeft:d, total:d, terr:lk.terr, via:lk.via||null, hajj:!!(lk.halts||lk.hajj), thirst:lk.thirst, harsh:!!lk.harsh, halt:lk.halt||null, haltAt:lk.haltAt, strait:!!lk.strait, storm:lk.storm||1, water:_water, sight:lk.sight||null, sightDone:false, phases:lk.phases||null, sight2:lk.sight2||null, sight2Done:false, crossFounder:lk.founder||0, east:(SEA_ORDER[fromName]>SEA_ORDER[toName]), li:legGCLi(fromName,toName), coast:!!lk.coast, rapids:!!lk.rapids, up:!!(lk.flow&&toName!==lk.flow), dNom:lk.d||d, unfit:!!S._forceSea, need:(typeof legWaters==='function'?legWaters(lk):3)};
-  try{ var _bd=voyBeatDays(fromName,toName,lk,d); if(_bd>0){ S.voy.daysLeft+=_bd; S.voy.total+=_bd;
+  S.voy.q=0; S.voy.nomDays=d; try{ var _bd=voyBeatDays(fromName,toName,lk,d); if(_bd>0){ S.voy.daysLeft+=_bd; S.voy.total+=_bd;   /* the master's forecast for the ledger; the wind itself decides the days (v4.4.1) */
     log('The wind sits foul for much of this passage \u2014 the master reckons on '+_bd+' more day'+(_bd>1?'s':'')+' of beating to windward before '+eraName(toName)+'.'); } }catch(e){}   /* Kris 1024: tacking takes time, and the clock says so from the start */
-  S.screen='voyage'; S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS);
+  S.screen='voyage'; S.voyaging=true; render(); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS));
 }
 /* ==================== 1271 ERA EVENTS (Talas, v2.09.28) ==================== */
 /* Kaidu's wars: in flagged years (seeded per run) the Ili roads close for the Apr-Sep campaign season. */
@@ -9381,14 +9479,14 @@ if(!S._pwOK){ var _need=Math.round(legEtaDays(lk,from,to)*foodNeed()); var _have
   startJourney(); }
 function noCaptainsEvent(a,b){ return {h:'THE MONSOON IS AGAINST YOU', t:"You go down to the wharves to take ship for "+b+", and find every captain ashore, their vessels idle. The wind sits dead against that course: nothing will sail for "+b+" until "+monsoonWhen(a,b)+". The sea keeps its own calendar, and there is no arguing with it. You must wait for the wind to turn — or take another road.", ch:[{l:'Wait for the wind',f(){}}]}; }
 
-function voyDayStep(){
-  if(S.voy && S.voy.phases){ var _pp=(S.voy.total-S.voy.daysLeft)/S.voy.total, _r=1, _ph=S.voy.phases; for(var _i=0;_i<_ph.length;_i++){ if(_pp<=_ph[_i].until){ _r=_ph[_i].rate; break; } } S.voy.daysLeft=Math.round((S.voy.daysLeft-_r)*1000)/1000; }
-  else if(S.voy){ S.voy.daysLeft-=1; }
-}
 function stepVoy(){
   if(!S || !S.voyaging || S.pendingEvent || S.eventOutcome || S.screen!=='voyage' || !S.voy){ clearVoy(); return; }
+  if(!dayGateOK('voy')) return;
   if(!S.voy.crewJob && S.food < foodNeed() && (!S.voy.grace||S.day>=S.voy.grace)){ if(S._voyHungryUntil&&S.day<=S._voyHungryUntil){ if(typeof applyDeprivation==='function')applyDeprivation('hunger',6); } else { S.voyaging=false; clearVoy(); S.pendingEvent=(['land','canal','river'].indexOf(S.voy.terr)>=0?evLandFood():evSeaFood()); render(); return; } }
-  S._vhb=Date.now(); S.day++; if(typeof trainSS==='function'&&S.voy&&S.voy.terr!=='land')trainSS(); var _short=(!S.voy.crewJob && S.food < foodNeed()); if(!S.voy.crewJob){ S.food=Math.max(0,S.food-foodNeed()); } else { S.silver+=1; if(!S.job)S.job={place:S.voy.from,title:'a common sailor',days:0}; S.job.days=(S.job.days||0)+1; if(S.job.days%3===0){ S.silver=Math.max(0,S.silver-1); } /* Kris: the captain's table is no longer free - 1s every third day */ } accrueGuardWages(); if(_short){ if(typeof starve==='function')starve(3,3); if(S.hp<=0){ S.voyaging=false; clearVoy(); if(typeof die==='function')die(); render(); return; } } else { S.hp=clamp(S.hp+0.25,0,100); var _sr=1.5,_lp=livingParty(); for(var _i=0;_i<_lp.length;_i++){ var _p=_lp[_i],_h=(_p.hp==null?100:_p.hp); if(_h<100)_p.hp=Math.min(100,_h+_sr); } if(typeof souls==='function'){ souls().forEach(function(z){ if(typeof soulHp==='function')soulHp(z); if(z.hp!=null&&z.hp<100)z.hp=Math.min(100,z.hp+1.0); }); } } voyDayStep(); if(S.voy&&(S.voy.terr==='river'||S.voy.terr==='canal'||S.voy.terr==='med')&&typeof riverMoorTick==='function')  /* med: sea legs may declare a halt (Matracha on the Kerch strait) - no-op for legs without one */{ var _rp=(S.voy.total-S.voy.daysLeft)/(S.voy.total||1); if(riverMoorTick(S.voy,_rp)) return; }
+  S._vhb=Date.now(); S.day++; if(typeof trainSS==='function'&&S.voy&&S.voy.terr!=='land')trainSS(); var _short=(!S.voy.crewJob && S.food < foodNeed()); if(!S.voy.crewJob){ S.food=Math.max(0,S.food-foodNeed()); } else { S.silver+=1; if(!S.job)S.job={place:S.voy.from,title:'a common sailor',days:0}; S.job.days=(S.job.days||0)+1; if(S.job.days%3===0){ S.silver=Math.max(0,S.silver-1); } /* Kris: the captain's table is no longer free - 1s every third day */ } accrueGuardWages(); if(_short){ if(typeof starve==='function')starve(3,3); if(S.hp<=0){ S.voyaging=false; clearVoy(); if(typeof die==='function')die(); render(); return; } } else { var _land=(S.voy.terr==='land'), _pax=!S.voy.crewJob&&!_land, _shortH=_pax&&(S.seaCrew!=null&&S.seaCrew<5), _sick=_pax&&S.seasick&&((S.voy.total||0)-(S.voy.daysLeft||0))<=2;
+      /* Kris 1024d: a paying passenger rests - the sailors do the work. ~2.5 a day aboard (river barges too), less when pirates have left the ship short-handed and you are hauling lines, nothing in the first green days of seasickness; a crew job or a caravan 'voyage' over land is work, as before. */
+      var _cm=(typeof restCookMult==='function')?restCookMult():1;   /* Kris 1024d: a passage heals nearly as well as a town stay (~10 a day vs 11.4), the cook/physician helping */
+      S.hp=clamp(S.hp+(_pax?(_sick?0:(_shortH?3.5:10*_cm)):0.25),0,100); if(S.hp>99.2)S.hp=100; var _sr=_pax?(_shortH?3.5:10*_cm):1.5,_lp=livingParty(); for(var _i=0;_i<_lp.length;_i++){ var _p=_lp[_i],_h=(_p.hp==null?100:_p.hp); if(_h<100)_p.hp=Math.min(100,_h+_sr); } if(typeof souls==='function'){ souls().forEach(function(z){ if(typeof soulHp==='function')soulHp(z); if(z.hp!=null&&z.hp<100)z.hp=Math.min(100,z.hp+1.0); }); } } voyDayStep(); if(S.voy&&(S.voy.terr==='river'||S.voy.terr==='canal'||S.voy.terr==='med')&&typeof riverMoorTick==='function')  /* med: sea legs may declare a halt (Matracha on the Kerch strait) - no-op for legs without one */{ var _rp=voyQ(S.voy); if(riverMoorTick(S.voy,_rp)) return; }
   // dated events on the Basra–Baghdad road, during the Alid revolt
   if(S.voy.terr==='land' && (S.voy.from==='Basra'||S.voy.to==='Basra') && (S.voy.from==='Baghdad'||S.voy.to==='Baghdad')){
     if(!S.onceFlags.sawBakhamra && gameDate().y===763 && gameDate().m===1 && gameDate().d>=21){ S.onceFlags.sawBakhamra=true; S.voyaging=false; clearVoy(); S.pendingEvent=witnessBakhamra(); render(); return; }
@@ -9398,7 +9496,7 @@ function stepVoy(){
   if(S.voy.terr==='land' && S.voy.hajj){ if(hajjDay()) return; }
   if(S.voy && S.voy.to==='Acre' && !S.voy._acreFall && (typeof gameDate==='function') && gameDate().t>=Date.UTC(1291,4,18)){ S.voy._acreFall=true; S.voyaging=false; clearVoy(); S.pendingEvent=evAcreFall('sea'); render(); return; }
   if(S.voy.daysLeft<=0){ if(!S.voy._landed){ S.voy._landed=true; updateVoy(); return; } S.voyaging=false; clearVoy(); voyArrive(); render(); return; } /* one tick with the dot AT the gates (Kris) - safe now the arrival exception is dead */
-  const p=(S.voy.total-S.voy.daysLeft)/S.voy.total;
+  const p=voyQ(S.voy);
   /* COASTING legs camp ashore nightly (Kris): villages and war-bands find your fires */
   if(S.voy.coast && !S.pendingEvent){
     /* villages are fixed points on the bank: their share scales with km/day (nominal days /
@@ -9432,12 +9530,12 @@ function stepVoy(){
     if(S.voy.sight2 && !S.voy.sight2Done && p>=0.55){ S.voy.sight2Done=true; log(S.voy.sight2); }
   if(S.voy.terr==='deep' || S.voy.terr==='coast' || S.voy.terr==='med'){
     if(!S.voy.sickRolled && p>=0.3){ S.voy.sickRolled=true; if(rnd()<0.4){ S.seasick=true; log("You are wretchedly seasick — green at the rail and certain you will die. It passes; the sea does this to nearly everyone once."); } }
-    try{ if(S.voy&&typeof siegeAt==='function'&&siegeAt(S.voy.to)&&!S.voy._siegeWarned){ var _vp=(S.voy.total-S.voy.daysLeft)/(S.voy.total||1); if(_vp>=0.55){ S.voy._siegeWarned=true; S.voyaging=false; clearVoy(); S.pendingEvent={h:'THE PORT IS CLOSED \u2014 SIEGE', t:'A fishing boat running out of '+S.voy.to+' gives the master the news across the water: the port is under siege \u2014 war-fleets in the roads, fire along the shore. He will not run a blockade for any freight.', ch:[{l:'Come about \u2014 back to '+S.voy.from,f:function(){ var v=S.voy; var t2=v.to; v.to=v.from; v.from=t2; v.daysLeft=Math.max(1,v.total-v.daysLeft); v._siegeWarned=false; S.screen='voyage'; S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS); }}]}; render(); return; } } }catch(e){}
+    try{ if(S.voy&&typeof siegeAt==='function'&&siegeAt(S.voy.to)&&!S.voy._siegeWarned){ var _vp=voyQ(S.voy); if(_vp>=0.55){ S.voy._siegeWarned=true; S.voyaging=false; clearVoy(); S.pendingEvent={h:'THE PORT IS CLOSED \u2014 SIEGE', t:'A fishing boat running out of '+S.voy.to+' gives the master the news across the water: the port is under siege \u2014 war-fleets in the roads, fire along the shore. He will not run a blockade for any freight.', ch:[{l:'Come about \u2014 back to '+S.voy.from,f:function(){ var v=S.voy; var t2=v.to; v.to=v.from; v.from=t2; v.q=1-voyQ(v); v.daysLeft=Math.max(1,Math.ceil((1-v.q)/Math.max(1e-6,voyRateToday(v)))); v._siegeWarned=false; S.screen='voyage'; S.voyaging=true; render(); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); }}]}; render(); return; } } }catch(e){}
     voyLostDay();
     const wreckP=(S.voy.terr==='deep'?0.006:0.009)*hullMult()*crewWreckMult()*winterStormMult(S.voy.terr)*(S.voy.storm||1)*((typeof isAmberWaterLeg==='function'&&S.voy&&isAmberPlace(S.voy.from))?boatQualityMult():1);
     if(rnd()<wreckP){ S.voyaging=false; clearVoy(); S.pendingEvent=((typeof fleet==='function'&&fleet().length)?voyStormFleet():voyStorm()); render(); return; }
     if(rnd()<0.05){ S.voyaging=false; clearVoy(); S.pendingEvent=evSeaWinds(); render(); return; }
-    let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); var _inStrait=false; if(S.voy.strait){ _inStrait=true; if(S.voy.straitTip){ var _vf=(S.voy.total-S.voy.daysLeft)/(S.voy.total||1),_T=0.35; _inStrait=(S.voy.from===S.voy.straitTip)?(_vf<=_T):(S.voy.to===S.voy.straitTip)?(_vf>=1-_T):true; } if(_inStrait)pp*=2.8; } /* Fadak: strait x2.8 whole-leg for a strait edge; for a straitTip edge (Tumasik-Kauthara) only near the tip city, so deep water past the Dragon's Teeth calms */ pp*=wealthLure(); pp*=seaHeatMult(); if(typeof isCaspianVoy==='function'&&isCaspianVoy()&&((S&&S.era)==='1271'))pp*=1.6;
+    let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); var _inStrait=false; if(S.voy.strait){ _inStrait=true; if(S.voy.straitTip){ var _vf=voyQ(S.voy),_T=0.35; _inStrait=(S.voy.from===S.voy.straitTip)?(_vf<=_T):(S.voy.to===S.voy.straitTip)?(_vf>=1-_T):true; } if(_inStrait)pp*=2.8; } /* Fadak: strait x2.8 whole-leg for a strait edge; for a straitTip edge (Tumasik-Kauthara) only near the tip city, so deep water past the Dragon's Teeth calms */ pp*=wealthLure(); pp*=seaHeatMult(); if(typeof isCaspianVoy==='function'&&isCaspianVoy()&&((S&&S.era)==='1271'))pp*=1.6;
     var _mala=/Kollam|Mantai/.test((S.voy.from||'')+(S.voy.to||'')); if(_mala)pp*=1.7; /* Kris via Polo: the Malabar shore is rife with pirate fleets - though Polo himself passed unscathed, so rife is not certain */
     if(_mala && !S.voy._malaSeen && rnd()<0.10){ S.voy._malaSeen=true; log('A line of low hulls stands off the shore \u2014 the pirate fleets of the Malabar coast, anchored in their lane like toll-keepers who have not yet named the toll. Your master alters course a point seaward, and today, at least, they let you pass.'); }
     if(rnd()<pp){ S._straitPir=_inStrait; S.voyaging=false; clearVoy(); S.pendingEvent=(isCaspianVoy()?evCaspianRus():evPirates()); render(); return; }
@@ -9488,7 +9586,7 @@ function fleetStormResolve(){
   S.party=S.party.filter(function(pp){return pp.alive;});
   if((S.goods.slaves||0)>0){ var n=S.goods.slaves; var d=Math.round(n*frac*0.5); if(d>0){ S.goods.slaves=Math.max(0,n-d); if(S.souls)S.souls=S.souls.slice(0,S.goods.slaves); } }
   if(!S.boats.length){
-    var v=S.voy||{}; var pp2=(v.total?(v.total-v.daysLeft)/v.total:0.5);
+    var v=S.voy||{}; var pp2=voyQ(v);
     if(typeof castawayPossible==='function' && castawayPossible(v.terr||'coast',!!v.strait) && typeof castawayWash==='function'){ castawayWash({from:v.from,to:v.to,terr:v.terr||'coast',strait:!!v.strait,p:pp2,dest:(pp2>0.5?v.to:v.from),legDays:v.total||8}); return; }
     S.cause='shipwreck'; for(var _k=0;_k<(S.party||[]).length;_k++)S.party[_k].alive=false; S.hp=0; if(typeof die==='function')die(); log("The last hull goes under in the dark — no boat, no shore, no morning. The sea takes the cargo and every soul with it."); return;
   }
@@ -9502,7 +9600,7 @@ function voyStorm(){
   return {h:'STORM AT SEA', t:"The sky goes green-black and the swell stands up in walls. For a night and a day the ship is a toy on the water, the crew lashed to their work, the cargo groaning in the hold.",
    ch:[{l:'Ride it out, and pray',f(){
      S.hp=Math.max(1,clamp(S.hp-14,0,100));
-     const v=S.voy||{}; const terr=v.terr||'coast'; const strait=!!v.strait; const pp=(v.total?(v.total-v.daysLeft)/v.total:0.5);
+     const v=S.voy||{}; const terr=v.terr||'coast'; const strait=!!v.strait; const pp=voyQ(v);
      if(castawayPossible(terr,strait) && rnd()<0.30){ castawayWash({from:v.from,to:v.to,terr:terr,strait:strait,p:pp,dest:(pp>0.5?v.to:v.from),legDays:v.total||8}); return; }
      const deep=true;
      const founder=0.13;
@@ -9513,7 +9611,7 @@ function voyStorm(){
      if(S.hp<=0){ S.cause='shipwreck'; die(); log(s+". You never see the far shore."); return; }
      if(S.voy) voyDelay(2+ri(3));
      var _openSea=(S.voy&&(S.voy.terr==='deep'||/Kollam|Mantai|Socotra|Zanzibar|Dhofar|Aden|Basra/.test((S.voy.from||'')+(S.voy.to||''))));
-     if(S.voy && _openSea && rnd()<((S.voy.terr==='deep'?0.45:0.3)*(bestSS()>=14?0.7:1)*(sailorsAboard()<5?1.25:1)) && !S.voy.lost){ S.voy.lost=true; S.voy.lostQ=(S.voy.total?(S.voy.total-S.voy.daysLeft)/S.voy.total:0.5); log(s+". When the sky finally clears there is no land, no mark, and no man aboard who can say where the storm has thrown you. The master shortens sail and watches the stars."); }
+     if(S.voy && _openSea && rnd()<((S.voy.terr==='deep'?0.45:0.3)*(bestSS()>=14?0.7:1)*(sailorsAboard()<5?1.25:1)) && !S.voy.lost){ S.voy.lost=true; S.voy.q=Math.max(0,voyQ(S.voy)-0.06-rnd()*0.08); S.voy.lostQ=S.voy.q;   /* thrown back along the lane: the position IS where the storm left her (v4.4.1) */ log(s+". When the sky finally clears there is no land, no mark, and no man aboard who can say where the storm has thrown you. The master shortens sail and watches the stars."); }
      else log(s+". The battered ship limps on, days behind.");
    }}]};
 }
@@ -9528,7 +9626,7 @@ function hajjDay(){ var v=S.voy; if(!v) return false;
    if(livingComps()>0&&rnd()<.22){ var _v=pick(livingParty()); _v.alive=false; noteDeath(_v,'thirst'); S.party=S.party.filter(function(p){return p.alive;}); log(_v.name+" dies of thirst on the waterless road; you scrape a grave in the sand and stumble on."); }
    if(S.hp<=0){ var _t=v.to; S.voy=null; S.voyaging=false; clearVoy(); die(); log("The water fails a long march short of "+_t+", and the sands of Arabia keep you."); render(); return true; } } }
  hajjAnimalPeril(v.harsh);
- var p=(v.total-v.daysLeft)/v.total;
+ var p=voyQ(v);
  if(v.halt && !v.haltDone && p>=(v.haltAt||0.5)){ v.haltDone=true; var _hv3=evDesertHalt(v.halt); if(_hv3){ S.voyaging=false; clearVoy(); S.pendingEvent=_hv3; render(); return true; } }
  if(rnd()<0.04){ S.voyaging=false; clearVoy(); S.pendingEvent=evDesertRoad(); render(); return true; }
  return false; }
@@ -10001,13 +10099,13 @@ const ACRE_REFUGEES=[
  {name:'Toros', g:'m', role:'a Cilician Armenian sailor', skills:{}, ss:8, salty:true},
  {name:'Perronelle', g:'f', role:'a dyer\u2019s daughter of the Genoese quarter', skills:{}}
 ];
-function sackScriptCrossing(from,to,days,terr){ terr=terr||'med'; S.voy={from:from,to:to,daysLeft:days,total:days,terr:terr,crewJob:false,grace:S.day+days+2,storm:1,water:null,sight:null,sightDone:true,east:false,coast:false,dNom:days}; S.screen='voyage'; S.voyaging=false; }
+function sackScriptCrossing(from,to,days,terr){ terr=terr||'med'; S.voy={from:from,to:to,q:0,nomDays:days,daysLeft:days,total:days,terr:terr,crewJob:false,grace:S.day+days+2,storm:1,water:null,sight:null,sightDone:true,east:false,coast:false,dNom:days}; S.screen='voyage'; S.voyaging=false; }
 function evAcreFall(ctx){
   var atSea=(ctx==='sea');
   var _fare=Math.max(200,Math.round((S.silver||0)*0.2)), _can=(S.silver||0)>=_fare;
   function toFamagusta(withRef){
     if(withRef) joinRefugee(ACRE_REFUGEES,'Acre');
-    if(atSea && S.voy){ S.voy.from='the Acre roads'; S.voy.to='Famagusta'; S.voy.daysLeft=2; S.voy.total=2; S.voy._landed=false; S.voy.sight=null; S.voy.sightDone=true; S.voy.coast=false; }
+    if(atSea && S.voy){ S.voy.from='the Acre roads'; S.voy.to='Famagusta'; S.voy.q=0; S.voy.daysLeft=2; S.voy.total=2; S.voy._landed=false; S.voy.sight=null; S.voy.sightDone=true; S.voy.coast=false; }
     else { sackScriptCrossing('Acre','Famagusta',2); }
     log(withRef ? "You take off all the souls your deck will bear and turn north for Cyprus, low in the water and quiet." : "You crowd on what sail you have and stand away north for Cyprus.");
   }
@@ -10016,7 +10114,7 @@ function evAcreFall(ctx){
     ch=[
       {l:'Come alongside the refugee boats \u2014 take off all you can and bear on for Famagusta',f(){ toFamagusta(true); }},
       {l:'Crowd on sail for Famagusta with an empty deck',f(){ toFamagusta(false); }},
-      {l:'Put about \u2014 you\u2019ll not go near that coast',f(){ if(S.voy){ var trav=Math.max(1,(S.voy.total||1)-(S.voy.daysLeft||0)); var o=S.voy.from; S.voy.to=o; S.voy.from='the Acre roads'; S.voy.daysLeft=trav; S.voy.total=trav; S.voy._landed=false; } log('You put up the helm and stand away from the burning coast, back the way you came.'); }}
+      {l:'Put about \u2014 you\u2019ll not go near that coast',f(){ if(S.voy){ var trav=Math.max(1,Math.round(voyQ(S.voy)*(S.voy.total||1))); var o=S.voy.from; S.voy.to=o; S.voy.from='the Acre roads'; S.voy.q=0; S.voy.daysLeft=trav; S.voy.total=trav; S.voy._landed=false; } log('You put up the helm and stand away from the burning coast, back the way you came.'); }}
     ];
   } else {
     function _loot(){ if(typeof clearHerd==='function')clearHerd(); for(const g of GOODS){ S.goods[g.id]=0; if(S.basis)S.basis[g.id]=0; } }
@@ -10145,8 +10243,8 @@ function checkSeaHistory(port){
 function updateVoy(){ if(!S||!S.voy)return; renderStats(); renderLog(); voyMapTick();
   const e=$('sDay'); if(e)e.textContent='Day '+S.day; var _dg=$('vDiag'); if(_dg&&S.voy)_dg.textContent='[d'+S.day+' \u00b7 '+S.voy.from+'\u2192'+S.voy.to+' \u00b7 left '+Math.round(S.voy.daysLeft)+'/'+S.voy.total+(S.voy.hajj?' \u00b7 hajj':'')+(S.voyaging?'':' \u00b7 STOPPED')+']';
   const sl=$('sLoc'); if(sl)sl.textContent=S.voy.water;
-  const r=$('sRemain'); if(r)r.textContent=fmtDist(S.voy.li?Math.max(1,Math.round(S.voy.li*S.voy.daysLeft/(S.voy.total||1))):S.voy.daysLeft*voyLiPerDay(S.voy.terr))+' \u00b7 '+Math.max(1,Math.round(S.voy.daysLeft))+' day'+(Math.round(S.voy.daysLeft)!==1?'s':'')+' to '+S.voy.to;
-  const p=$('sProg'); if(p)p.style.width=Math.round((1-S.voy.daysLeft/S.voy.total)*100)+'%';
+  const r=$('sRemain'); if(r)r.textContent=fmtDist(S.voy.li?Math.max(1,Math.round(S.voy.li*(1-voyQ(S.voy)))):S.voy.daysLeft*voyLiPerDay(S.voy.terr))+' \u00b7 '+Math.max(1,Math.round(S.voy.daysLeft))+' day'+(Math.round(S.voy.daysLeft)!==1?'s':'')+' to '+S.voy.to;
+  const p=$('sProg'); if(p)p.style.width=Math.round((voyQ(S.voy))*100)+'%';
   const ph=SKY[skyPhase()], set=(id,a,v)=>{const el=$(id);if(el)el.setAttribute(a,v);};
   set('sSkyTop','stop-color',ph.t); set('sSkyBot','stop-color',ph.b);
   set('sSun','opacity',ph.sun); set('sMoon','opacity',ph.moon); set('sStars','opacity',ph.star); set('sVeil','opacity',ph.veil);
@@ -10249,7 +10347,7 @@ function voyDesertCanal(){ var d=['Fustat','Qulzum']; var f=(S.voy&&S.voy.from),
 function voySteppeRiver(){ var f=(S.voy&&S.voy.from), t=(S.voy&&S.voy.to); return f==='Tana'||f==='Sarai'||t==='Tana'||t==='Sarai'; }  /* the Don and the Volga run through grass, not sand (Kris) */
 function voySeaVessel(){ if(voyChinaSea())return 'junk'; var f=(S.voy&&S.voy.from)||'',t=(S.voy&&S.voy.to)||''; var MED={Venice:1,Ragusa:1,Candia:1,Gortyn:1,Constantinople:1,Trebizond:1,Acre:1,Ayas:1,Alexandria:1,Famagusta:1,Cherson:1,Soldaia:1,Tana:1,Caffa:1,Oleshye:1,Lubeck:1,Havn:1,Roskilde:1,Visby:1,Turku:1,Reval:1,Riga:1,Gdansk:1,Stockholm:1,Kalmar:1,Lodose:1,Bergen:1}; if(MED[f]||MED[t])return 'med'; return 'dhow'; }   /* the roundship sails only the Med/Baltic; every eastern & southern sea (Red Sea, Indian Ocean, Bengal, the archipelago, the Zanj coast) gets the dhow (Kris) */
 function voyCamp(){ if(S&&S.voy)S.voy._camped=true; if(!S||!S.voy)return; S.voyaging=false; clearVoy(); log('You make camp where you stand. The fire is small; the stars are many.'); render(); }
-function voyResume(){ if(S&&S.voy)S.voy._camped=false; if(!S||!S.voy)return; S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS); }
+function voyResume(){ if(S&&S.voy)S.voy._camped=false; if(!S||!S.voy)return; S.voyaging=true; render(); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); }
 function voyRest(){ if(!S||!S.voy)return; S.voyaging=false; clearVoy(); for(var i=0;i<3;i++){ S.day++; S.food=Math.max(0,S.food-foodNeed()); if(S.voy&&S.voy.hajj){ if(hajjDay()) return; } if(S.dead){render();return;} } S.hp=clamp(S.hp+8,0,100); healMembers(12); log('You hold camp three days on the road; folk and beasts mend a little.'); voyResume(); }
 function voyHunt(){ if(!S||!S.voy||['land','canal','river'].indexOf(S.voy.terr)<0)return; S.voyaging=false; clearVoy(); if(typeof huntFood==='function'){ huntFood(); return; } /* the savoured hunt, not the quick roll (Kris) */ var h=bestHunter()||{you:true,name:(S.name||'You')}; var m=doHunt((S.voy.harsh?'harsh':'desert'),false,h); S.day++; S.food=Math.max(0,S.food-foodNeed()); if(S.dead){render();return;} log(m); voyResume(); }
 function voyLine(){
@@ -10300,7 +10398,7 @@ function voyMapPanel(){ var mp=voyMapEntry(); if(!mp)return ''; setTimeout(funct
    +'</div></div>'; }
 function voyMapTick(init){ var v=S&&S.voy; if(!v)return; var mp=voyMapEntry(); if(!mp)return; if(window.M3&&M3.owns('voy')){ M3.tickVoy(mp); return; }
   var w=document.getElementById('vmWorld'), dt=document.getElementById('vmDot'), vv=document.getElementById('vmView'); if(!w||!dt||!vv)return;
-  var q=(v.total-v.daysLeft)/(v.total||1); if(v.lost&&v.lostQ!=null)q=v.lostQ; if(v.from!==mp.from)q=1-q; if(dt)dt.style.opacity=(v.lost?'0.25':'1');
+  var q=voyQ(v); if(v.lost&&v.lostQ!=null)q=v.lostQ; if(v.from!==mp.from)q=1-q; if(dt)dt.style.opacity=(v.lost?'0.25':'1');
   var pos=voyPosAt(voyMapPts(mp),q);
   var tr=init?'none':'transform 1.1s linear'; w.style.transition=tr; dt.style.transition=tr;
   dt.style.transform='translate('+pos[0].toFixed(1)+'px,'+pos[1].toFixed(1)+'px)';
@@ -10319,7 +10417,7 @@ function voyMapTick(init){ var v=S&&S.voy; if(!v)return; var mp=voyMapEntry(); i
 function renderVoy(m){ try{ renderVoyInner(m); }catch(e){ screenArmor(m,'voyage',e); } }
 function renderVoyInner(m){
   const v=S.voy; if(!v){ S.screen=S.seaMode?'port':'city'; render(); return; }
-  const pct=Math.round((1-v.daysLeft/v.total)*100);
+  const pct=Math.round(voyQ(v)*100);
   m.innerHTML='<div class="rpanel"><h2>'+(v.terr==='land'?'On the road, bound for ':v.terr==='canal'?'On the water, bound for ':'At sea, bound for ')+v.to+'</h2>'+
     '<p class="sub"><span id="sDay">Day '+S.day+'</span> · <span id="sLoc">'+v.water+(v.via?' \u2014 by '+v.via:'')+'</span> · <span id="sRemain">'+fmtDist(v.li?Math.max(1,Math.round(v.li*v.daysLeft/(v.total||1))):v.daysLeft*voyLiPerDay(v.terr))+' \u00b7 '+(v.lost?'??? \u2014 position unknown':(Math.max(1,Math.round(v.daysLeft))+' day'+(Math.round(v.daysLeft)!==1?'s':'')))+' to '+v.to+'</span></p>'+
     '<div class="bar"><i id="sProg" style="width:'+pct+'%"></i></div>'+
@@ -10327,7 +10425,7 @@ function renderVoyInner(m){
     '<p class="sub" style="margin-top:8px;border-left:2px solid var(--line);padding-left:10px">'+voyLine()+' <span id="vDiag" style="opacity:.45">[d'+S.day+' \u00b7 '+v.from+'\u2192'+v.to+' \u00b7 left '+(Math.round(v.daysLeft*100)/100)+'/'+v.total+']</span></p></div><div id="roadGap"></div><div class="rpanel">'+
     ((v.terr==='land'||v.terr==='canal'||v.terr==='river')?((S.voyaging?'<button onclick="voyCamp()">Make camp</button> ':'<button class="seal" onclick="voyResume()">Break camp &amp; press on</button> ')+'<button onclick="voyHunt()">Hunt (1 day)</button> <button onclick="voyRest()">Rest 3 days</button> <button onclick="voyTurnBack()">Turn back</button> '):'')+'<button class="seal" onclick="skipVoy()">Skip ahead</button></div>';
 }
-function voyTurnBack(){ if(!S||!S.voy)return; var v=S.voy; var a=v.from; v.from=v.to; v.to=a; v.daysLeft=Math.max(1,(v.total||1)-(v.daysLeft||0)); v._landed=false; v.sightDone=false; v.sight2Done=false; S.voyaging=true; clearVoy(); if(typeof voyTimer!=='undefined'&&voyTimer)clearInterval(voyTimer); voyTimer=setInterval(stepVoy,DAY_MS); log('You turn the caravan around, retracing the road toward '+eraName(v.to)+'.'); render(); }
+function voyTurnBack(){ if(!S||!S.voy)return; var v=S.voy; var a=v.from; v.from=v.to; v.to=a; v.q=1-voyQ(v); v.daysLeft=Math.max(1,Math.ceil((1-v.q)/Math.max(1e-6,voyRateToday(v)))); v._landed=false; v.sightDone=false; v.sight2Done=false; S.voyaging=true; clearVoy(); if(typeof voyTimer!=='undefined'&&voyTimer)clearInterval(voyTimer); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); log('You turn the caravan around, retracing the road toward '+eraName(v.to)+'.'); render(); }
 function skipVoy(){
   S.voyaging=false; clearVoy();
   for(let i=0;i<160 && S.voy;i++){
@@ -10338,16 +10436,16 @@ function skipVoy(){
     }
     if(S.voy.terr==='land' && S.voy.hajj){ if(hajjDay()) return; }
     if(S.voy.daysLeft<=0){ voyArrive(); render(); return; } /* skip is instant: no arrival-tick latch here (it froze the loop at the coast) */
-    const p=(S.voy.total-S.voy.daysLeft)/S.voy.total;
+    const p=voyQ(S.voy);
     if(S.voy.sight && !S.voy.sightDone && p>=(S.voy.phases?0.42:0.5)){ S.voy.sightDone=true; log(S.voy.sight); }
     if(S.voy.sight2 && !S.voy.sight2Done && p>=0.55){ S.voy.sight2Done=true; log(S.voy.sight2); }
-    try{ if(S.voy&&typeof siegeAt==='function'&&siegeAt(S.voy.to)&&!S.voy._siegeWarned){ var _vp=(S.voy.total-S.voy.daysLeft)/(S.voy.total||1); if(_vp>=0.55){ S.voy._siegeWarned=true; S.voyaging=false; clearVoy(); S.pendingEvent={h:'THE PORT IS CLOSED \u2014 SIEGE', t:'A fishing boat running out of '+S.voy.to+' gives the master the news across the water: the port is under siege \u2014 war-fleets in the roads, fire along the shore. He will not run a blockade for any freight.', ch:[{l:'Come about \u2014 back to '+S.voy.from,f:function(){ var v=S.voy; var t2=v.to; v.to=v.from; v.from=t2; v.daysLeft=Math.max(1,v.total-v.daysLeft); v._siegeWarned=false; S.screen='voyage'; S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS); }}]}; render(); return; } } }catch(e){}
+    try{ if(S.voy&&typeof siegeAt==='function'&&siegeAt(S.voy.to)&&!S.voy._siegeWarned){ var _vp=voyQ(S.voy); if(_vp>=0.55){ S.voy._siegeWarned=true; S.voyaging=false; clearVoy(); S.pendingEvent={h:'THE PORT IS CLOSED \u2014 SIEGE', t:'A fishing boat running out of '+S.voy.to+' gives the master the news across the water: the port is under siege \u2014 war-fleets in the roads, fire along the shore. He will not run a blockade for any freight.', ch:[{l:'Come about \u2014 back to '+S.voy.from,f:function(){ var v=S.voy; var t2=v.to; v.to=v.from; v.from=t2; v.q=1-voyQ(v); v.daysLeft=Math.max(1,Math.ceil((1-v.q)/Math.max(1e-6,voyRateToday(v)))); v._siegeWarned=false; S.screen='voyage'; S.voyaging=true; render(); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); }}]}; render(); return; } } }catch(e){}
     voyLostDay();
     if(S.voy.terr==='deep'||S.voy.terr==='coast'||S.voy.terr==='med'){
       const wreckP=(S.voy.terr==='deep'?0.006:0.009)*hullMult()*crewWreckMult()*winterStormMult(S.voy.terr)*(S.voy.storm||1)*((typeof isAmberWaterLeg==='function'&&S.voy&&isAmberPlace(S.voy.from))?boatQualityMult():1);
       if(rnd()<wreckP){ S.voyaging=false; clearVoy(); S.pendingEvent=((typeof fleet==='function'&&fleet().length)?voyStormFleet():voyStorm()); render(); return; }
       if(rnd()<0.05){ S.voyaging=false; clearVoy(); S.pendingEvent=evSeaWinds(); render(); return; }   /* Fadak: twin path, same leak */
-      let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); var _inStrait=false; if(S.voy.strait){ _inStrait=true; if(S.voy.straitTip){ var _vf=(S.voy.total-S.voy.daysLeft)/(S.voy.total||1),_T=0.35; _inStrait=(S.voy.from===S.voy.straitTip)?(_vf<=_T):(S.voy.to===S.voy.straitTip)?(_vf>=1-_T):true; } if(_inStrait)pp*=2.8; } /* Fadak: strait x2.8 whole-leg for a strait edge; for a straitTip edge (Tumasik-Kauthara) only near the tip city, so deep water past the Dragon's Teeth calms */ pp*=wealthLure(); pp*=seaHeatMult(); if(typeof isCaspianVoy==='function'&&isCaspianVoy()&&((S&&S.era)==='1271'))pp*=1.6;
+      let pp=(S.voy.terr==='coast'?0.020:0.011)*(S.banditFreq||1); var _inStrait=false; if(S.voy.strait){ _inStrait=true; if(S.voy.straitTip){ var _vf=voyQ(S.voy),_T=0.35; _inStrait=(S.voy.from===S.voy.straitTip)?(_vf<=_T):(S.voy.to===S.voy.straitTip)?(_vf>=1-_T):true; } if(_inStrait)pp*=2.8; } /* Fadak: strait x2.8 whole-leg for a strait edge; for a straitTip edge (Tumasik-Kauthara) only near the tip city, so deep water past the Dragon's Teeth calms */ pp*=wealthLure(); pp*=seaHeatMult(); if(typeof isCaspianVoy==='function'&&isCaspianVoy()&&((S&&S.era)==='1271'))pp*=1.6;
     var _mala=/Kollam|Mantai/.test((S.voy.from||'')+(S.voy.to||'')); if(_mala)pp*=1.7; /* Kris via Polo: the Malabar shore is rife with pirate fleets - though Polo himself passed unscathed, so rife is not certain */
     if(_mala && !S.voy._malaSeen && rnd()<0.10){ S.voy._malaSeen=true; log('A line of low hulls stands off the shore \u2014 the pirate fleets of the Malabar coast, anchored in their lane like toll-keepers who have not yet named the toll. Your master alters course a point seaward, and today, at least, they let you pass.'); }
       if(rnd()<pp){ S._straitPir=_inStrait; S.pendingEvent=evPirates(); render(); return; }
@@ -11448,7 +11546,8 @@ var M3=(function(){
    seaFlatten(R,tex);
    for(var iy=0;iy<=R.NY;iy++)for(var ix=0;ix<=R.NX;ix++) p.setY(iy*(R.NX+1)+ix,R.h[iy*(R.NX+1)+ix]);
    g.computeVertexNormals();
-   var m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:tex}));
+   var _tm=new THREE.MeshBasicMaterial({map:tex}); _tm.stencilWrite=true; _tm.stencilFunc=THREE.NotEqualStencilFunc; _tm.stencilRef=1; _tm.stencilWriteMask=0; _tm.stencilFail=THREE.KeepStencilOp; _tm.stencilZFail=THREE.KeepStencilOp; _tm.stencilZPass=THREE.KeepStencilOp;   /* the chart is not drawn where a hull's stencil is set: the hull makes a hole in the water (Kris) */
+   var m=new THREE.Mesh(g,_tm); m.renderOrder=-1;
    m.position.set(R.cw/2,0,R.chh/2); m.name='terrain'; return {mesh:m,R:R}; }
  function mkMat(c){ return new THREE.MeshStandardMaterial({color:c,roughness:0.95,metalness:0}); }
  function mkCamel(){ var g=new THREE.Group(), hide=mkMat(0x6e5236);
@@ -11674,6 +11773,33 @@ var M3=(function(){
    [-1,1].forEach(function(sg){ var sw=new THREE.Mesh(new THREE.CylinderGeometry(0.09,0.12,6,5),mkMat(0x5d452a));
      sw.rotation.x=1.0; sw.position.set(sg*1.6,2.6,-7.2); g.add(sw); });
    return g; }
+ /* THE HOLE IN THE WATER (Kris, from the testbed): an open or gapped hull sunk to its waterline showed the sea surface inside it.
+    Every mesh of the vessel is drawn once more as a stencil mask (no colour, no depth) before the chart; the chart's material skips
+    the marked pixels; the vessel then draws over the gap. Below the waterline you see her own planking, not the sea. */
+ var HOLE_MAT=null;
+ function addWaterHole(model){ try{ if(!HOLE_MAT){ HOLE_MAT=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,side:THREE.DoubleSide}); HOLE_MAT.stencilWrite=true; HOLE_MAT.stencilRef=1; HOLE_MAT.stencilFunc=THREE.AlwaysStencilFunc; HOLE_MAT.stencilZPass=THREE.ReplaceStencilOp; HOLE_MAT.stencilZFail=THREE.KeepStencilOp; HOLE_MAT.stencilFail=THREE.KeepStencilOp; }
+   /* Kris 1024d: masking EVERY mesh hid the sea over the whole hull, so she showed down to the keel and rode on top of the water.
+      Now the mask is only her WATERLINE SECTION - the outline where the hull meets the sea, read from her own hull vertices near
+      the draft line (convex hull, shrunk 4%). Through that cap you look into her (her inside, not the sea in her); everywhere else the
+      sea is drawn as usual, so the planking below the waterline is under water again. */
+   var dr=(model.userData&&model.userData.draft)||0; if(!(dr>0)) return;
+   model.updateMatrixWorld(true); var sc=model.scale.x||1, inv=new THREE.Matrix4().copy(model.matrixWorld).invert(), pts=[], v=new THREE.Vector3(), band=Math.max(0.6,dr*0.3);
+   model.traverse(function(o){ if(!o.isMesh||(o.userData&&o.userData.hole)||!o.geometry||!o.geometry.attributes||!o.geometry.attributes.position)return;
+     var pa=o.geometry.attributes.position, M=new THREE.Matrix4().multiplyMatrices(inv,o.matrixWorld);
+     var got=0, mnY=1e9, mxY=-1e9, bx=[1e9,-1e9,1e9,-1e9];
+     for(var i=0;i<pa.count;i++){ v.fromBufferAttribute(pa,i).applyMatrix4(M); if(Math.abs(v.y-dr)<=band){ pts.push([v.x,v.z]); got++; } if(v.y<mnY)mnY=v.y; if(v.y>mxY)mxY=v.y; if(v.x<bx[0])bx[0]=v.x; if(v.x>bx[1])bx[1]=v.x; if(v.z<bx[2])bx[2]=v.z; if(v.z>bx[3])bx[3]=v.z; }
+     if(!got && mnY<dr && mxY>dr){ pts.push([bx[0],bx[2]],[bx[0],bx[3]],[bx[1],bx[2]],[bx[1],bx[3]]); } });   /* a box-built hull has no vertex near the waterline - it crosses it, so its footprint counts */
+   if(pts.length<3) return;
+   pts.sort(function(a,b){ return a[0]-b[0]||a[1]-b[1]; });
+   var cr=function(o,a,b){ return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]); }, lo=[], hi=[];
+   for(var k=0;k<pts.length;k++){ while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],pts[k])<=0)lo.pop(); lo.push(pts[k]); }
+   for(var k2=pts.length-1;k2>=0;k2--){ while(hi.length>=2&&cr(hi[hi.length-2],hi[hi.length-1],pts[k2])<=0)hi.pop(); hi.push(pts[k2]); }
+   var ring=lo.slice(0,-1).concat(hi.slice(0,-1)); if(ring.length<3) return;
+   var cx=0,cz=0; ring.forEach(function(q){ cx+=q[0]; cz+=q[1]; }); cx/=ring.length; cz/=ring.length;
+   var shp=new THREE.Shape(); ring.forEach(function(q,i){ var x=cx+(q[0]-cx)*0.96, z=cz+(q[1]-cz)*0.96; if(i===0)shp.moveTo(x,-z); else shp.lineTo(x,-z); });
+   var cg=new THREE.ShapeGeometry(shp); cg.rotateX(-Math.PI/2);
+   var cap=new THREE.Mesh(cg,HOLE_MAT); cap.position.y=dr+0.02; cap.renderOrder=-2; cap.userData.hole=true; model.add(cap);
+ }catch(e){} }
  function mkVessel(){ try{
    if((typeof S!=='undefined'&&S)&&S.voy&&(S.voy.terr==='canal'||S.voy.terr==='river')){
      /* Kris saw the Venetian roundship on the Nile at Aylah: canal/river legs sail their OWN craft,
@@ -11843,6 +11969,33 @@ var M3=(function(){
      cy(g,0x9a8a70,0.05,0.06,0.22,0.2,0.11,-0.15,6); bx(g,0x9a8a70,0.1,0.05,0.05,0.05,0.025,-0.25,0.8); return g; };
    return B;
  })();
+ /* THE PYRAMIDS (Kris 1024d) - on the 3D maps at their true places, each in its own shape, at the city miniatures' scale (exaggerated
+    alike, so a group keeps its real layout). Built in metres, cardinal-aligned (east +x, north -z), then shrunk: Khufu's base = 0.32 x the
+    city scale; within a group the spacing is drawn in to 0.6 so a group does not sprawl over the next town (Kris 1024d). 1271: Giza still wears its white casing (it was stripped for Cairo after the 1303 earthquake); Menkaure keeps its lower
+    courses of red granite; the Bent Pyramid breaks from 54 to 43 degrees; the Red Pyramid is bare red stone; Djoser's six steps at Saqqara;
+    Meidum the collapsed tower on its own rubble; the mud-brick pyramids of Lahun and Hawara are dark slumped mounds. */
+ function addPyramids(sc,rel,spec,uScale){ try{ if(!spec||!spec.geo)return; var G=spec.geo, u=uScale||Math.max(1.1,Math.min(2.8,rel.cw/55)), k=0.32*u/230;
+   var M=function(c){ return new THREE.MeshStandardMaterial({color:c,roughness:0.95,flatShading:true}); };
+   var pyr=function(g,mat,base,h,x,z,y0){ var m=new THREE.Mesh(new THREE.ConeGeometry(base/Math.SQRT2,h,4,1),mat); m.rotation.y=Math.PI/4; m.position.set(x,(y0||0)+h/2,z); g.add(m); return m; };
+   var fru=function(g,mat,b0,b1,h,x,z,y0){ var m=new THREE.Mesh(new THREE.CylinderGeometry(b1/Math.SQRT2,b0/Math.SQRT2,h,4,1),mat); m.rotation.y=Math.PI/4; m.position.set(x,(y0||0)+h/2,z); g.add(m); return m; };
+   var box=function(g,mat,w,h,d,x,z,y0){ var m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat); m.position.set(x,(y0||0)+h/2,z); g.add(m); return m; };
+   var mLat=111320, sites=[];
+   sites.push({ll:[31.1342,29.9792], build:function(g){ var white=M(0xe8dcc0), gran=M(0xa86e58);   /* GIZA */
+     pyr(g,white,230,146,0,0); var dx=function(lon){ return 0.6*(lon-31.1342)*mLat*Math.cos(30*Math.PI/180); }, dz=function(lat){ return -0.6*(lat-29.9792)*mLat; };
+     var kh=pyr(g,white,215,143,dx(31.1308),dz(29.9761));
+     fru(g,gran,103,72,21,dx(31.1281),dz(29.9725)); pyr(g,white,72,44,dx(31.1281),dz(29.9725),21);   /* Menkaure: red granite below, limestone above */
+     [-60,0,60].forEach(function(o){ pyr(g,white,46,30,115+38,o+20); });   /* the three queens' pyramids just east of Khufu */
+     [-48,0,48].forEach(function(o){ pyr(g,white,38,24,dx(31.1281)+o,dz(29.9725)+52+30); }); } });   /* and the three south of Menkaure */
+   sites.push({ll:[31.2164,29.8713], build:function(g){ var tan=M(0xc8b48a); var w=121,d=109,h=10.4; for(var i=0;i<6;i++){ box(g,tan,w-i*16,h,d-i*14,0,0,i*h); } } });   /* SAQQARA: Djoser, six steps */
+   sites.push({ll:[31.2077,29.7995], build:function(g){ var cas=M(0xd8ccb0); fru(g,cas,188.6,121.8,47,10,180); pyr(g,cas,121.8,57.7,10,180,47);   /* DAHSHUR: the Bent Pyramid (south) ... */
+     pyr(g,M(0xb88c6a),220,105,-10,-180); } });   /* ... and the Red Pyramid (north) - drawn in close, side by side, as they stand */
+   sites.push({ll:[31.1569,29.3883], build:function(g){ var deb=M(0xbca77f), st2=M(0xc9b389); fru(g,deb,190,90,22,0,0); fru(g,st2,90,80,26,0,0,22); fru(g,st2,74,64,20,0,0,48); } });   /* MEIDUM: the tower on its rubble */
+   sites.push({ll:[30.9708,29.2333], build:function(g){ fru(g,M(0x6e5a44),106,40,30,0,0); } });   /* LAHUN: mud-brick, slumped */
+   sites.push({ll:[30.8986,29.2733], build:function(g){ fru(g,M(0x6a5642),105,36,28,0,0); } });   /* HAWARA */
+   sites.forEach(function(st3){ var lon=st3.ll[0], lat=st3.ll[1]; if(lon<G[0]||lon>G[1]||lat<G[2]||lat>G[3])return;
+     var x=(lon-G[0])/(G[1]-G[0])*rel.cw, z=(G[3]-lat)/(G[3]-G[2])*rel.chh; if(x<0.5||z<0.5||x>rel.cw-0.5||z>rel.chh-0.5)return;
+     var g=new THREE.Group(); st3.build(g); g.scale.setScalar(k); g.position.set(x,hAt(rel,x,z),z); g.name='pyramids'; sc.add(g); });
+ }catch(e){} }
  function addCities(sc,rel,items,uScale){
    try{
      var u=uScale||Math.max(1.1,Math.min(2.8,rel.cw/55));
@@ -11973,7 +12126,7 @@ var M3=(function(){
        var w=el.clientWidth||860;
        el.style.height=Math.round(Math.min(560,w*spec.vbh/spec.vbw*1.1))+'px';
        var L=baseView(el,spec,tex,'chart');
-       addCities(L.sc,L.rel,cityItems(ch));
+       addCities(L.sc,L.rel,cityItems(ch)); try{ addPyramids(L.sc,L.rel,spec); }catch(_py){}
        L.R.domElement.style.border='5px solid #6b4f2a'; L.R.domElement.style.borderRadius='3px';
        L.step=function(){ placeCam(L); };
        bindPanZoom(L,function(px,py){
@@ -11995,6 +12148,22 @@ var M3=(function(){
    if(mp.pts && !((typeof S!=='undefined'&&S)&&S.dash&&S.dash.bed!==undefined)) s2+='<polyline points="'+mp.pts+'" fill="none" stroke="#8a2f1d" stroke-width="6" stroke-dasharray="11 12" opacity="0.9"/>';   /* Kris: the SECRET desert dashes (dashBegin sets .bed) are rumours - no red line on the relief either */
    (mp.cities||[]).forEach(function(cc){ if(cc.n) s2+='<text x="'+(cc.x+16)+'" y="'+(cc.y+9)+'" font-size="34" font-family="Georgia,serif" font-weight="bold" fill="#171008">'+cc.n+'</text>'; });
    return s2; }
+ /* THE WORLD BEYOND THE CHARTS (Kris 1024d: past the chart's edge on Kedah->Puttalam the Indian Ocean was bare beige sky).
+    A wide flat skirt under everything - out to 1.5 chart-widths on every side - coloured from the height data: sea where the DEM
+    reads sea level, tan land elsewhere. It sits below the primary chart and the neighbour drapes (-0.15), so it only shows where
+    no chart reaches; the fog carries it into the horizon. */
+ function addWorldSkirt(L,spec){ if(!spec.geo||!L.rel||!st.dem||!st.dem.D)return; var G=spec.geo, cw=L.rel.cw, ch=L.rel.chh;
+   var upl=cw/(G[1]-G[0]), upt=ch/(G[3]-G[2]), gx=1.5, W=G[0]-(G[1]-G[0])*gx, E=G[1]+(G[1]-G[0])*gx, N=G[3]+(G[3]-G[2])*gx, Sd=G[2]-(G[3]-G[2])*gx;
+   var NX=96, NY=96, geo=new THREE.PlaneGeometry((E-W)*upl,(N-Sd)*upt,NX,NY); geo.rotateX(-Math.PI/2);
+   var col=new Float32Array((NX+1)*(NY+1)*3), D=st.dem.D, sea=new THREE.Color(0x4a74a0), land=new THREE.Color(0xb4a47c), out=new THREE.Color(0xc3b492);
+   for(var iy=0;iy<=NY;iy++)for(var ix=0;ix<=NX;ix++){ var lon=W+ix/NX*(E-W), lat=N-iy/NY*(N-Sd), c=out;
+     if(lon>=D.W&&lon<=D.E&&lat>=D.S&&lat<=D.N){ var e=0; try{ e=elevAt(lon,lat); }catch(_e){ e=1; } c=(e<=2)?sea:land; }
+     var k=(iy*(NX+1)+ix)*3; col[k]=c.r; col[k+1]=c.g; col[k+2]=c.b; }
+   geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+   var mat=new THREE.MeshBasicMaterial({vertexColors:true}); mat.stencilWrite=true; mat.stencilFunc=THREE.NotEqualStencilFunc; mat.stencilRef=1; mat.stencilWriteMask=0; mat.stencilFail=THREE.KeepStencilOp; mat.stencilZFail=THREE.KeepStencilOp; mat.stencilZPass=THREE.KeepStencilOp;   /* like the chart: never drawn inside a hull's waterline hole */
+   var m=new THREE.Mesh(geo,mat); m.renderOrder=-1; m.name='worldSkirt';   /* after the hole mask (-2), as the chart is */
+   m.position.set((W-G[0])*upl+(E-W)*upl/2, -0.15, (G[3]-N)*upt+(N-Sd)*upt/2);
+   L.sc.add(m); }
  function addNeighborCharts(L,spec){ /* Kris: the world must not end at the chart's edge - drape the
      ADJOINING set-out charts into the same frame, scaled between georefs, sunk 0.07 so the primary wins
      overlaps. Whole-road overview charts that fully contain the primary are skipped (they'd double-drape). */
@@ -12049,11 +12218,12 @@ var M3=(function(){
        L.R.setSize(innerWidth,innerHeight); L.cam.aspect=innerWidth/innerHeight;
        L.cam.updateProjectionMatrix();
        L.R.domElement.style.height='100vh';
-       addCities(L.sc,L.rel,(mp.cities||[]).map(function(cc){return {n:cc.n,x:cc.x,y:cc.y,rn:!!cc.rn};}));
+       addCities(L.sc,L.rel,(mp.cities||[]).map(function(cc){return {n:cc.n,x:cc.x,y:cc.y,rn:!!cc.rn};})); try{ addPyramids(L.sc,L.rel,spec); }catch(_py){}
        addHalts(L.sc,L.rel,CHARTS[mp._ck]);
        try{ addNeighborCharts(L,spec); }catch(_nb){}
+       try{ addWorldSkirt(L,spec); }catch(_sk){}
        L.camR=17; L.ph=0.18; L.th=Math.PI/2; /* Kris 1013: open at the LOWEST angle (the drag floor, 0.18) */   /* Kris: open low, near his own playing angle - the horizon and the ranges are in frame from the first tick (was 0.5) */ L.mvKey=mvKey; L.mp=mp; L.q=null; L.qT=null; L.pts=null; L.lastMs=Date.now(); L.userUntil=0; L.trail=[]; L.windB=Math.random()*6.283;
-       if(kindModel==='ship'){ L.model=mkVessel(); L.model.scale.setScalar(0.16); L.sc.add(L.model); }
+       if(kindModel==='ship'){ L.model=mkVessel(); L.model.scale.setScalar(0.16); addWaterHole(L.model); L.sc.add(L.model); }
        else { var _sv=(typeof wagonServiced==='function')?wagonServiced():{cart:0,wagon:0};
          if(_sv.wagon>0){ var rig=mkOxWagon(); rig.scale.setScalar(0.19); L.sc.add(rig); L.file.push(rig); }   /* a wagon on the road: FOUR oxen and the covered wagon, one rig (Kris) */
          else if(_sv.cart>0){ var rigC=mkOxCart(); rigC.scale.setScalar(0.19); L.sc.add(rigC); L.file.push(rigC); }
@@ -12124,17 +12294,18 @@ var M3=(function(){
            }
          } }catch(e){}
          if(L.pts&&L.qT!==null){
-           if(L.q===null)L.q=L.qT;
+           if(L.q===null){ L.q=L.qT;   /* Kris 1024d: the 3D view often mounted after the first day had ticked, so she appeared a day out already - a leg that has barely begun starts at the quay and sails up to the reckoning */
+             try{ var _early=(L.kind==='voy')?(S.voy&&voyQ(S.voy)*(S.voy.total||1)<=1.5):((S.legKm||0)<=Math.max(1,daySpeed())*1.5); if(_early) L.q=((L.qDir||1)>0)?0:1; }catch(_e9){} }
            if(L.kind==='voy'&&(typeof S!=="undefined"&&S)&&S.voy&&S.voy.terr!=='land'&&S.voy.terr!=='canal'&&S.voy.terr!=='river'){
              /* open water: constant way, no pulse - she does not anchor at night (Kris) */
              var dayFrac=1/((S.voy.total||1));
-             var vel=dayFrac/((typeof DAY_MS!=='undefined'?DAY_MS:2000)/1000);
+             var vel=dayFrac/((typeof DAY_MS!=='undefined'?DAY_MS:2000)/1000); if((L.qDir||1)*(L.qT-L.q)>dayFrac*0.5) vel*=1.6;   /* behind the reckoning (a quay start): a little quicker until she is up with it */
              var stalled=(Date.now()-(L.lastTickMs||0))>2.6*((typeof DAY_MS!=='undefined'?DAY_MS:2000));
              var dir=L.qDir||1;
              if(!stalled && !((typeof S!=='undefined'&&S)&&(S.pendingEvent||S.eventOutcome))){ var lim=L.qT+dir*dayFrac*1.02, nq=L.q+dir*vel*dt;  /* FIX (Kris): the ship holds position while a pirate/other dialog blocks the voyage - no sailing on to the destination and snapping back */
                var nq2=(dir>0)?Math.min(lim,Math.max(nq,L.q)):Math.max(lim,Math.min(nq,L.q));
-               /* Kris 1024: the way made is made. If the day-reckoned target has fallen behind the hull (a delay), she lies to
-                  where she is until the reckoning catches up - she does not sail backwards. Only a LOST ship may be set back. */
+               /* v4.4.1: the model's position is the truth; the hull only ever eases toward it. A hold (foul wind, portage)
+                  simply stops the target advancing, so she lies to. Only a LOST ship sees the target jump back, and follows it. */
                if(!(S.voy&&S.voy.lost)){ nq2=(dir>0)?Math.max(nq2,L.q):Math.min(nq2,L.q); }
                L.q=nq2; }
              else if(!(S&&S.voy&&S.voy.lost) && ((dir>0&&L.qT<L.q)||(dir<0&&L.qT>L.q))){ /* a dialog is up and the reckoning is behind: hold */ }
@@ -12202,8 +12373,11 @@ var M3=(function(){
        var rel9=wrapA(wHd9-hd2), ab9=Math.abs(rel9), sgn9=(rel9>=0)?1:-1;
        var rig9=(L.model.userData.rig)||'lateen', amin9=RIG_MIN[rig9]||1.05;
        var s9=(ab9<amin9)?0.3:Math.max(0.3,Math.min(1.45,0.5*ab9-0.09));
-       L.model.userData.sails.forEach(function(sg9){ var tb=sg9.userData.athwart ? -sgn9*(Math.PI/2-s9) : sgn9*s9;
-         var d9=wrapA(tb-sg9.rotation.y); sg9.rotation.y+=d9*0.06; }); } }
+       var _slack=(typeof S!=='undefined'&&S&&S.voy&&S.voy.calm&&S.voy.hold>0), _tn=Date.now()/1000;   /* becalmed at anchor: the yards wander, the canvas hangs */
+       L.model.userData.sails.forEach(function(sg9,i9){ var tb=sg9.userData.athwart ? -sgn9*(Math.PI/2-s9) : sgn9*s9;
+         if(_slack) tb=1.1*Math.sin(_tn*0.35+i9*1.7)+0.35*Math.sin(_tn*0.9+i9);
+         var d9=wrapA(tb-sg9.rotation.y); sg9.rotation.y+=d9*(_slack?0.02:0.06);
+         var _sx=_slack?0.78:1; sg9.scale.x+=(_sx-sg9.scale.x)*0.05; }); } }
    for(var i=0;i<L.file.length;i++){
      var cm=L.file[i], p=trailAt(L,(cm.userData.fOff!=null?cm.userData.fOff:(0.22+(i)*0.85)));   /* interpenetration is for the caravanserai stable, after dark (Kris) */
      var cx2,cz2,chd;
@@ -12320,7 +12494,7 @@ var M3=(function(){
    L.qDir=_rev?-1:1;                                  /* which way q runs against the march (Kris: the cart that set off backwards) */
    L.pts=voyMapPts(mp); L.qT=q; seedTrail(L,q,L.qDir); }catch(e){} }
  function tickVoy(mp){ try{ var L=st.live; if(!L)return; var v=S&&S.voy; if(!v)return; L.lastTickMs=Date.now(); L.qDir=(v.from!==mp.from)?-1:1;
-   var q=(v.total-v.daysLeft)/(v.total||1); if(v.lost&&v.lostQ!=null)q=v.lostQ; if(v.from!==mp.from)q=1-q;
+   var q=voyQ(v); if(v.lost&&v.lostQ!=null)q=v.lostQ; if(v.from!==mp.from)q=1-q;
    L.pts=voyMapPts(mp); L.qT=q; seedTrail(L,q,L.qDir); }catch(e){} }
 
  /* ---- DIORAMA LEAF BUILDERS (module scope; usable by the moving map too) ---- */
@@ -13038,7 +13212,7 @@ function renderTravelInner(m){
       '<button onclick="skipToStop()">Skip ahead</button>';
   }
   m.innerHTML=html+'</div>';
-  if(S.journeying && !journeyTimer && !S.pendingEvent && S.screen==='travel'){ journeyTimer=setInterval(stepDay, DAY_MS); } /* safety: recover a dropped march timer (the 'not advancing but not camped' freeze) */
+  if(S.journeying && !journeyTimer && !S.pendingEvent && S.screen==='travel'){ journeyTimer=(clearInterval(journeyTimer),setInterval(stepDay,DAY_MS)); } /* safety: recover a dropped march timer (the 'not advancing but not camped' freeze) */
 }
 function renderSteppe(m){
   var here=isWest()?'Samarkand':'Hami';
@@ -13697,7 +13871,8 @@ const WEAPONS={
   saifold:{n:'an old straight Arab sword',die:8,fs:2},
   spatha:{n:'a spathion',n1271:'a paramerion saber',die:8,fs:2},
   battleaxe:{n:'a Norse battle-axe',die:10,fs:3},
-  chokuto:{n:'a chokut\u014d, the straight sword of Yamato',n1271:'a tachi',die:8,fs:3},   /* 1271: the long curved tachi of the mounted bushi - the katana is a 14th-15th c. sword */
+  chokuto:{n:'a chokut\u014d, the straight sword of Yamato',n1271:'a tachi',die:8,fs:3},
+  goryeo:{n:'a Silla sword',n1271:'a Goryeo sabre',die:8,fs:2},   /* Kris 1024d: Kaesong guards */   /* 1271: the long curved tachi of the mounted bushi - the katana is a 14th-15th c. sword */
 };
 function originWeapon(p){ var t=(((p&&p.role)||'')+' '+((p&&p.name)||'')).toLowerCase(); var reg=(p&&p.region)||''; var fc=(p&&p.fromCity)||'';
   if(/norse|axeman|varangian|northman|viking|red-bearded/.test(t)) return 'battleaxe';
@@ -13709,7 +13884,7 @@ function originWeapon(p){ var t=(((p&&p.role)||'')+' '+((p&&p.name)||'')).toLowe
   if(/persian|arab|sogdian|daylam|khurasan|khorasan|kurd|saracen|bukhar|samarkand|yemen|omani|hadrami|bedouin/.test(t)) return 'saif';
   if(/malay|srivijaya|java|cham|khmer|pilot of the/.test(t)) return 'klewang';
   if(/zanj|swahili|african|abyssin|nubian/.test(t)) return 'spear';
-  var rmap={china:'dao',steppe:'saber',arab:'saif',egypt:'saif',india:'saif',africa:'spear',seasia:'klewang'};
+  var rmap={china:'dao',steppe:'saber',arab:'saif',egypt:'saif',india:'saif',africa:'spear',seasia:'klewang',japan:'chokuto',korea:'goryeo'};
   if(rmap[reg]) return rmap[reg];
   if(/Constantinople|Ephesus|Gortyn|Alexandria|Trebizond|Chalcedon/.test(fc)) return 'spatha';
   if((typeof GUARD_CITY_REGION!=='undefined') && GUARD_CITY_REGION[fc] && rmap[GUARD_CITY_REGION[fc]]) return rmap[GUARD_CITY_REGION[fc]];
@@ -13870,7 +14045,7 @@ function renderBattle(m){
         '<td style="text-align:center"><input type="checkbox" '+(f._withdraw?'checked':'')+' onclick="battleToggle('+i+',0)"></td></tr>';
     }).join('');
     m.innerHTML='<div class="panel event"><h3 class="red">'+(c.sea?'PIRATES':(c.band?c.band.toUpperCase():'BANDITS'))+' — '+c.n+(c.sea?' aboard a galley':' riders')+'</h3>'+
-      '<p class="sub">Tick <b>fight</b> (left) or <b>withdraw</b> (right) for each. Those who withdraw lead off the pack-animals and slip clear if the fight is lost — but a lone fighter left to stand alone may lose heart and bolt too.</p>'+
+      '<p class="sub">Tick <b>fight</b> (left) or <b>withdraw</b> (right) for each. '+(c.sea?'Those who withdraw go below decks out of the fighting, and are spared if the deck is lost — but a lone fighter left to hold it alone may lose heart and go below too.':'Those who withdraw lead off the pack-animals and slip clear if the fight is lost — but a lone fighter left to stand alone may lose heart and bolt too.')+'</p>'+   /* Kris 1024d: at sea nobody leads off pack-animals */
       '<table><tr><th>fight</th><th>character</th><th>withdraw</th></tr>'+rows+'</table>'+
       '<button class="seal" onclick="battleJoin()">Join battle</button> <button onclick="'+(c.sea?'battleSurrender()':'battleAllWithdraw();battleJoin()')+'">'+(c.sea?'Surrender':'Withdraw everyone')+'</button></div>';
     return;
@@ -14042,7 +14217,7 @@ function battleFinish(outcome){
   var head = outcome==='win'?(c.n===1?(sea?'PIRATE DRIVEN OFF':'BANDIT DRIVEN OFF'):(sea?'PIRATES DRIVEN OFF':'BANDITS DRIVEN OFF'))
            : outcome==='loss'?(c.withdrawers&&c.withdrawers.length?'OVERRUN':'THE CARAVAN IS BROKEN')
            : outcome==='flee'?'WITHDREW' : outcome==='surrender'?'SURRENDERED':'STALEMATE';
-  if((outcome==='loss'||outcome==='flee') && c.withdrawers&&c.withdrawers.length){ L.push('<span class="sub">The withdrawers and their pack-animals get clear.</span>'); }
+  if((outcome==='loss'||outcome==='flee') && c.withdrawers&&c.withdrawers.length){ L.push('<span class="sub">'+(c.sea?'Those who went below decks are spared.':'The withdrawers and their pack-animals get clear.')+'</span>'); }
   if(outcome==='flee' && c._talkedThenFled){ var _ab=c._talkedThenFled;
     if(_ab && _ab.ref){ _ab.ref.hp=clamp((_ab.ref.hp||100)-(8+ri(14)),1,100); L.push('<span class="red">'+cbName(_ab)+', told to hold and then left alone, turns late — a parting blow catches him as he breaks. He rides clear, but hurt.</span>'); }
     var _sg=null,_bh=0; for(var _si=0;_si<GOODS.length;_si++){ var _sgg=GOODS[_si]; var _sh=S.goods[_sgg.id]||0; if(_sh>_bh){_bh=_sh;_sg=_sgg;} }
@@ -14071,7 +14246,7 @@ function battleExit(){ var c=S.battle; if(!c){ S.screen='travel'; render(); retu
     if(_mangled){ try{ log('The fight over, you take your bearings and find the road exactly where you left it.'); console.warn('BATTLE FRAME MANGLED mid-battle and restored: dash was '+(_tv.dashFrom||'none')+'>'+(_tv.dashTo||'none')); }catch(e){} }
   }
   if(prev==='travel' && !fell){ S.journeying=false; if(typeof clearJourney==='function')clearJourney(); S._forceCamp=true; }  /* after a land fight, drop into camp so the player can rest to heal instead of marching straight on */
-  if(prev==='voyage' && !fell && S.voy){ setTimeout(function(){ if(S.voy && !S.pendingEvent && S.screen==='voyage'){ S.voyaging=true; if(typeof voyTimer!=='undefined'&&voyTimer)clearInterval(voyTimer); voyTimer=setInterval(stepVoy,DAY_MS); } },400); }  /* at sea there is no camping: sheet home and sail on (Kris) */
+  if(prev==='voyage' && !fell && S.voy){ setTimeout(function(){ if(S.voy && !S.pendingEvent && S.screen==='voyage'){ S.voyaging=true; if(typeof voyTimer!=='undefined'&&voyTimer)clearInterval(voyTimer); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); } },400); }  /* at sea there is no camping: sheet home and sail on (Kris) */
   L.slice().reverse().forEach(function(x){ log(x); });
   if(fell){ die(); render(); return; }
   if(S.deathQueue && S.deathQueue.length && typeof deathDialog==='function'){ S.pendingEvent=deathDialog(); }
@@ -14698,13 +14873,31 @@ async function autoResume(){
     if(!S.screen) S.screen='city';
     if(S.screen==='travel' && !(S.itin&&S.itin.length)) S.screen='city';
     log('You wake where you halted \u2014 the road is as you left it.'+((o.v&&o.v!==VERSION)?' (The world has moved on to v'+VERSION+' around you.)':''));
-    if(S.screen==='sailing'&&S.sail){ S.sailing=true; render(); sailTimer=setInterval(stepSail, DAY_MS); return true; }
-    if(S.screen==='voyage'&&S.voy){ S.voyaging=true; render(); voyTimer=setInterval(stepVoy, DAY_MS); return true; }
+    if(S.screen==='sailing'&&S.sail){ S.sailing=true; render(); sailTimer=(clearInterval(sailTimer),setInterval(stepSail,DAY_MS)); return true; }
+    if(S.screen==='voyage'&&S.voy){ S.voyaging=true; render(); voyTimer=(clearInterval(voyTimer),setInterval(stepVoy,DAY_MS)); return true; }
     render(); return true;
   }catch(e){ return false; }
 }
-function quickStart(cityName){ try{
-  SETUP.era='1271'; SETUP.origin=(typeof cityPersp==='function'?cityPersp(cityName):'east'); SETUP.style='caravan'; SETUP.nephewName='';
+function hasLandExit(nm){ try{ var era=(S&&S.era)||(typeof SETUP!=='undefined'&&SETUP.era)||'1271';   /* Kris 1024d: a start with no road out (Butuan) gets its pack-beasts' price instead of the beasts */
+  if([].concat(MAIN1,NORTH,SOUTH,MAIN2,STEPPE).some(function(c){ return c&&c.name===nm&&(!c.era||c.era===era); })) return true;
+  return SEA_EDGES.some(function(e){ if(e.era&&e.era!=='both'&&e.era!==era)return false; if(!e.era&&era==='1271')return false; return (e.a===nm||e.b===nm)&&(e.terr==='land'||e.terr==='river'||e.terr==='canal'); });
+ }catch(e){ return true; } }
+function quickStart(cityName,humble){ try{
+  SETUP.era='1271'; SETUP.origin=(typeof cityPersp==='function'?cityPersp(cityName):'east'); SETUP.style=humble?'donkey':'caravan'; SETUP.nephewName='';
+  if(humble){   /* Kris 1024d: ?start=<town>&humble - the humble start from any town: you alone, 85 silver, one beast; the nephew waits in the home tavern, the cousin's letter still comes */
+    newGame('the merchant', null, '', 'humble'); if(!S) return false;
+    S.origin=SETUP.origin; S.nameDeferred=true; S.startCity=cityName; S.seaUnlocked=true; S.log=[];
+    landAtCity(cityName);
+    var _hb='donkey', _hc=null; try{ _hc=cityByName(cityName)||city();
+      if(_hc&&typeof animalAvailable==='function'&&!animalAvailable('donkey',_hc)){ _hb=['mule','horse','bactrian','dromedary'].find(function(k){ return animalAvailable(k,_hc); })||'donkey'; } }catch(e){}
+    S.herd={donkey:0,mule:0,horse:0,bactrian:0,dromedary:0,hybrid:0}; var _hsea=!hasLandExit(cityName), _hp=0;
+    if(_hsea){ try{ _hp=Math.round((typeof animalPrice==='function'&&_hc)?animalPrice(_hb,_hc):((ANIMALS[_hb]&&ANIMALS[_hb].base)||28)); }catch(e){ _hp=28; } if(!(_hp>0))_hp=28; S.silver+=_hp; }
+    else S.herd[_hb]=1;
+    S.startHerdSnap=Object.assign({},S.herd); S.water=waterMax();
+    var _hn={donkey:'a donkey',mule:'a mule',horse:'a packhorse',bactrian:'a Bactrian camel',dromedary:'a dromedary'}[_hb]||'a donkey';
+    log('You take up the road at '+((typeof eraName==='function')?eraName(cityName):cityName)+' \u2014 alone, with '+S.silver+' silver'+(_hsea?' (the family '+_hn.replace(/^an? /,'')+' sold, for no road leaves here but the sea)':', '+_hn)+', and a pack you can carry yourself. Everyone you need is still out there to be met.');
+    S.pendingEvent=null; if(typeof beginStartStory==='function')beginStartStory(cityName);
+    render(); return true; }
   var _startCrew=(typeof buildStartParty==='function')?buildStartParty(cityName):null;   /* regional opening 3 (Kris 8/15) - not always the eastern roster */
   newGame('the merchant', (_startCrew&&_startCrew.length)?_startCrew:null, '', undefined);
   if(S)S.origin=SETUP.origin;   /* the start city's faith drives calendar, units, home festivals (Kris) */
@@ -14712,7 +14905,7 @@ function quickStart(cityName){ try{
   var np=S.party&&S.party.find(function(q){return q.nephew;});
   if(np){ np.name='your nephew'; np.full=null; np.role='your sister\u2019s boy, more enthusiasm than sense'; }
   var _rgQ=(typeof startRegion==='function')?startRegion(cityName):'';   /* Kris 1020: the Kish cartographer at a Baltic start reads oddly - the north gets a local pilot, who knows the way in his head */
-  var _carto=(_rgQ==='norse')?{id:'pilot_n',name:'Orm the Pilot',role:'a lake-and-sea pilot who carries every channel from Vanern to Gotland in his head, and charts them for you in wax'}:(_rgQ==='hansa')?{id:'pilot_h',name:'Lambert the Pilot',role:'a cog-pilot of the Baltic crossings, his soundings knotted on a cord and his routes in a little book'}:(_rgQ==='rus')?{id:'pilot_r',name:'Stavr the Guide',role:'a river guide of the Rus, every portage and rapid from Ladoga to the Volga set down on birch-bark'}:{id:'ruknaldin',name:'Rukn al-Din',role:'a cartographer of Kish \u2014 maps rolled in oiled leather, and opinions about all of them'};
+  var _carto=(_rgQ==='seasia')?{id:'pilot_s',name:'Huang the Pilot',role:'a Zaiton junk-pilot with a south-pointing needle floating in a bowl, and a book of compass-bearings for every strait between Champa and the Spice Islands'}:(_rgQ==='norse')?{id:'pilot_n',name:'Orm the Pilot',role:'a lake-and-sea pilot who carries every channel from Vanern to Gotland in his head, and charts them for you in wax'}:(_rgQ==='hansa')?{id:'pilot_h',name:'Lambert the Pilot',role:'a cog-pilot of the Baltic crossings, his soundings knotted on a cord and his routes in a little book'}:(_rgQ==='rus')?{id:'pilot_r',name:'Stavr the Guide',role:'a river guide of the Rus, every portage and rapid from Ladoga to the Volga set down on birch-bark'}:{id:'ruknaldin',name:'Rukn al-Din',role:'a cartographer of Kish \u2014 maps rolled in oiled leather, and opinions about all of them'};
   S.party.push({id:_carto.id, name:_carto.name, role:_carto.role, skills:{}, fs:3, hs:5, cartographer:true, alive:true, kind:'companion', hp:100}); S._startCarto=_carto.name;
   if(typeof normalizeMember==='function')normalizeMember(S.party[S.party.length-1]);
   S.log=[];
@@ -14725,13 +14918,19 @@ function quickStart(cityName){ try{
       S.startHerdSnap=Object.assign({},S.herd); S.water=waterMax(); }
   }catch(e){}
   var _an=(S.herd&&S.herd.dromedary)?'dromedaries':(S.herd&&S.herd.bactrian)?'Bactrian camels':(S.herd&&S.herd.horse)?'packhorses':'mules';
+  var _seaLocked=!hasLandExit(cityName), _beastPrice=0;
+  if(_seaLocked){ try{ var _cc=cityByName(cityName)||city(); for(var _k in S.herd){ var _nb=S.herd[_k]||0; if(_nb>0){ var _pp=(typeof animalPrice==='function'&&_cc)?animalPrice(_k,_cc):((ANIMALS[_k]&&ANIMALS[_k].base)||60); if(!(_pp>0))_pp=(ANIMALS[_k]&&ANIMALS[_k].base)||60; _beastPrice+=_nb*_pp; } S.herd[_k]=0; } }catch(e){ _beastPrice=_beastPrice||180; for(var _k2 in S.herd)S.herd[_k2]=0; }
+    _beastPrice=Math.round(_beastPrice); S.silver+=_beastPrice; S.startHerdSnap=Object.assign({},S.herd); S.water=waterMax(); }
+  if(_seaLocked) log('You take up the road at '+((typeof eraName==='function')?eraName(cityName):cityName)+' \u2014 '+S.silver+' silver (the family\u2019s pack-beasts sold, for no road leaves here but the sea: '+_beastPrice+' of it), your sister\u2019s boy, your companions, and '+(S._startCarto||'Rukn al-Din')+'\u2019s '+((S._startCarto&&S._startCarto!=='Rukn al-Din')?'charts':'maps')+'. The world runs in every direction from here; pick one.'); else
   log('You take up the road at '+((typeof eraName==='function')?eraName(cityName):cityName)+' \u2014 '+S.silver+' silver, three good '+_an+', your sister\u2019s boy, your companions, and '+(S._startCarto||'Rukn al-Din')+'\u2019s '+((S._startCarto&&S._startCarto!=='Rukn al-Din')?'charts':'maps')+'. The world runs in every direction from here; pick one.'); S.pendingEvent=null; /* Oxus: drop the eastern-newGame war-box for quick-starts */
   if(typeof beginStartStory==='function')beginStartStory(cityName);
   render(); return true;
  }catch(e){ return false; } }
 function quickStartFromURL(){ try{
   var m=/[?#&]start=([^&#]+)/.exec(location.href); if(!m) return false;
-  var want=decodeURIComponent(m[1]).replace(/[_+]/g,' ').trim().toLowerCase(); if(!want) return false;
+  var _raw=decodeURIComponent(m[1]); var _parts=_raw.split('?');   /* Kris 1024d: ?start=Butuan?humble (as typed) or ?start=Butuan&humble both make a humble start */
+  var humble=_parts.slice(1).some(function(x){ return /^humble$/i.test(x.trim()); })||/[?&#]humble(\b|=|$)/i.test(location.href);
+  var want=_parts[0].replace(/[_+]/g,' ').trim().toLowerCase(); if(!want) return false;
   if(/^mango/.test(want) && typeof mangoStart==='function') return mangoStart();
   if(/^ljiloop/.test(want) && typeof ljiStart==='function') return ljiStart();          /* the loop-video quickstart (tools/loopvid.js) */
   if(/^lji/.test(want) && typeof ljiSetup==='function') return ljiSetup();               /* ?start=LJI - the scenario proper */
@@ -14742,7 +14941,7 @@ function quickStartFromURL(){ try{
   var _rn={}; try{ var _R=Object.assign({}, (typeof ERA1271_NET!=='undefined'&&ERA1271_NET.rename)||{}, (typeof RENAME1271!=='undefined')?RENAME1271:{}); for(var _k in _R) _rn[String(_R[_k]).toLowerCase()]=_k; }catch(e){}
   var _wantInt=_rn[want]||null;
   for(var i=0;i<all.length;i++){ var c=all[i]; if(!c||!c.name||c.era==='762')continue;
-    var _cn=c.name.toLowerCase(); if(_cn===want||(_wantInt&&c.name===_wantInt)) return quickStart(c.name); }
+    var _cn=c.name.toLowerCase(); if(_cn===want||(_wantInt&&c.name===_wantInt)) return quickStart(c.name,humble); }
   return false;
  }catch(e){ return false; } }
 try{ window.autoResume=autoResume; window.quickStart=quickStart; }catch(e){}
@@ -15456,12 +15655,42 @@ function makeTune(k,R){ const bl=barLenOf(R), dom=domOf(k,R), n=R.scale.length, 
   const B=toNotes(rB,contour(R,cB,dom,dom,Math.min(n+2,dom+(Math.random()<.5?2:3)),leap));   /* up in the higher register, then hang on the dominant */
   return {bl:bl, A:A, A2:A2, B:B}; }
 function vary(notes){ return notes.map(function(x){ return {deg:x.deg,dur:x.dur,acc:x.acc,pos:x.pos,slide:x.slide}; }); }
-function makePiece(){ const k=pickRegion(), R=P(k); if(!(R.density>0)) return null;
-  const leads=R.leads||['lute'], v1=pickA(leads), v2=leads.length>1?pickA(leads.filter(function(x){return x!==v1;}).concat([v1])):v1;
+/* ---- BETWEEN REGIONS (Kris 1024d: 'it changes the music all at once - between regions it should pull from both, in proportion to where you are').
+   Before, each tune was wholly one region's, picked at random by the weights, so the road flipped between two musics. Now a tune between
+   two places is ONE tune that carries both, the nearer place leading:
+   - NOTES: it keeps the leading region's scale but BORROWS some of its notes from the other's (each borrowed degree takes the other scale's
+     nearest note) - more borrowed the closer you get, the tonic never; the way real music slides from one mode into a neighbour's.
+   - DRUMS: one groove for the tune, in the leader's metre, each beat taken from the other region's pattern with the other's share.
+   - INSTRUMENTS: the leader plays the tune; the bridge (and, more often as you near the far place, the second time through) goes to the
+     other region's instrument - a call and answer between the two.
+   - ornament, density, the gong cycle and (already) the drones and tempo are mixed by the same share.
+   Past halfway the other place leads, carrying a share of the first. A remembered tune of the leading region comes back with its new notes. */
+function topTwo(){ var ks=Object.keys(weights).filter(function(k){return weights[k]>0;}).sort(function(x,y){return weights[y]-weights[x];});
+  var a=ks[0]||'latin', b=ks[1]||null, t=b?weights[b]/(weights[a]+weights[b]):0; return {a:a,b:b,t:t}; }
+function nearestPitch(c,scale){ var best=null,bd=1e9; scale.forEach(function(x){ [x-1200,x,x+1200].forEach(function(y){ var d=Math.abs(y-c); if(d<bd){bd=d;best=y;} }); }); return best; }
+function mixScale(A,B,t){ var out=A.slice(), n=A.length, cand=[];
+  for(var i=1;i<n;i++){ var nb=nearestPitch(A[i],B); if(Math.abs(nb-A[i])>=25) cand.push({i:i,c:nb}); }   /* only notes that actually differ */
+  for(var j=cand.length-1;j>0;j--){ var r=Math.floor(Math.random()*(j+1)), tmp=cand[j]; cand[j]=cand[r]; cand[r]=tmp; }
+  var take=Math.min(cand.length,Math.round(t*2*cand.length)), got=0;   /* t is the other region's share (<= 0.5): at halfway every differing note is borrowed */
+  for(var k=0;k<cand.length&&got<take;k++){ var q=cand[k]; var lo=q.i>0?out[q.i-1]:-1e9, hi=q.i<n-1?out[q.i+1]:1e9; if(q.c>lo+80&&q.c<hi-80){ out[q.i]=q.c; got++; } }   /* stay in order, and keep a clear step (80+ cents) from the neighbours - no sour clusters */
+  out._borrowed=got; return out; }
+function mixPerc(PA,PB,t){ if(!PA&&!PB) return null; var LA=PA?PA.length:(PB?PB.length:8), LB=PB?PB.length:1, out=[];
+  for(var j=0;j<LA;j++){ var a=PA?PA[j]:'.', b=PB?PB[Math.round(j*LB/LA)%LB]:'.'; out.push(Math.random()<t?b:a); }
+  return out; }
+function blendR(a,b,t){ var RA=P(a), RB=P(b); var R=Object.assign({},RA);
+  R.scale=mixScale(RA.scale,RB.scale,t); R.orn=(RA.orn||0)*(1-t)+(RB.orn||0)*t; R.density=(RA.density||0)*(1-t)+(RB.density||0)*t;
+  R.perc=mixPerc(RA.perc,RB.perc,t); R.gongP=(RA.gong?1-t:0)+(RB.gong?t:0); R.gong=R.gongP>0; R._blend={a:a,b:b,t:t,borrowed:R.scale._borrowed||0};
+  var ol=(RB.leads||[]).filter(function(v){ return v!=='chant'||RA.chant; }); R._otherLeads=ol.length?ol:null; return R; }
+let blendInfo='';
+function makePiece(){ const tt=topTwo(); const blend=(tt.b&&tt.t>=0.06); const k=blend?tt.a:pickRegion(), R=blend?blendR(tt.a,tt.b,tt.t):P(k); if(!(R.density>0)) return null;
+  const leads=R.leads||['lute'], v1=pickA(leads); let v2=leads.length>1?pickA(leads.filter(function(x){return x!==v1;}).concat([v1])):v1;
+  if(blend&&R._otherLeads&&tt.t>0.12&&Math.random()<0.35+tt.t) v2=pickA(R._otherLeads);   /* the answer on the other region's instrument */
+  blendInfo=blend?(REG[tt.a].name+' leading, '+Math.round(tt.t*100)+'% '+REG[tt.b].name+' - '+R._blend.borrowed+' of '+R.scale.length+' notes borrowed, drums mixed'+(v2!==v1&&R._otherLeads&&R._otherLeads.indexOf(v2)>=0?', the answer on the '+v2:'')):(REG[k].name);
+  try{ var bi=document.getElementById('blendInfo'); if(bi) bi.textContent='Now playing: '+blendInfo; }catch(e){}
   const secs=[];
   if(R.chant){ chantLeft=0; for(let i=0;i<5;i++){ const c=chantMelody(R); secs.push({notes:c.notes, voice:(v1==='chant'||Math.random()<.7)?v1:v2, rest:c.rest, free:true}); if(c.final)break; }
-    return {region:k, secs:secs, i:0, kind:'chant'}; }
-  if(k==='india'&&R.perc&&!busker&&!bandits&&terrain!=='tavern'){   /* the alap: free, slow, no tabla */
+    return {region:k, R:R, secs:secs, i:0, kind:'chant'}; }
+  if(k==='india'&&R.perc&&!busker&&!bandits&&terrain!=='tavern'&&!(blend&&tt.t>0.25)){   /* the alap: free, slow, no tabla */
     for(let j=0;j<2;j++){ const p=pickA(PAKAD), lead=[]; let d=p[0]; lead.push({deg:j?2:0,dur:4});
       p.forEach(function(x,i){ lead.push({deg:x,dur:i===p.length-1?6:(Math.random()<.4?3:2),slide:Math.random()<.5}); });
       secs.push({notes:lead, voice:'sitar', rest:2, free:true, alap:true}); } }
@@ -15469,7 +15698,7 @@ function makePiece(){ const k=pickRegion(), R=P(k); if(!(R.density>0)) return nu
   let tune; if(mk.length&&Math.random()<.5) tune=pickA(mk); else { tune=makeTune(k,R); mk.push(tune); if(mk.length>4)mk.shift(); }   /* old tunes come round again */
   const reps=Math.random()<.3?1:2;   /* through once, or twice - the second time often on the other instrument */
   [[tune.A,v1],[tune.A2,v1],[tune.B,v2],[tune.A2,v1],[tune.A,v2],[tune.A2,v2],[tune.B,v1],[tune.A2,v1]].slice(0,4*reps).forEach(function(q){ secs.push({notes:vary(q[0]), voice:q[1], rest:0, metric:true, bl:tune.bl}); });
-  return {region:k, secs:secs, i:0, kind:'tune'}; }
+  return {region:k, R:R, secs:secs, i:0, kind:'tune'}; }
 function degFreq(R,deg){ const n=R.scale.length, o=Math.floor(deg/n), i=((deg%n)+n)%n; return cents(TONIC*2,R.scale[i]+1200*o); }
 let noteLeft=0, prevF=null;
 function playNote(R,k,voice,nt,len){ const f=degFreq(R,nt.deg), o={acc:nt.acc||1};
@@ -15489,20 +15718,20 @@ function tick(){ if(!playing)return; const now=ctx.currentTime; if(nextT<now-.1)
   for(const k in drones){ const tgt=resting?0:(weights[k]||0)*P(k).droneLvl*tm.drone*(night?.8:1); drones[k].gain.setTargetAtTime(tgt,now,1.6); }
   while(nextT<now+.25){ const tempo=blended('tempo')*(night?.85:1)*(terrain==='mountain'?.9:1), stepDur=60/tempo/2;   /* the grid is eighth-notes */
     if(!resting){
-      if(barPerc==null||step%barPerc.length===0){ barRegion=(piece&&piece.kind==='tune'&&weights[piece.region])?piece.region:pickRegion(); barPerc=P(barRegion).perc||['.','.','.','.','.','.','.','.']; step=0;   /* the drum follows the tune's region, so the metres agree */
+      if(barPerc==null||step%barPerc.length===0){ barRegion=(piece&&piece.kind==='tune'&&weights[piece.region])?piece.region:pickRegion(); barPerc=((piece&&piece.kind==='tune'&&piece.R&&piece.region===barRegion)?piece.R.perc:P(barRegion).perc)||['.','.','.','.','.','.','.','.']; step=0;   /* the drum follows the tune's region, so the metres agree */
         if(P(barRegion).bell&&Math.random()<P(barRegion).bell*(terrain==='town'?1.3:1)) bell(nextT,TONIC*(Math.random()<.5?4:3),.06);
-        if(P(barRegion).gong&&piece&&piece.kind==='tune'&&piece.region===barRegion){ gongCyc++; const _bl=barPerc.length*stepDur, _R=P(barRegion);   /* the colotomic cycle: the great gong every second bar, the middle gongs between */
+        if(piece&&piece.kind==='tune'&&piece.region===barRegion&&(piece.R?(piece.R.gongP>0&&Math.random()<piece.R.gongP):P(barRegion).gong)){ gongCyc++; const _bl=barPerc.length*stepDur, _R=piece.R||P(barRegion);   /* the colotomic cycle: the great gong every second bar, the middle gongs between */
           if(gongCyc%2===1) gongHit(nextT,TONIC/2,.3,7); else gongHit(nextT,cents(TONIC,_R.scale[Math.min(_R.scale.length-1,3)]),.11,3.5);
           gongHit(nextT+_bl/2,cents(TONIC,_R.scale[Math.min(_R.scale.length-1,2)]),.07,2.5); } }
       const p=barPerc[step%barPerc.length]; if(p!=='.'&&tm.perc>0&&!(alapNow&&barRegion==='india')&&Math.random()<Math.min(1,.95*tm.perc)) drum(nextT+(Math.random()-.5)*.012,p,(night?.6:1)*Math.min(1.2,tm.perc)*(step===0?1.15:1));
       if(noteLeft<=0){
         if(restSteps>0){ restSteps--; noteLeft=1; }
-        else if(phrase.length){ const R=P(phraseRegion), nt=phrase.shift(), len=nt.dur*stepDur; if(nt.deg!=null) playNote(R,phraseRegion,phraseVoice,nt,len); noteLeft=nt.dur; if(!phrase.length&&piece&&piece._rest)restSteps=piece._rest; }
+        else if(phrase.length){ const R=(piece&&piece.R&&piece.region===phraseRegion)?piece.R:P(phraseRegion), nt=phrase.shift(), len=nt.dur*stepDur; if(nt.deg!=null) playNote(R,phraseRegion,phraseVoice,nt,len); noteLeft=nt.dur; if(!phrase.length&&piece&&piece._rest)restSteps=piece._rest; }
         else {
-          if(piece&&(piece.i>=piece.secs.length||!(weights[piece.region]>0))){ const R=P(piece.region); restSteps=Math.round(barLenOf(R)*(1+Math.round((1-Math.min(1,R.density*tm.dens))*6)+(night?2:0)+Math.random()*2)); piece=null; alapNow=false; noteLeft=1; }   /* a silence between tunes - longer where the land is emptier */
+          if(piece&&(piece.i>=piece.secs.length||!(weights[piece.region]>0))){ const R=piece.R||P(piece.region); restSteps=Math.round(barLenOf(R)*(1+Math.round((1-Math.min(1,R.density*tm.dens))*6)+(night?2:0)+Math.random()*2)); piece=null; alapNow=false; noteLeft=1; }   /* a silence between tunes - longer where the land is emptier */
           else { if(!piece){ piece=makePiece(); prevF=null; }
             if(!piece){ restSteps=8; noteLeft=1; }
-            else { const sec=piece.secs[piece.i], R=P(piece.region);
+            else { const sec=piece.secs[piece.i], R=piece.R||P(piece.region);
               if(sec.metric&&step%barPerc.length!==0){ noteLeft=1; }   /* a tune comes in on the downbeat */
               else { piece.i++; phraseRegion=piece.region; phraseVoice=sec.voice; alapNow=!!sec.alap; piece._rest=sec.rest||0;
                 const tot=sec.notes.reduce(function(a,x){return a+x.dur;},0);
@@ -15549,7 +15778,7 @@ function gameScene(){   /* -> {w, terr, night, live} from the game's state; any 
   try{
     if(scr==='travel'||(scr==='battle'&&!S.seaMode&&!S.voy&&!S.sail)){ var c=city(), n=nextCity(); a=regionOf(c); b=regionOf(n); var L=legDist(); p=L?Math.max(0,Math.min(1,(S.legKm||0)/L)):0;
       var lt=(typeof legTerr==='function')?legTerr():'settled'; terr=(lt==='desert'||lt==='sand'||lt==='harsh')?'desert':(lt==='mountain'||lt==='rugged')?'mountain':'road'; }
-    else if((scr==='voyage'||scr==='battle')&&S.voy){ a=regionOf(S.voy.from); b=regionOf(S.voy.to); p=S.voy.total?1-S.voy.daysLeft/S.voy.total:0; var vt=S.voy.terr;
+    else if((scr==='voyage'||scr==='battle')&&S.voy){ a=regionOf(S.voy.from); b=regionOf(S.voy.to); p=S.voy.total?voyQ(S.voy):0; var vt=S.voy.terr;
       terr=(vt==='river'||vt==='canal')?'road':(vt==='land')?((S.voy.harsh||S.voy.thirst)?'desert':'road'):'sea'; }
     else if((scr==='sailing'||scr==='battle')&&S.sail){ a=regionOf(S.sail.from); b=regionOf(_nm(S.sail.target)); p=S.sail.total?1-S.sail.daysLeft/S.sail.total:0; terr='sea'; }
     else { a=regionOf(S.seaMode?S.portName:city()); terr=(scr==='tavern')?'tavern':'town'; }
@@ -15604,6 +15833,7 @@ let ui=null, nowEl=null;
 function paintNow(){ if(!nowEl||!ui||ui.panel.style.display==='none')return;
   if(!playing){ nowEl.textContent=PREF.on?'(quiet)':'(off)'; return; }
   const ks=Object.keys(weights).sort(function(x,y){return weights[y]-weights[x];}); let s=ks.map(function(k){return REG[k]?REG[k].name:k;}).join(' → ');
+  if(typeof blendInfo!=='undefined'&&blendInfo&&/leading/.test(blendInfo)) s=blendInfo;   /* Kris 1024d: between two places, say how the tune is mixed */
   s+=' · '+terrain+(night?' · night':'')+(resting?' · resting':'')+(busker?' · street musician':'')+(bandits?' · war-drums':''); nowEl.textContent=s; }
 function buildUI(){ if(ui||!document.body)return;
   const b=document.createElement('button'); b.id='sraBtn'; b.title='Music and sound';
