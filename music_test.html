@@ -89,7 +89,17 @@ const REG={
  india:  {name:'Hind',        note:'Raga Yaman over the humming tanpura drone (Sa-Pa-Sa); a sitar-like pluck; tabla theka.',
           scale:[0,200,400,600,700,900,1100], leads:['sitar','sitar','flute'], drone:[0,700,1200], droneLvl:.16, perc:['B','R','R','B','B','R','R','B'], tempo:76, durs:[1,1,2,2,3], orn:.5, density:.9},
  north:  {name:'The North',   note:'Old folk modes with a fiddle\'s open-string drone; a plain walking pulse.',
-          scale:[0,200,400,500,700,900,1000], leads:['fiddle','fiddle','lute'], drone:[0,700], droneLvl:.12, perc:['D','.','.','.','k','.','.','.'], tempo:88, durs:[1,1,2,2,3,4], orn:.15, density:.8}
+          scale:[0,200,400,500,700,900,1000], leads:['fiddle','fiddle','lute'], drone:[0,700], droneLvl:.12, perc:['D','.','.','.','k','.','.','.'], tempo:88, durs:[1,1,2,2,3,4], orn:.15, density:.8},
+ /* Kris 1024c: the Malay straits, Palembang and Butuan were playing Hind's raga. The maritime south-east is BRONZE: a gong-chime ensemble,
+    ancestor of the gamelan and the kulintang - slendro (five near-equal steps of ~240 cents, between the western notes), a steady
+    metallophone melody elaborated an octave up by the kettle-gong chime, a hand drum, and the gongs marking the cycle (the great gong
+    every second bar, the middle gongs between). */
+ seasia: {name:'The Southern Seas', note:'A bronze gong-chime ensemble in slendro - five near-equal steps - a metallophone melody, the kettle-gong chime elaborating it, a hand drum, the great gong closing every cycle.',
+          scale:[0,240,480,720,960], leads:['saron'], elab:true, gong:true, drone:[], droneLvl:0, perc:['D','.','k','T','.','k','D','T'], bell:0, tempo:76, durs:[2,2,2,4], orn:0, density:.9,
+          cells:{8:[[2,2,2,2],[2,2,2,2],[2,2,4],[1,1,2,2,2]]}, endcells:{8:[[2,2,4],[2,6],[4,4]]}},
+ /* Champa: Indianized court music - the saranai shawm leading over barrel drums, the gongs keeping the cycle, a mode with semitones. */
+ champa: {name:'Champa', note:'Cham court music: the reedy saranai shawm over barrel drums, gongs keeping the cycle, in a mode with half-steps that sounds half India, half the gong-lands.',
+          scale:[0,100,500,700,800], leads:['saranai','saranai','saron'], elab:true, gong:true, drone:[0,700], droneLvl:.05, perc:['D','T','.','D','T','.','D','k'], bell:0, tempo:84, durs:[1,1,2,2,3], orn:.35, density:.9}
 };
 /* Kris 1021: the TAVERN plays the street's music, not the church's - each region's merrier variant, used while you sit in a tavern */
 const TAV={
@@ -108,10 +118,14 @@ const TAV={
  india:  {note:'In the tavern, Yaman at a lively tempo, the tabla doubling its pace.',
           scale:[0,200,400,600,700,900,1100], leads:['sitar','sitar','flute'], perc:['B','R','B','R','B','R','R','B'], tempo:100, durs:[1,1,2], orn:.5, density:.95},
  north:  {note:'In the hall, a fiddler plays a turning dance in three.',
-          scale:[0,200,400,500,700,900,1100], leads:['fiddle','fiddle','lute'], perc:['D','.','k','.','D','k'], tempo:110, durs:[1,1,2,2], orn:.2, density:.95}
+          scale:[0,200,400,500,700,900,1100], leads:['fiddle','fiddle','lute'], perc:['D','.','k','.','D','k'], tempo:110, durs:[1,1,2,2], orn:.2, density:.95},
+ seasia: {note:'In the harbour stalls the gongs quicken: the drum leads, the chimes interlock at double time.',
+          leads:['saron'], perc:['D','k','T','k','D','T','k','T'], tempo:104, density:.95},
+ champa: {note:'In the harbour tavern the saranai skirls over a quick barrel-drum dance.',
+          leads:['saranai','saron'], perc:['D','T','k','D','T','k','D','T'], tempo:108, density:.95}
 };
-const BUSK_LEAD={latin:'lute',byz:'lute',arab:'oud',persian:'tar',steppe:'lute',china:'zither',india:'sitar',north:'fiddle'};
-const BUSK_SING={latin:'vielle',byz:'vielle',arab:'ney',persian:'ney',steppe:'morin',china:'dizi',india:'flute',north:'fiddle'};
+const BUSK_LEAD={latin:'lute',byz:'lute',arab:'oud',persian:'tar',steppe:'lute',china:'zither',india:'sitar',north:'fiddle',seasia:'saron',champa:'saron'};
+const BUSK_SING={latin:'vielle',byz:'vielle',arab:'ney',persian:'ney',steppe:'morin',china:'dizi',india:'flute',north:'fiddle',seasia:'flute',champa:'saranai'};
 let busker=null, bandits=null;
 function P(k){ let R=(terrain==='tavern'&&TAV[k])?Object.assign({},REG[k],TAV[k]):REG[k];
   if(bandits){ R=Object.assign({},R,{leads:['morin'], perc:['D','D','T','D','.','D','T','T'], tempo:132, durs:[1,1,2], orn:0, density:.8, droneLvl:R.droneLvl*.4, bell:0}); }   /* war-drums under a low, rough fiddle */
@@ -168,6 +182,15 @@ function bowed(t,f,len,opt){ opt=opt||{}; const o=ctx.createOscillator(); o.type
   const vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=opt.vibr||5; vg.gain.setValueAtTime(0,t); vg.gain.linearRampToValueAtTime(f*(opt.vibd||.005),t+Math.min(len,.6)); vib.connect(vg); vg.connect(o.frequency); vg.connect(o2.frequency);
   const g=ctx.createGain(), a=opt.gain||.12; g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(a,t+(opt.att||.14)); g.gain.setTargetAtTime(0,t+len,.18);
   o.connect(lp); o2.connect(lp); lp.connect(g); out(g,.55); [o,o2,vib].forEach(x=>{ x.start(t); x.stop(t+len+1); }); }
+/* BRONZE (Kris 1024c): a struck bar or kettle rings with inharmonic partials that die faster the higher they are */
+function metal(t,f,dec,gain,parts){ parts=parts||[[1,1],[2.76,.35],[5.4,.12]];
+  parts.forEach(function(pq,i){ const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.value=f*pq[0]*(1+(Math.random()-.5)*.004);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(gain*pq[1],t+.004); g.gain.exponentialRampToValueAtTime(.0001,t+dec/(1+i*1.4));
+    o.connect(g); out(g,.55); o.start(t); o.stop(t+dec+.1); }); }
+function gongHit(t,f,gain,dec){   /* a hanging gong: a low hum that beats against itself, a shimmer, a slow bloom and a very long decay */
+  [[1,1,1],[1.004,.8,1],[2.0,.25,.6],[2.92,.12,.4]].forEach(function(pq){ const o=ctx.createOscillator(), g=ctx.createGain(); o.frequency.setValueAtTime(f*pq[0]*1.01,t); o.frequency.exponentialRampToValueAtTime(f*pq[0],t+.4);
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(gain*pq[1],t+.06); g.gain.exponentialRampToValueAtTime(.0001,t+dec*pq[2]);
+    o.connect(g); out(g,.7); o.start(t); o.stop(t+dec+.2); }); }
 function bell(t,f,gain){ const c=ctx.createOscillator(), m=ctx.createOscillator(), mg=ctx.createGain(); c.frequency.value=f; m.frequency.value=f*3.5;
   mg.gain.setValueAtTime(f*2.5,t); mg.gain.exponentialRampToValueAtTime(1,t+2.5); m.connect(mg); mg.connect(c.frequency);
   const g=ctx.createGain(); g.gain.setValueAtTime(gain||.12,t); g.gain.exponentialRampToValueAtTime(.0001,t+3.5); c.connect(g); out(g,.8); c.start(t); m.start(t); c.stop(t+3.6); m.stop(t+3.6); }
@@ -192,6 +215,9 @@ const VOICE={   /* o: {acc (accent), slide (start pitch ratio)} */
  vielle:(t,f,l)=>bowed(t,f,l,{lp:1400,gain:.11,vibd:.004}),
  morin: (t,f,l)=>bowed(t,f*.5,l,{lp:1100,gain:.15,vibd:.007,vibr:4.5}),
  fiddle:(t,f,l)=>bowed(t,f,l,{lp:2400,gain:.09,vibd:.003,att:.06}),
+ saron: (t,f,l,o)=>metal(t,f,Math.max(1.2,l*1.3),.17*((o&&o.acc)||1)),                                   /* the metallophone: the melody */
+ bonang:(t,f,l,o)=>metal(t,f*2,Math.max(.5,l*1.1),.08*((o&&o.acc)||1),[[1,1],[3.0,.22],[4.1,.08]]),       /* the kettle-gong chime: an octave up, damped */
+ saranai:(t,f,l)=>bowed(t,f,l,{lp:2200,gain:.08,vibd:.006,att:.04}),                                         /* single notes; the line proper is LINE.saranai */
  chant: (t,f,l)=>bowed(t,f*.5,l,{lp:900,gain:.12,vibd:.004})   /* single notes only; the chant proper is sung a phrase at a time (chantPhrase) */
 };
 const droneOsc={};
@@ -282,7 +308,7 @@ function drawBars(){ const el=document.getElementById('bars'); el.innerHTML=Obje
    Byzantium and the Latin West sing CHANT instead (free rhythm, the formula melodies). Hind opens each piece with a free alap on the sitar
    (no tabla), built on Yaman's pakad, before the metred gat. */
 let nextT=0, step=0, barPerc=null, barRegion=null, phrase=[], phraseRegion='latin', phraseVoice='lute', memory={}, restSteps=0;
-let piece=null, lastKey='', lineEnvs=[], alapNow=false;
+let piece=null, lastKey='', lineEnvs=[], alapNow=false, gongCyc=0;
 function terrMod(){ return {town:{dens:1.15,perc:1.1,drone:1}, tavern:{dens:1.1,perc:.9,drone:.9}, road:{dens:1,perc:1,drone:1}, desert:{dens:.9,perc:1.2,drone:1.1}, mountain:{dens:.55,perc:.25,drone:1.4}, sea:{dens:.8,perc:0,drone:.8}}[terrain]; }
 /* ---- CHANT (Kris 1022: 'Byzantium sounds like someone leaning on random keys') ----
    The fix is two things the random walk lacked. (1) A VOICE, legato: one sung line per phrase, gliding note to note, the vowel changing with
@@ -334,13 +360,16 @@ function chantMelody(R){ const n=R.scale.length, out=[]; if(chantLeft<=0) chantL
 /* ---- legato lines: winds and bows breathe a whole phrase ---- */
 const LINE={ ney:{kind:'blown',oct:1,breath:.09,gain:.2,glide:.05,vib:.006,dip:.7}, dizi:{kind:'blown',oct:2,breath:.05,gain:.14,glide:.03,vib:.005,dip:.6},
   flute:{kind:'blown',oct:1,breath:.06,gain:.18,glide:.035,vib:.005,dip:.65}, vielle:{kind:'bowed',oct:1,lp:1400,gain:.11,glide:.03,vib:.004,dip:.6},
-  morin:{kind:'bowed',oct:.5,lp:1100,gain:.15,glide:.07,vib:.007,vibr:4.5,dip:.65}, fiddle:{kind:'bowed',oct:1,lp:2400,gain:.09,glide:.02,vib:.003,dip:.35} };
+  morin:{kind:'bowed',oct:.5,lp:1100,gain:.15,glide:.07,vib:.007,vibr:4.5,dip:.65}, fiddle:{kind:'bowed',oct:1,lp:2400,gain:.09,glide:.02,vib:.003,dip:.35},
+  saranai:{kind:'reed',oct:1,bp:1300,gain:.085,glide:.045,vib:.007,vibr:5.8,dip:.55} };   /* the Cham shawm: a buzzing double reed, nasal and bright */
 function linePhrase(t,notes,stepDur,R,voice){ const L=LINE[voice]; if(!L)return; const tot=notes.reduce(function(a,n){return a+n.dur;},0)*stepDur;
   const env=ctx.createGain(); env.gain.setValueAtTime(0,t); const oscs=[], fr=[];   /* fr: [param, multiple] - every pitch-following parameter */
   const vib=ctx.createOscillator(), vg=ctx.createGain(); vib.frequency.value=L.vibr||5.2; vg.gain.value=0; vib.connect(vg);
   if(L.kind==='blown'){ const o=ctx.createOscillator(); o.type='sine'; const o2=ctx.createOscillator(); o2.type='triangle'; const g2=ctx.createGain(); g2.gain.value=.08; o2.connect(g2);
     const n=ctx.createBufferSource(); n.buffer=noiseBuf(); n.loop=true; const bp=filt('bandpass',600,2), ng=ctx.createGain(); ng.gain.value=L.breath; n.connect(bp); bp.connect(ng);
     o.connect(env); g2.connect(env); ng.connect(env); vg.connect(o.frequency); oscs.push(o,o2,n); fr.push([o.frequency,1],[o2.frequency,2],[bp.frequency,1.5]); }
+  else if(L.kind==='reed'){ const o=ctx.createOscillator(); o.type='square'; const o2=ctx.createOscillator(); o2.type='sawtooth'; const bp=filt('bandpass',L.bp,1.6), hp=filt('highpass',380,.7), lp=filt('lowpass',3800,.7);
+    o.connect(bp); o2.connect(bp); bp.connect(hp); hp.connect(lp); lp.connect(env); vg.connect(o.frequency); vg.connect(o2.frequency); oscs.push(o,o2); fr.push([o.frequency,1],[o2.frequency,1.004]); }
   else { const o=ctx.createOscillator(); o.type='sawtooth'; const o2=ctx.createOscillator(); o2.type='sawtooth'; const lp=filt('lowpass',L.lp,1.2);
     o.connect(lp); o2.connect(lp); lp.connect(env); vg.connect(o.frequency); vg.connect(o2.frequency); oscs.push(o,o2); fr.push([o.frequency,1],[o2.frequency,1.003]); }
   let tn=t, prevRest=true; const a0=L.gain;
@@ -365,7 +394,7 @@ const ENDCELLS={6:[[2,1,3],[3,3],[1,1,1,3],[6],[1,2,3]], 7:[[3,4],[2,1,4],[1,2,4
 function barLenOf(R){ const n=R.perc?R.perc.length:8; return CELLS[n]?n:8; }
 const pickA=function(a){ return a[Math.floor(Math.random()*a.length)]; };
 /* the structural tones: final (0), dominant, and how far a tune may climb */
-const DOM={arab:3, persian:3, india:2, china:3, steppe:3, north:4};   /* Hijaz's ghammaz G; Shur's G; Yaman's vadi Ga; the pentatonic fifths; the fiddler's A */
+const DOM={arab:3, persian:3, india:2, china:3, steppe:3, north:4, seasia:3, champa:3};   /* Hijaz's ghammaz G; Shur's G; Yaman's vadi Ga; the pentatonic fifths; the fiddler's A */
 function domOf(k,R){ return DOM[k]!=null?DOM[k]:(R.scale.length>5?4:3); }
 const PAKAD=[[-1,1,2,1,0],[2,1,-1,1,0],[-1,1,2,3,5,3,2],[5,3,2,1,2,1,0]];   /* Yaman's catch-phrases: Ni Re Ga Re Sa ... Ga Ma Dha */
 /* a contour through waypoints, mostly by step, the last note on the target */
@@ -378,15 +407,15 @@ function contour(R,count,from,to,peak,leap){ const out=[]; if(count<=0)return ou
       nd=Math.max(-2,Math.min(n+3,nd)); out.push(nd); d=nd; }
   out[out.length-1]=to; if(count>1&&(Math.abs(out[count-1]-out[count-2])>2||(count>2&&out[count-2]===to))) out[count-2]=to+((count>2?out[count-3]:out[count-2])>to?1:-1);   /* arrive by step, from the side you came */
   return out; }
-function rhythmPhrase(bl,bars){ const r=[]; for(let b=0;b<bars-1;b++) r.push(pickA(CELLS[bl])); r.push(pickA(ENDCELLS[bl])); return r; }
+function rhythmPhrase(bl,bars,R){ const C=(R&&R.cells&&R.cells[bl])||CELLS[bl], E=(R&&R.endcells&&R.endcells[bl])||ENDCELLS[bl]; const r=[]; for(let b=0;b<bars-1;b++) r.push(pickA(C)); r.push(pickA(E)); return r; }   /* a region may bring its own cells (the gong-lands' steady melody) */
 function toNotes(rh,degs){ const out=[]; let i=0; rh.forEach(function(cell){ let pos=0; cell.forEach(function(d){ out.push({deg:degs[i++],dur:d,acc:pos===0?1.15:(pos%2===0?1:.85),pos:pos}); pos+=d; }); }); return out; }
 function makeTune(k,R){ const bl=barLenOf(R), dom=domOf(k,R), n=R.scale.length, leap=(k==='steppe');
-  const rA=rhythmPhrase(bl,2), cA=rA.reduce(function(a,c){return a+c.length;},0), n1=rA[0].length;
+  const rA=rhythmPhrase(bl,2,R), cA=rA.reduce(function(a,c){return a+c.length;},0), n1=rA[0].length;
   let dA=contour(R,cA,Math.random()<.6?0:dom-1,dom,dom+(Math.random()<.5?1:2),leap);
   if(k==='india'&&Math.random()<.6){ const p=pickA(PAKAD), m=Math.min(p.length,cA-2); if(m>=3){ dA=p.slice(0,m).concat(contour(R,cA-m+1,p[m-1],dom,null,false).slice(1)); } }   /* open on the pakad, then on to Ga */
   const A=toNotes(rA,dA);
   const dA2=dA.slice(0,n1).concat(contour(R,cA-n1,dA[n1-1],0,Math.random()<.5?dA[n1-1]+1:null,leap)); const A2=toNotes(rA,dA2);   /* the same opening, home this time */
-  const rB=rhythmPhrase(bl,2), cB=rB.reduce(function(a,c){return a+c.length;},0);
+  const rB=rhythmPhrase(bl,2,R), cB=rB.reduce(function(a,c){return a+c.length;},0);
   const B=toNotes(rB,contour(R,cB,dom,dom,Math.min(n+2,dom+(Math.random()<.5?2:3)),leap));   /* up in the higher register, then hang on the dominant */
   return {bl:bl, A:A, A2:A2, B:B}; }
 function vary(notes){ return notes.map(function(x){ return {deg:x.deg,dur:x.dur,acc:x.acc,pos:x.pos,slide:x.slide}; }); }
@@ -409,6 +438,7 @@ let noteLeft=0, prevF=null;
 function playNote(R,k,voice,nt,len){ const f=degFreq(R,nt.deg), o={acc:nt.acc||1};
   if((voice==='sitar'||voice==='oud')&&prevF&&(nt.slide||Math.random()<(voice==='sitar'?.3:.15))&&Math.abs(prevF/f-1)<.2) o.slide=prevF/f;   /* meend: slide in from the last note */
   if(voice==='tar'&&len>.55&&Math.random()<.65){ const n=Math.floor(len/.085); for(let i=0;i<n;i++) VOICE.tar(nextT+i*.085,f,.12,{acc:(i?.55:1)*(nt.acc||1)*(1-i/n*.4)}); prevF=f; return; }   /* riz - the tar's tremolo */
+  if(R.elab&&voice==='saron'&&nt.dur>=2){ const e=len/nt.dur; for(let i=0;i<nt.dur;i++) VOICE.bonang(nextT+i*e,degFreq(R,nt.deg+(i%2?1:0)),e,{acc:i===0?1:.75}); }   /* the chime elaborates each melody note: note, neighbour, note... an octave up */
   if(R.orn&&len>.3&&Math.random()<R.orn*.45){ VOICE[voice](nextT,degFreq(R,nt.deg+1),.08,{acc:.7}); VOICE[voice](nextT+.08,f,len*.95,o); }   /* a grace note from above */
   else VOICE[voice](nextT,f,len*.95,o);
   if(terrain==='town'&&nt.pos===0&&Math.random()<.6) pluck(nextT,nt.deg>=3&&nt.deg<=5?cents(TONIC,R.scale[Math.min(R.scale.length-1,domOf(k,R))]):TONIC,len*1.5,{damp:.993,bright:.2,gain:.14,lp:900});   /* a bass note on the downbeat */
@@ -423,7 +453,10 @@ function tick(){ if(!playing)return; const now=ctx.currentTime; if(nextT<now-.1)
   while(nextT<now+.25){ const tempo=blended('tempo')*(night?.85:1)*(terrain==='mountain'?.9:1), stepDur=60/tempo/2;   /* the grid is eighth-notes */
     if(!resting){
       if(barPerc==null||step%barPerc.length===0){ barRegion=(piece&&piece.kind==='tune'&&weights[piece.region])?piece.region:pickRegion(); barPerc=P(barRegion).perc||['.','.','.','.','.','.','.','.']; step=0;   /* the drum follows the tune's region, so the metres agree */
-        if(P(barRegion).bell&&Math.random()<P(barRegion).bell*(terrain==='town'?1.3:1)) bell(nextT,TONIC*(Math.random()<.5?4:3),.06); }
+        if(P(barRegion).bell&&Math.random()<P(barRegion).bell*(terrain==='town'?1.3:1)) bell(nextT,TONIC*(Math.random()<.5?4:3),.06);
+        if(P(barRegion).gong&&piece&&piece.kind==='tune'&&piece.region===barRegion){ gongCyc++; const _bl=barPerc.length*stepDur, _R=P(barRegion);   /* the colotomic cycle: the great gong every second bar, the middle gongs between */
+          if(gongCyc%2===1) gongHit(nextT,TONIC/2,.3,7); else gongHit(nextT,cents(TONIC,_R.scale[Math.min(_R.scale.length-1,3)]),.11,3.5);
+          gongHit(nextT+_bl/2,cents(TONIC,_R.scale[Math.min(_R.scale.length-1,2)]),.07,2.5); } }
       const p=barPerc[step%barPerc.length]; if(p!=='.'&&tm.perc>0&&!(alapNow&&barRegion==='india')&&Math.random()<Math.min(1,.95*tm.perc)) drum(nextT+(Math.random()-.5)*.012,p,(night?.6:1)*Math.min(1.2,tm.perc)*(step===0?1.15:1));
       if(noteLeft<=0){
         if(restSteps>0){ restSteps--; noteLeft=1; }
