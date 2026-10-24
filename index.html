@@ -144,7 +144,7 @@
 <script>
 "use strict";
 /* ============ DATA ============ */
-const VERSION='4.3.98'; const BUILD='1024.wayMade'; /* build-stamp: version ghosts shall not pass */
+const VERSION='4.3.99'; const BUILD='1024.longBoards'; /* build-stamp: version ghosts shall not pass */
 const DEV_1271=true;  /* PUBLIC build: 1271 reachable only via the tavern secret. The local dev copy (Silk_Road_v#.html) flips this true for a direct era picker on the title screen. */
 const RESUME_B64="";
 const GOODS=[
@@ -5222,7 +5222,12 @@ const CITYFOLK_1271X={
  'Cambay':{name:'Dhanpal',role:'a Jain broker of the Cambay counting-houses',skills:{trade:3},fs:2,hs:3,era:'1271',tav:'a whitewashed counting-court where fortunes change hands at a whisper and violence is a stranger',join:'He weighs a bargain the way his faith weighs a footstep \u2014 with care for everything living in it. Prices open to him that stay shut to shouters.'},
  'Chittagong':{name:'Madhu Majhi',role:'a delta pilot who reads the Ganges mouths like a letter',skills:{handle:2},fs:5,hs:4,salty:true,era:'1271',tav:'a stilt-house toddy shop over the tide-mud, hung with channel-marks and dried fish',join:'The channels shift every flood and he shifts with them; islands are born and drown on his word. Any fool can sail the sea, he says \u2014 the river is the examination.'},
  'Butuan':{name:'Lakan',role:'a balangay-master\u2019s son of the gold river',skills:{handle:1},fs:8,hs:6,salty:true,era:'1271',tav:'a longhouse porch above the river where the gold-weights come out with the palm wine',join:'He has sailed the sewn boats since he could walk a gunwale, and wears his ancestors\u2019 gold like other men wear a shirt. He would see where the tribute fleets went, and come home with a story worth his name.'},
- 'Hakata':{name:'Saburo',role:'a masterless samurai looking hard away from the sea',skills:{},fs:17,hs:7,era:'1271',gear:{armor:'leather',weapon:'sword'},tav:'a harbour-ward sake house where the Song factors drink with men who don\u2019t discuss their previous employment',join:'His lord backed the wrong quarrel and paid for it; the sword kept its edge. He says nothing of the wall they are building on the bay hills, and watches the western horizon like a man reading a slow letter.'},
+ 'Hakata':{name:'Saburo',role:'a masterless samurai with one eye always on the western sea',skills:{},fs:17,hs:7,era:'1271',gear:{armor:'lamellar',weapon:'chokuto',bow:'yumi'},tav:'a harbour-ward sake house where the Song factors drink with men who don\u2019t discuss their previous employment',
+   get join(){ var y=1271,m=1; try{ var g=gameDate(); y=g.y; m=g.m; }catch(e){} var t=y*12+m, base='His lord backed the wrong quarrel and paid for it; the sword kept its edge. ';   /* Kris 1024b: the Mongol invasions - envoys from 1268, the Bun\u2019ei landing of Nov 1274, the bay wall from 1276, the K\u014dan fleet of summer 1281 */
+     if(t<1274*12+11) return base+'The Great Khan\u2019s envoys have come to Dazaifu demanding submission and gone home unanswered, and every man on Hakata bay knows what that means. He watches the western sea like a man reading a slow letter.';
+     if(t<1276*12+3) return base+'The Mongol fleet came last autumn, burned the town and was gone in a night of wind; he watches the western sea for its return.';
+     if(t<1281*12+9) return base+'They are building a stone wall along the bay shore against the next landing, and he has carried his share of its stones. He watches the western sea for the fleet everyone knows is coming.';
+     return base+'The second fleet came and the wind took it, as the first; the bay wall held. He watches the western sea out of habit now, and says the gods owe Japan nothing more.'; }},
  'Kaesong':{name:'Chin Suwol',role:'a celadon-factor of the Goryeo kilns',skills:{trade:2},fs:3,hs:4,era:'1271',tav:'a kiln-quarter wine house where the glaze-masters argue about the colour of sky after rain',join:'She grades celadon by lamplight and by touch, and knows what Khanbaliq pays before Khanbaliq does. The garrisons and the levies have made home a hard place to love this year; the road pays better than staying.'},
  'Socotra':{name:'Thoma',role:'an island deacon who mends nets and souls in the same sitting',skills:{heal:1,cook:1},fs:4,hs:5,salty:true,era:'1271',tav:'a stone room by the church older than anyone\u2019s memory, smelling of fish, wax and dragon\u2019s blood',join:'He blesses ships in Syriac and patches them in practice; a man of the rite of the East, far from any bishop, and content so. He would see Jerusalem once \u2014 or failing that, anywhere at all.'},
 'Sanaa':{name:'Yusuf al-Usta',role:'a Jewish silversmith of Sanaa',skills:{trade:1,handle:1},fs:5,hs:4,era:'1271',tav:'a lamp-lit workshop court where the filigree-hammers tick like rain on a roof',join:'His people have worked silver in Yemen since before the Himyarite kings, and his granulation-work goes north with every pilgrim caravan. He has outfitted travellers his whole life and never once been one; he would see Jerusalem with his own eyes before his hands stiffen, and a caravan that carries a careful man who can mend anything small and precious carries its own luck.'},
@@ -5249,7 +5254,7 @@ function kentoshiTavern(scene){
     ? _intro + "He is Ōtomo no Yakatari, a bushi — a warrior — of a clan that has borne arms for the sovereigns of the Land of the Rising Sun, he says, since the age of the gods, though he allows with a dry twist that the sovereigns themselves now do as the lords of Kamakura bid. He came east across the water two winters past as armed escort to a monk of the Zen school, bound to sit at the feet of the great Chan masters and carry their teaching home. But the road back has curdled behind him: the Great Khan’s envoys have sailed for his islands three times now, bearing letters that name his people the Khan’s vassals, and three times his people have sent them home with no answer the Khan will like. “The strait is watched now, and every ship that puts out eastward carries the smell of the war that is coming,” he says, with the stillness of a man who has made his peace with it. “If the road east leads only to that, I will go the other way, and see the far edge of the world I have only heard named. They tell me your road runs west without end.”"
     : _intro + "He is Ōtomo no Yakatari, of a clan that has guarded the sovereigns of the Land of the Rising Sun, he says, since the age of the gods — a swordsman who came to Chang’an three years past with the last embassy his country sent across the eastern ocean to the Tang court. He has been stranded ever since: the An Lushan rebellion shut the roads home, and the ships sent to carry the envoys back have been turned away, or wrecked, or becalmed, one after another — the year before last, last year, and again this very spring. “The sea to the east is closed to me,” he says, with the stillness of a man who has made his peace with it, “and the court I served is scattered to the winds. If I cannot go home, then I will go the other way, and see the far edge of the world I have only heard named. They tell me your road runs west without end.”";
   return {h:'THE STRANDED SWORDSMAN', t:t, ch:[
-    {l:'Take \u014ctomo no Yakatari on for the road west',f(){ S.party.push({name:'\u014ctomo no Yakatari',role:_role,skills:{},fs:12,hs:3,alive:true,kind:'companion',recruited:true,hp:100,fromCity:"Chang'an",gear:{weapon:'chokuto',bow:'bow'},cbStats:{hp:12,fs:7,die:8}}); log("\u014ctomo no Yakatari rises, bows once to the whole room, and takes his place at your side. He will see the far edge of the world, he says \u2014 or fall honourably on the way to it, which he seems to count much the same thing."); }},
+    {l:'Take \u014ctomo no Yakatari on for the road west',f(){ S.party.push({name:'\u014ctomo no Yakatari',role:_role,skills:{},fs:12,hs:3,alive:true,kind:'companion',recruited:true,hp:100,fromCity:"Chang'an",gear:{weapon:'chokuto',bow:'yumi'},cbStats:{hp:12,fs:7,die:8}}); log("\u014ctomo no Yakatari rises, bows once to the whole room, and takes his place at your side. He will see the far edge of the world, he says \u2014 or fall honourably on the way to it, which he seems to count much the same thing."); }},
     {l:'Salute his resolve, and leave him his cup',f(){ log("You leave the swordsman to his straight blade and his silence. He bows, gravely, and you feel \u2014 absurdly \u2014 that you have just failed some small and wordless test."); }},
   ]};
 }
@@ -6304,6 +6309,7 @@ function normalizeMember(p){
   if(p.__wpnFix2!==true){ if(p.gear&&p.gear.weapon==='spear'){ var _ow2=originWeapon(p); if(_ow2!=='spear') p.gear.weapon=_ow2; } p.__wpnFix2=true; }
   if(p.__euWpn!==true){ if(p.gear&&p.gear.weapon==='saif' && /frank|lombard|saxon|crusader|templar|hospitaller|knight|latin|venetian|genoese|pisan|ragusan|italian|norman/i.test(((p.role||'')+' '+(p.name||'')))) p.gear.weapon='sword'; p.__euWpn=true; } /* one-time: undo the saif that the old fall-through handed European fighters */
   if(p.gear && p.gear.weapon && typeof WEAPONS!=='undefined' && !WEAPONS[p.gear.weapon]) p.gear.weapon=originWeapon(p);
+  if(p.__jpFix!==true){ if(p.gear && /samurai|bushi|eastern isles/i.test(p.role||'') && (p.gear.weapon==='saif'||p.gear.weapon==='sword')) p.gear.weapon='chokuto'; if(p.gear && p.name==='Saburo' && p.fromCity==='Hakata'){ if(p.gear.armor==='leather')p.gear.armor='lamellar'; if(!p.gear.bow)p.gear.bow='yumi'; p.role='a masterless samurai with one eye always on the western sea'; } if(p.gear && p.gear.bow==='bow' && /eastern isles|bushi/i.test(p.role||'')) p.gear.bow='yumi'; p.__jpFix=true; }   /* Kris 1024b: Japanese arms - the tachi, the yumi, Saburo's lamellar (\u014d-yoroi is lamellar) */
   return p;
 }
 function normalizeParty(){ if(S&&S.party) S.party.forEach(normalizeMember); }
@@ -12243,21 +12249,31 @@ var M3=(function(){
      var aOff=wrapA(wHd-routeHd), aMin=RIG_MIN[rig]||1.05;
      var trav=Math.abs(q-(L._tq==null?q:L._tq))*C.T; L._tq=q;             /* chart px travelled along the lane this frame */
      var nx=ty, ny=-tx;                                                      /* the lane's +90-degree side (heading rotated toward +aOff); +aOff = the wind comes from this side */
-     var want=Math.abs(aOff)<aMin-0.03;
-     var AMAX=26, cl=seaClear(L,pos[0],pos[1],nx,ny,AMAX+6), cr=seaClear(L,pos[0],pos[1],-nx,-ny,AMAX+6);
-     var A=Math.min(AMAX,cl-4,cr-4); if(A<5) want=false;                     /* a strait: no sea-room to beat in, she rides the lane */
-     if(L._tackOff==null){ L._tackOff=0; L._tackSide=1; }
+     /* LONG BOARDS (Kris 1024b: 'too fast - the ship just looks like it's twitching'). The first cut flipped whenever the lateral
+        offset hit +-26 px, so a steep board lasted a few px; the sea-room re-read each frame shrank the limit and flipped her again.
+        Now: (1) a board runs a set DISTANCE along the lane (the long board away from the wind ~1/9 of the chart width, the short
+        board toward it ~1/15) before she goes about; (2) the slope is flattened so the board fits the sea-room instead of bouncing
+        off it, and runs parallel at the edge if it must; (3) the sea-room limit is smoothed; (4) the board angle eases round over
+        ~15 px when she tacks; (5) hysteresis on whether to beat at all; (6) a shoal turns her once, then she holds the new board. */
+     var vbw=(L.spec&&L.spec.vbw)||1400, LONG=vbw/9, SHORT=vbw/15;
+     if(L._tackOff==null){ L._tackOff=0; L._tackSide=1; L._tackAlong=0; L._tackSl=0; L._tackA=null; L._tackOn=false; L._tackCool=0; }
+     var absOff=Math.abs(aOff); if(!L._tackOn && absOff<aMin-0.06) L._tackOn=true; else if(L._tackOn && absOff>aMin+0.06) L._tackOn=false;
+     var want=L._tackOn;
+     var AMAX=60, cl=seaClear(L,pos[0],pos[1],nx,ny,AMAX+8), cr=seaClear(L,pos[0],pos[1],-nx,-ny,AMAX+8);
+     var Araw=Math.min(AMAX,cl-6,cr-6); L._tackA=(L._tackA==null)?Araw:L._tackA+(Araw-L._tackA)*Math.min(1,trav/25);
+     var A=Math.min(L._tackA,Araw+6); if(A<6) want=false;                     /* a strait: no sea-room to beat in, she rides the lane */
      if(want){
        var sgn=(aOff>=0)?1:-1;                                                 /* which side the wind is on */
-       /* the two boards: toward the wind's side the course lies at (aMin - |aOff|) off the lane - the short, hard board;
-          away from it at (aMin + |aOff|) - the long, easy one. Slopes are lateral px per px along. */
-       var sideRel=(L._tackSide===sgn)?1:-1;
-       var ang=(sideRel>0)?(aMin-Math.abs(aOff)):Math.min(1.35,aMin+Math.abs(aOff));
-       var slope=Math.tan(Math.max(0.12,ang));
-       L._tackOff+=L._tackSide*slope*trav;
-       if(L._tackOff>A){ L._tackOff=A; L._tackSide=-1; } else if(L._tackOff<-A){ L._tackOff=-A; L._tackSide=1; }
-       if(!seaAt(L,pos[0]+nx*L._tackOff,pos[1]+ny*L._tackOff)){ L._tackSide=-L._tackSide; L._tackOff+=L._tackSide*4; }   /* a shoal under the lee bow: go about at once */
-     } else if(L._tackOff!==0){ var back=Math.min(Math.abs(L._tackOff),trav*0.7+0.02); L._tackOff-=Math.sign(L._tackOff)*back; }   /* the wind frees: ease back onto the lane */
+       var toWind=(L._tackSide===sgn);
+       var ang=toWind?(aMin-absOff):Math.min(1.35,aMin+absOff);
+       var len=toWind?SHORT:LONG;
+       var tgt=Math.min(Math.tan(Math.max(0.12,ang)), (2*A)/Math.max(1,len));   /* flattened to fit: the board crosses the sea-room in about its length */
+       L._tackSl+=(tgt-L._tackSl)*Math.min(1,trav/15);                         /* she comes round, she does not snap */
+       L._tackOff+=L._tackSide*L._tackSl*trav; L._tackAlong+=trav; L._tackCool=Math.max(0,L._tackCool-trav);
+       if(L._tackOff>A) L._tackOff=A; else if(L._tackOff<-A) L._tackOff=-A;   /* at the edge of the sea-room she runs on parallel */
+       if(L._tackAlong>=len){ L._tackSide=-L._tackSide; L._tackAlong=0; L._tackSl=0; }   /* about ship */
+       else if(L._tackCool<=0 && !seaAt(L,pos[0]+nx*(L._tackOff+L._tackSide*4),pos[1]+ny*(L._tackOff+L._tackSide*4))){ L._tackSide=-L._tackSide; L._tackAlong=0; L._tackSl=0; L._tackCool=20; }   /* shoal water under the lee bow: go about once, then hold the new board */
+     } else if(L._tackOff!==0){ var back=Math.min(Math.abs(L._tackOff),trav*0.5+0.02); L._tackOff-=Math.sign(L._tackOff)*back; L._tackAlong=0; L._tackSl=0; }   /* the wind frees: ease back onto the lane */
      return [pos[0]+nx*L._tackOff, pos[1]+ny*L._tackOff];
    }catch(e){ return pos; } }
  function seedTrail(L,q,qdir){ try{
@@ -13661,12 +13677,13 @@ const WEAPONS={
   saifold:{n:'an old straight Arab sword',die:8,fs:2},
   spatha:{n:'a spathion',n1271:'a paramerion saber',die:8,fs:2},
   battleaxe:{n:'a Norse battle-axe',die:10,fs:3},
-  chokuto:{n:'a chokut\u014d, the straight sword of Yamato',n1271:'a tachi',die:8,fs:3},
+  chokuto:{n:'a chokut\u014d, the straight sword of Yamato',n1271:'a tachi',die:8,fs:3},   /* 1271: the long curved tachi of the mounted bushi - the katana is a 14th-15th c. sword */
 };
 function originWeapon(p){ var t=(((p&&p.role)||'')+' '+((p&&p.name)||'')).toLowerCase(); var reg=(p&&p.region)||''; var fc=(p&&p.fromCity)||'';
   if(/norse|axeman|varangian|northman|viking|red-bearded/.test(t)) return 'battleaxe';
   if(/frank|lombard|saxon|crusader|templar|hospitaller|knight|latin|venetian|genoese|pisan|ragusan|italian|norman/.test(t)) return 'sword';   /* crusaders, Venetians, Genoese &c. fell through to the saif default (Kris) */
   if(/turk|qarluq|qarluk|uygh|kirghiz|karluk|tatar|khazar|pecheneg|steppe|nomad|tiele|onok/.test(t)) return 'saber';
+  if(/samurai|bushi|yamato|eastern isles|japan|nihon|\bronin\b/.test(t)||fc==='Hakata') return 'chokuto';   /* Kris 1024b: Saburo came out of the tavern with a scimitar */
   if(/tang|chinese|\bhan\b|tibet|cathay/.test(t)) return 'dao';
   if(/greek|roman|byzantine|anatolian|armenian|cappadocian|rhom/.test(t)) return 'spatha';
   if(/persian|arab|sogdian|daylam|khurasan|khorasan|kurd|saracen|bukhar|samarkand|yemen|omani|hadrami|bedouin/.test(t)) return 'saif';
@@ -13678,7 +13695,7 @@ function originWeapon(p){ var t=(((p&&p.role)||'')+' '+((p&&p.name)||'')).toLowe
   if((typeof GUARD_CITY_REGION!=='undefined') && GUARD_CITY_REGION[fc] && rmap[GUARD_CITY_REGION[fc]]) return rmap[GUARD_CITY_REGION[fc]];
   return 'saif'; }
 const ARMOR={ leather:{n:'a leather jerkin',hp:1}, lamellar:{n:'a lamellar coat',hp:2,fs:1}, mail:{n:'a mail hauberk',hp:4,fs:1} };
-const BOWS={ bow:{n:'a hunting bow',hs:1}, recurve:{n:'a composite recurve',hs:2}, crossbow:{n:'a crossbow',hs:1} };
+const BOWS={ bow:{n:'a hunting bow',hs:1}, recurve:{n:'a composite recurve',hs:2}, crossbow:{n:'a crossbow',hs:1}, yumi:{n:'a yumi, the tall asymmetric bow of the bushi',hs:2} };   /* yumi (Kris 1024b): bamboo-faced laminated composite, gripped below centre - the composite's equal; never sold in western bazaars */
 const CLOAKS={ fur:{n:'a fur coat'} };
 function gWeaponDie(g){ var w=g&&g.weapon&&WEAPONS[g.weapon]; return w?w.die:0; }
 function gWeaponFS(g){ return 0; }
@@ -13866,7 +13883,17 @@ function battleJoin(){
     c._talkedThenFled=stayers[0];
     withdrawers.push(stayers.pop());
   }
-  if(sea){ var _nc=(S.seaCrew==null?5:S.seaCrew); for(var s=0;s<_nc;s++) stayers.push({sailor:true,name:'a sailor',role:'sailor',cMax:8,cHP:8,fs:8,hs:0,die:6,bow:false,alive:true}); }
+  if(sea){ var _nc=(S.seaCrew==null?5:S.seaCrew); var _sl=[]; for(var s=0;s<_nc;s++){ var _so={sailor:true,name:'a sailor',role:'sailor',cMax:8,cHP:8,fs:8,hs:0,die:6,bow:false,alive:true}; stayers.push(_so); _sl.push(_so); }
+    /* Kris 1024b: the crew break open the baggage - the best spare blades, bows and armour lying unassigned go to the sailors for the fight (lent, not given: the baggage keeps them) */
+    try{ var _bag=(S.baggage||[]).slice(), _rk=function(it){ return (typeof gItemRank==='function')?gItemRank(it.slot,it.id):0; };
+      var _wp=_bag.filter(function(it){return it.slot==='weapon'&&WEAPONS[it.id];}).sort(function(a,b){return _rk(b)-_rk(a);});
+      var _bw=_bag.filter(function(it){return it.slot==='bow'&&BOWS[it.id];}).sort(function(a,b){return _rk(b)-_rk(a);});
+      var _ar=_bag.filter(function(it){return it.slot==='armor'&&ARMOR[it.id];}).sort(function(a,b){return _rk(b)-_rk(a);});
+      var _nW=0,_nB=0,_nA=0;
+      _sl.forEach(function(so,i){ if(_wp[i]){ so.die=Math.max(so.die,WEAPONS[_wp[i].id].die||6); so.name='a sailor with '+gLabel('weapon',_wp[i].id); _nW++; }
+        if(_bw[i]){ so.bow=true; so.bowId=_bw[i].id; so.hs=4+((BOWS[_bw[i].id]&&BOWS[_bw[i].id].hs)||0); _nB++; }
+        if(_ar[i]){ var _h=(ARMOR[_ar[i].id]&&ARMOR[_ar[i].id].hp)||0; so.cMax+=_h; so.cHP+=_h; _nA++; } });
+      if(_nW+_nB+_nA>0) c.L.push('The crew break open the baggage: '+[_nW?_nW+' take up blade'+(_nW>1?'s':''):'',_nB?_nB+' string bow'+(_nB>1?'s':''):'',_nA?_nA+' buckle on armour':''].filter(Boolean).join(', ')+'.'); }catch(e){} }
   c.stayers=stayers; c.withdrawers=withdrawers;
   if(!stayers.length){ var _fleers=withdrawers.filter(function(f){return f.alive&&f.cHP>0;}); var _nb=Math.max(0,Math.round(n*cbBowFrac())); var _al=[]; for(var _bi=0;_bi<_nb;_bi++){ var _lf=_fleers.filter(function(f){return f.cHP>0;}); if(!_lf.length)break; var _t=pick(_lf); if(_t && rnd()<0.27){ cbHit(_t,cbDie(6)); _al.push('an arrow takes '+cbName(_t)+' from behind'+(_t.cHP<=0?' <span class="red">\u2014 down!</span>':'')); } } c.L.push('<b>You break and run'+(sea?' for the boats':'')+'.</b> '+(_al.length?'Shafts hiss after you \u2014 '+_al.join('; ')+'.':'A scatter of shafts hisses past, all wide \u2014 no one shoots back; you are running.')); var _rl=[]; var _mn=Math.min(n, _fleers.length); for(var _mi=0;_mi<_mn;_mi++){ var _lf2=_fleers.filter(function(f){return f.cHP>0;}); if(!_lf2.length)break; var _t2=pick(_lf2); if(_t2 && rnd()<0.5){ cbHit(_t2,cbDie(6)); _rl.push(cbName(_t2)+(_t2.cHP<=0?' <span class="red">is run down and killed</span>':' takes a parting blow')); } } if(_rl.length) c.L.push('The nearest '+(sea?'pirates':'riders')+' get one swing as you go: '+_rl.join('; ')+'.'); else c.L.push('You are clear before they can lay a blade on you.'); return battleFinish('flee'); }
   var B=[]; var _est=(typeof convoyValue==='function'?convoyValue():0);
