@@ -43,6 +43,10 @@ Maps/*_summer.png
 Maps/*_autumn.png
 Maps/*_winter.png
 
+# --- testbeds (Fadak's sail/ship rigs etc.) - working-folder only, never published (Kris 1024) ---
+testbed/
+*_testbed*.html
+
 # --- scratch / temp ---
 *.tmp
 Maps/placeholder.txt
